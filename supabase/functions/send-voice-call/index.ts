@@ -133,6 +133,9 @@ serve(async (req: Request) => {
       body: JSON.stringify(vonagePayload),
     });
 
+    console.log('Vonage API response status:', response.status);
+    console.log('Response Content-Type:', response.headers.get('content-type'));
+
     if (response.status === 401 || response.status === 404) {
       console.warn('Primary host returned', response.status, '- trying legacy host api.nexmo.com');
       response = await fetch('https://api.nexmo.com/v1/calls', {
@@ -143,6 +146,22 @@ serve(async (req: Request) => {
         },
         body: JSON.stringify(vonagePayload),
       });
+      console.log('Legacy host response status:', response.status);
+    }
+
+    // Verificar se a resposta é realmente JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const textResponse = await response.text();
+      console.error('Non-JSON response received:', textResponse.substring(0, 500));
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Vonage API returned non-JSON response',
+          details: textResponse.substring(0, 200)
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const responseData = await response.json();

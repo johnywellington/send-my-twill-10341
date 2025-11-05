@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.77.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,15 +77,56 @@ serve(async (req: Request) => {
   }
 
   try {
+    // 🔒 AUTENTICAÇÃO OBRIGATÓRIA
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Autenticação necessária' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Criar cliente Supabase com o token do usuário
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id);
+
     const { to, from, language = "pt-BR", style = 2, premium = false, template, ncco }: IVRRequest = await req.json();
 
+    // ✅ VALIDAÇÃO DE INPUTS
     if (!to || !from || !ncco || !Array.isArray(ncco) || ncco.length === 0) {
       console.error('Missing required fields:', { to, from, hasNCCO: !!ncco });
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: to, from, and ncco are required' }),
+        JSON.stringify({ error: 'Campos obrigatórios: to, from, ncco (deve ser array)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Validar formato de telefone
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(to.replace(/\s/g, ''))) {
+      return new Response(
+        JSON.stringify({ error: 'Formato de número de destino inválido. Use formato E.164' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✅ Validation passed - User:', user.id, 'Template:', template);
 
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');

@@ -22,11 +22,40 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== SMS Send Request Started ===');
 
+    // 🔒 AUTENTICAÇÃO OBRIGATÓRIA
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing Authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Autenticação necessária' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Criar cliente Supabase com o token do usuário
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Não autorizado' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    console.log('Authenticated user:', user.id);
+
     const { to, from, body, provider = "twilio" }: SmsRequest = await req.json();
 
     console.log('SMS details:', { to, from, bodyLength: body.length, provider });
 
-    // Validate inputs
+    // ✅ VALIDAÇÃO DE INPUTS
     if (!to || !from || !body) {
       console.error('Missing required fields');
       return new Response(
@@ -34,6 +63,31 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
+
+    // Validar formato de telefone (E.164: +[país][número])
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(to.replace(/\s/g, ''))) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Formato de número de destino inválido. Use formato internacional: +5511999999999' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    if (!phoneRegex.test(from.replace(/\s/g, ''))) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Formato de número de origem inválido. Use formato internacional: +1234567890' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Validar tamanho da mensagem (máximo 1600 caracteres = 10 SMS)
+    if (body.length > 1600) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Mensagem muito longa. Máximo: 1600 caracteres' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    console.log('✅ Validation passed - User:', user.id, 'Provider:', provider);
     let response;
     
     if (provider === "vonage") {

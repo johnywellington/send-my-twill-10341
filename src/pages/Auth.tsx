@@ -50,6 +50,16 @@ const Auth = () => {
       return;
     }
 
+    if (password.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter no mínimo 6 caracteres",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const redirectUrl = `${window.location.origin}/`;
 
     const { data, error } = await supabase.auth.signUp({
@@ -75,8 +85,11 @@ const Auth = () => {
     } else {
       toast({
         title: "Conta criada!",
-        description: "Faça login para continuar",
+        description: "Você já pode fazer login",
       });
+      // Clear form
+      setEmail("");
+      setPassword("");
     }
 
     setLoading(false);

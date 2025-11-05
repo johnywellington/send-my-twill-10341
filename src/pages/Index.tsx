@@ -1,13 +1,28 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu, PhoneForwarded } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2">("sms");
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao fazer logout");
+    } else {
+      toast.success("Logout realizado!");
+      navigate("/auth");
+    }
+  };
 
   const titles = {
     sms: "SMS Sender",
@@ -33,8 +48,15 @@ const Index = () => {
   const Icon = icons[activeTab];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background flex items-center justify-center p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-4xl space-y-8 animate-slide-up">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background p-4 sm:p-6 md:p-8">
+      <div className="absolute top-4 right-4">
+        <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+          <LogOut className="w-4 h-4" />
+          Sair
+        </Button>
+      </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-full max-w-4xl space-y-8 animate-slide-up">
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-elegant)] mb-6 hover-lift">
             <Icon className="w-10 h-10" />
@@ -84,6 +106,7 @@ const Index = () => {
               <IVRMenuFormV2 />
             </TabsContent>
           </Tabs>
+        </div>
         </div>
       </div>
     </div>

@@ -34,13 +34,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Extract bearer token and validate user explicitly
+    const token = authHeader.replace('Bearer', '').trim();
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !user) {
       console.error('User authentication failed:', userError);

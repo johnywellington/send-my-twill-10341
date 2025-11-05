@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,42 +16,59 @@ interface IVRRequest {
   ncco: any[];
 }
 
-// Função para gerar JWT para autenticação Vonage
-function generateJWT(applicationId: string, privateKey: string): string {
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + (15 * 60); // 15 minutos
-  
-  // Header
-  const header = {
-    alg: "RS256",
-    typ: "JWT"
-  };
-  
-  // Payload
-  const payload = {
-    application_id: applicationId,
-    iat: now,
-    exp: exp,
-    jti: crypto.randomUUID()
-  };
-  
-  // Encode header and payload
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  
-  const message = `${headerB64}.${payloadB64}`;
-  
-  // Import private key and sign
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = privateKey.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
-  
-  // Para ambiente Deno, usamos Web Crypto API
-  // Nota: Isso é uma simplificação. Em produção, use uma biblioteca JWT adequada
-  const signatureB64 = btoa(message).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  
-  return `${message}.${signatureB64}`;
+// Função para gerar JWT para autenticação Vonage usando djwt
+async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
+  try {
+    // Garantir que a private key está no formato correto
+    let formattedKey = privateKey.trim();
+    
+    // Se não tiver os headers, adicionar
+    if (!formattedKey.includes('BEGIN PRIVATE KEY')) {
+      formattedKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`;
+    }
+    
+    // Importar a chave privada usando Web Crypto API
+    // Remover headers e quebras de linha
+    const pemContents = formattedKey
+      .replace('-----BEGIN PRIVATE KEY-----', '')
+      .replace('-----END PRIVATE KEY-----', '')
+      .replace(/\s/g, '');
+    
+    // Decodificar base64
+    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    
+    // Importar como CryptoKey
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryDer,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256',
+      },
+      true,
+      ['sign']
+    );
+    
+    // Criar payload
+    const payload = {
+      application_id: applicationId,
+      iat: getNumericDate(0), // now
+      exp: getNumericDate(60 * 15), // 15 minutos
+      jti: crypto.randomUUID()
+    };
+    
+    // Gerar JWT
+    const jwt = await create(
+      { alg: "RS256", typ: "JWT" },
+      payload,
+      cryptoKey
+    );
+    
+    return jwt;
+  } catch (error) {
+    console.error('Error generating JWT:', error);
+    throw new Error(`Failed to generate JWT: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 serve(async (req: Request) => {
@@ -112,15 +130,18 @@ serve(async (req: Request) => {
 
     console.log('Processed NCCO:', JSON.stringify(nccoWithWebhook, null, 2));
 
-    // Gerar JWT (simplificado - em produção use uma biblioteca adequada)
-    // Por enquanto, vamos usar a API Key/Secret como fallback
-    const apiKey = Deno.env.get('VONAGE_API_KEY');
-    const apiSecret = Deno.env.get('VONAGE_API_SECRET');
-
-    if (!apiKey || !apiSecret) {
-      console.error('Missing Vonage API credentials');
+    // Gerar JWT para autenticação
+    let jwt: string;
+    try {
+      jwt = await generateJWT(applicationId, privateKey);
+      console.log('JWT generated successfully');
+    } catch (error) {
+      console.error('Failed to generate JWT:', error);
       return new Response(
-        JSON.stringify({ error: 'Vonage API credentials not configured' }),
+        JSON.stringify({ 
+          error: 'Failed to generate authentication token',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -130,7 +151,7 @@ serve(async (req: Request) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${btoa(`${apiKey}:${apiSecret}`)}`
+        'Authorization': `Bearer ${jwt}`
       },
       body: JSON.stringify({
         to: [{

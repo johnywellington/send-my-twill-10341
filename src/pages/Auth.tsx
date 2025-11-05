@@ -36,7 +36,7 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -50,16 +50,26 @@ const Auth = () => {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const redirectUrl = `${window.location.origin}/`;
+
+    const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
     });
 
     if (error) {
       toast({
-        title: "Erro ao fazer login",
+        title: "Erro ao criar conta",
         description: error.message,
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Você já pode usar o sistema",
       });
     }
 
@@ -74,24 +84,24 @@ const Auth = () => {
             <MessageSquare className="w-8 h-8" />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Twilio SMS Sender
+            SMS Sender
           </h1>
           <p className="text-lg text-muted-foreground">
-            Faça login para acessar o sistema
+            Crie sua conta para acessar o sistema
           </p>
         </div>
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Login</CardTitle>
-            <CardDescription>Entre com sua conta para continuar</CardDescription>
+            <CardTitle>Criar Conta</CardTitle>
+            <CardDescription>Registre-se para começar a enviar SMS</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="signup-email">Email</Label>
                 <Input
-                  id="login-email"
+                  id="signup-email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
@@ -101,20 +111,21 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Senha</Label>
+                <Label htmlFor="signup-password">Senha</Label>
                 <Input
-                  id="login-password"
+                  id="signup-password"
                   type="password"
                   placeholder="••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   required
+                  minLength={6}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Entrar
+                Criar Conta
               </Button>
             </form>
           </CardContent>

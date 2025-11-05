@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,47 @@ interface VoiceCallRequest {
   language?: string;
   style?: number;
   premium?: boolean;
+}
+
+// Gera JWT para autenticação no Vonage Voice API
+async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
+  try {
+    let formattedKey = privateKey.trim();
+    if (!formattedKey.includes('BEGIN PRIVATE KEY')) {
+      formattedKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`;
+    }
+
+    const pem = formattedKey
+      .replace('-----BEGIN PRIVATE KEY-----', '')
+      .replace('-----END PRIVATE KEY-----', '')
+      .replace(/\s/g, '');
+
+    const binaryDer = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryDer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      true,
+      ['sign']
+    );
+
+    const payload = {
+      application_id: applicationId,
+      sub: applicationId,
+      iss: applicationId,
+      iat: getNumericDate(0),
+      nbf: getNumericDate(0),
+      exp: getNumericDate(60 * 15),
+      jti: crypto.randomUUID(),
+    } as const;
+
+    const jwt = await create({ alg: 'RS256', typ: 'JWT' }, payload, cryptoKey);
+    return jwt;
+  } catch (err) {
+    console.error('Error generating JWT:', err);
+    throw new Error(`Failed to generate JWT: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  }
 }
 
 serve(async (req: Request) => {
@@ -37,15 +79,15 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get Vonage credentials from environment variables
-    const VONAGE_API_KEY = Deno.env.get('VONAGE_API_KEY');
-    const VONAGE_API_SECRET = Deno.env.get('VONAGE_API_SECRET');
+    // Credenciais via Application ID e Private Key
+    const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
+    const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
-    if (!VONAGE_API_KEY || !VONAGE_API_SECRET) {
+    if (!applicationId || !privateKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Vonage credentials not configured",
+          error: "Vonage Voice credentials not configured (APPLICATION_ID/PRIVATE_KEY)",
         }),
         {
           status: 500,
@@ -57,16 +99,9 @@ serve(async (req: Request) => {
     console.log(`Making voice call from ${from} to ${to}`);
 
     // Prepare Vonage Voice API request
-    const vonageUrl = 'https://api.nexmo.com/v1/calls';
     const vonagePayload = {
-      to: [{
-        type: "phone",
-        number: to
-      }],
-      from: {
-        type: "phone",
-        number: from
-      },
+      to: [{ type: "phone", number: to }],
+      from: { type: "phone", number: from },
       ncco: [{
         action: "talk",
         text: text,
@@ -76,17 +111,39 @@ serve(async (req: Request) => {
       }]
     };
 
-    // Use Basic Auth with API Key and Secret
-    const authHeader = `Basic ${btoa(`${VONAGE_API_KEY}:${VONAGE_API_SECRET}`)}`;
+    // Gerar JWT e chamar a API (com fallback de host)
+    let jwt: string;
+    try {
+      jwt = await generateJWT(applicationId, privateKey);
+      console.log('JWT generated successfully for voice call');
+    } catch (e) {
+      console.error('Failed to generate JWT for voice call:', e);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to generate authentication token' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const response = await fetch(vonageUrl, {
+    let response = await fetch('https://api.vonage.com/v1/calls', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader,
+        'Authorization': `Bearer ${jwt}`,
       },
       body: JSON.stringify(vonagePayload),
     });
+
+    if (response.status === 401 || response.status === 404) {
+      console.warn('Primary host returned', response.status, '- trying legacy host api.nexmo.com');
+      response = await fetch('https://api.nexmo.com/v1/calls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(vonagePayload),
+      });
+    }
 
     const responseData = await response.json();
 

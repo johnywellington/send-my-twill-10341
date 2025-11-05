@@ -117,6 +117,34 @@ const templates = {
         language: "pt-BR"
       }
     ]
+  },
+  "bank-security": {
+    name: "Segurança Bancária - Alerta de Fraude",
+    description: "Confirmação de operação suspeita com encaminhamento para assistente",
+    ncco: [
+      {
+        action: "talk",
+        text: "Está a falar com o serviço de segurança do seu banco. Contactamos para confirmar uma possível tentativa de fraude no seu cartão. Esta chamada está a ser gravada. Se reconhece a operação, prima 1. Se não reconhece, prima 2, e será encaminhado para um assistente.",
+        language: "pt-PT",
+        style: 2,
+        bargeIn: true
+      },
+      {
+        action: "input",
+        type: ["dtmf"],
+        dtmf: {
+          maxDigits: 1,
+          timeOut: 10,
+          submitOnHash: false
+        }
+      },
+      {
+        action: "talk",
+        text: "Aguarde enquanto transferimos sua ligação.",
+        language: "pt-PT",
+        style: 2
+      }
+    ]
   }
 };
 

@@ -2,28 +2,32 @@ import { useState } from "react";
 import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuForm } from "@/components/IVRMenuForm";
+import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded } from "lucide-react";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2">("sms");
 
   const titles = {
     sms: "SMS Sender",
     voice: "Voice Call",
-    ivr: "Menu IVR"
+    ivr: "Menu IVR",
+    ivr2: "IVR 2.0"
   };
 
   const descriptions = {
     sms: "Envie mensagens SMS de forma simples e segura",
     voice: "Faça chamadas de voz usando a API do Vonage",
-    ivr: "Crie menus interativos de atendimento com captura de DTMF"
+    ivr: "Crie menus interativos de atendimento com captura de DTMF",
+    ivr2: "Sistema IVR avançado com redirecionamento de chamadas"
   };
 
   const icons = {
     sms: MessageSquare,
     voice: Phone,
-    ivr: Menu
+    ivr: Menu,
+    ivr2: PhoneForwarded
   };
 
   const Icon = icons[activeTab];
@@ -45,7 +49,7 @@ const Index = () => {
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full max-w-lg">
-            <TabsList className="grid w-full grid-cols-3 mb-8 h-12 p-1.5 glass-effect">
+            <TabsList className="grid w-full grid-cols-4 mb-8 h-12 p-1.5 glass-effect">
               <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">SMS</span>
@@ -57,6 +61,10 @@ const Index = () => {
               <TabsTrigger value="ivr" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Menu className="w-4 h-4" />
                 <span className="hidden sm:inline">IVR</span>
+              </TabsTrigger>
+              <TabsTrigger value="ivr2" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+                <PhoneForwarded className="w-4 h-4" />
+                <span className="hidden sm:inline">IVR 2.0</span>
               </TabsTrigger>
             </TabsList>
             
@@ -70,6 +78,10 @@ const Index = () => {
             
             <TabsContent value="ivr">
               <IVRMenuForm />
+            </TabsContent>
+            
+            <TabsContent value="ivr2">
+              <IVRMenuFormV2 />
             </TabsContent>
           </Tabs>
         </div>

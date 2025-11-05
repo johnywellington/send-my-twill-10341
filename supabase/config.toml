@@ -9,5 +9,14 @@ verify_jwt = false
 [functions.send-ivr-call]
 verify_jwt = false
 
+[functions.send-ivr-call-v2]
+verify_jwt = false
+
 [functions.ivr-webhook]
+verify_jwt = false
+
+[functions.ivr-webhook-v2]
+verify_jwt = false
+
+[functions.ivr-webhook-v2-events]
 verify_jwt = false

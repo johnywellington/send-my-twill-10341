@@ -99,6 +99,7 @@ serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
+    }
     
     // Validate Application ID format (must be UUID) and Private Key format
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(applicationId);

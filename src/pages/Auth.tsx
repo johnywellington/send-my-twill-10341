@@ -52,7 +52,7 @@ const Auth = () => {
 
     const redirectUrl = `${window.location.origin}/`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -66,10 +66,16 @@ const Auth = () => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
+    } else if (data.session) {
       toast({
         title: "Conta criada com sucesso!",
-        description: "Você já pode usar o sistema",
+        description: "Redirecionando...",
+      });
+      // Session is created, redirect will happen automatically
+    } else {
+      toast({
+        title: "Conta criada!",
+        description: "Faça login para continuar",
       });
     }
 

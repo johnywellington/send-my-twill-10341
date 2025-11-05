@@ -8,23 +8,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Phone, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
 }
 
-export const VoiceCallForm = ({ onCallMade }: VoiceCallFormProps) => {
-  const [to, setTo] = useState("");
-  const [from, setFrom] = useState("447418373268");
+export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
+  const [to, setTo] = useState("351911019866");
+  const [from, setFrom] = useState("447418373592");
   const [message, setMessage] = useState("Hello from Voice API");
   const [language, setLanguage] = useState("en-US");
   const [style, setStyle] = useState("0");
   const [premium, setPremium] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Gerar preview do request
+  const requestPreview = {
+    from: { type: "phone", number: from },
+    to: [{ type: "phone", number: to }],
+    ncco: [{
+      action: "talk",
+      language: language,
+      style: parseInt(style),
+      premium: premium,
+      text: message
+    }]
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!to || !from || !message) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -40,33 +59,26 @@ export const VoiceCallForm = ({ onCallMade }: VoiceCallFormProps) => {
       });
 
       if (error) {
-        const errorData = data?.error || error.message;
-        
-        toast.error("Erro ao fazer ligação", {
-          description: errorData,
-          duration: 6000,
+        toast.error("Error making call", {
+          description: error.message,
         });
         return;
       }
 
       if (data?.success) {
-        toast.success("Ligação iniciada com sucesso!", {
+        toast.success("Call initiated successfully!", {
           description: `UUID: ${data.uuid}`
         });
-        setMessage("Hello from Voice API");
-        setTo("");
-        if (onCallMade) {
-          onCallMade();
-        }
+        onCallMade?.();
       } else {
-        throw new Error(data?.error || "Falha ao fazer ligação");
+        toast.error("Failed to make call", {
+          description: data?.error || "Unknown error"
+        });
       }
     } catch (error: any) {
-      console.error("Erro ao fazer ligação:", error);
-      
-      toast.error("Erro inesperado", {
-        description: error.message || "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
-        duration: 6000,
+      console.error("Error making call:", error);
+      toast.error("Unexpected error", {
+        description: error.message || "An error occurred",
       });
     } finally {
       setLoading(false);
@@ -74,124 +86,144 @@ export const VoiceCallForm = ({ onCallMade }: VoiceCallFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-lg shadow-lg border-primary/20">
-      <CardHeader className="space-y-1 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-lg">
-        <CardTitle className="text-2xl font-bold">Voice API</CardTitle>
-        <CardDescription className="text-primary-foreground/90">
-          Envie chamadas de voz usando a API do Vonage
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="from">From</Label>
-            <Input
-              id="from"
-              type="tel"
-              placeholder="447418373268"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              required
-              className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
-            />
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Try it out</CardTitle>
+          <CardDescription>
+            Try our API by sending a Voice call to your phone. Sending a Voice call uses your account credit.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="from">From</Label>
+              <Input
+                id="from"
+                type="tel"
+                placeholder="447418373592"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="to">To</Label>
-            <Input
-              id="to"
-              type="tel"
-              placeholder="351911019866"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              required
-              className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="to">
+                To <span className="text-muted-foreground">ⓘ</span>
+              </Label>
+              <Input
+                id="to"
+                type="tel"
+                placeholder="351911019866"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="language">Language</Label>
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger id="language" className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en-US">English (United States)</SelectItem>
-                <SelectItem value="en-GB">English (United Kingdom)</SelectItem>
-                <SelectItem value="pt-BR">Portuguese (Brazil)</SelectItem>
-                <SelectItem value="pt-PT">Portuguese (Portugal)</SelectItem>
-                <SelectItem value="es-ES">Spanish (Spain)</SelectItem>
-                <SelectItem value="fr-FR">French (France)</SelectItem>
-                <SelectItem value="de-DE">German (Germany)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger id="language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en-US">English (United States)</SelectItem>
+                  <SelectItem value="en-GB">English (United Kingdom)</SelectItem>
+                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                  <SelectItem value="pt-PT">Português (Portugal)</SelectItem>
+                  <SelectItem value="es-ES">Español (España)</SelectItem>
+                  <SelectItem value="es-US">Español (Estados Unidos)</SelectItem>
+                  <SelectItem value="fr-FR">Français</SelectItem>
+                  <SelectItem value="de-DE">Deutsch</SelectItem>
+                  <SelectItem value="it-IT">Italiano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="style">Style</Label>
-            <Select value={style} onValueChange={setStyle}>
-              <SelectTrigger id="style" className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]">
-                <SelectValue placeholder="Select style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Style 0</SelectItem>
-                <SelectItem value="1">Style 1</SelectItem>
-                <SelectItem value="2">Style 2</SelectItem>
-                <SelectItem value="3">Style 3</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="style">Style</Label>
+              <Select value={style} onValueChange={setStyle}>
+                <SelectTrigger id="style">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">0</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="premium" 
-              checked={premium}
-              onCheckedChange={(checked) => setPremium(checked as boolean)}
-            />
-            <Label 
-              htmlFor="premium" 
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="premium" 
+                checked={premium}
+                onCheckedChange={(checked) => setPremium(checked as boolean)}
+              />
+              <Label htmlFor="premium" className="cursor-pointer text-primary">
+                Premium Voices
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message</Label>
+              <Textarea
+                id="message"
+                placeholder="Hello from Voice API"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                required
+                className="min-h-[100px]"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                For this specific call the character limit is 100
+              </p>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Making Call...
+                </>
+              ) : (
+                "Call"
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg">Voice API Request:</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold text-blue-600">POST</span>
+              <code className="text-xs bg-muted px-2 py-1 rounded">
+                https://api.nexmo.com/v1/calls
+              </code>
+            </div>
+            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
+{JSON.stringify(requestPreview, null, 2)}
+            </pre>
+            <a 
+              href="https://developer.vonage.com/en/voice/voice-api/overview" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline inline-block"
             >
-              Premium Voices
-            </Label>
+              Learn more
+            </a>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">Message</Label>
-            <Textarea
-              id="message"
-              placeholder="Hello from Voice API"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              required
-              rows={4}
-              maxLength={100}
-              className="resize-none transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
-            />
-            <p className="text-xs text-muted-foreground">
-              Limite de caracteres: {message.length}/100
-            </p>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300 shadow-[var(--shadow-glow)]"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Ligando...
-              </>
-            ) : (
-              <>
-                <Phone className="mr-2 h-4 w-4" />
-                Call
-              </>
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
-};
+}

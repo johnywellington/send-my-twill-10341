@@ -128,6 +128,7 @@ export function IVRMenuForm() {
   const [premium, setPremium] = useState(false);
   const [template, setTemplate] = useState<keyof typeof templates | "custom">("main-menu");
   const [customNCCO, setCustomNCCO] = useState("");
+  const [editedNCCO, setEditedNCCO] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +153,21 @@ export function IVRMenuForm() {
         return;
       }
     } else {
-      nccoToSend = templates[template].ncco;
+      // Se há NCCO editado, usar ele
+      if (editedNCCO) {
+        try {
+          nccoToSend = JSON.parse(editedNCCO);
+          if (!Array.isArray(nccoToSend)) {
+            toast.error("NCCO editado deve ser um array");
+            return;
+          }
+        } catch (error) {
+          toast.error("NCCO editado inválido. Verifique o formato JSON.");
+          return;
+        }
+      } else {
+        nccoToSend = templates[template].ncco;
+      }
     }
 
     setLoading(true);
@@ -245,15 +260,19 @@ export function IVRMenuForm() {
           </div>
 
           {currentTemplate && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Preview do Fluxo:</strong>
-                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
-                  {JSON.stringify(currentTemplate.ncco, null, 2)}
-                </pre>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="editableNCCO">Preview do Fluxo (Editável):</Label>
+              <Textarea
+                id="editableNCCO"
+                value={editedNCCO || JSON.stringify(currentTemplate.ncco, null, 2)}
+                onChange={(e) => setEditedNCCO(e.target.value)}
+                className="font-mono text-xs min-h-[300px] bg-muted/50"
+                placeholder="Edite as perguntas e textos do IVR aqui"
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 Edite os textos das perguntas diretamente no JSON acima
+              </p>
+            </div>
           )}
 
           {template === "custom" && (

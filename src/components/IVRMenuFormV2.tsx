@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Info, PhoneForwarded } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const templates = {
   "bank-security-v2": {
@@ -42,9 +43,9 @@ const templates = {
 };
 
 export function IVRMenuFormV2() {
-  const [to, setTo] = useState("");
-  const [from, setFrom] = useState("447418373268");
-  const [assistantNumber, setAssistantNumber] = useState("");
+  const [to, setTo] = useState("+351");
+  const [from, setFrom] = useState("+44447418373268");
+  const [assistantNumber, setAssistantNumber] = useState("+351");
   const [transferTimeout, setTransferTimeout] = useState("30");
   const [language, setLanguage] = useState("pt-PT");
   const [style, setStyle] = useState("2");
@@ -175,30 +176,23 @@ export function IVRMenuFormV2() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configuração Básica</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="to">Número de Destino *</Label>
-                <Input
-                  id="to"
-                  type="tel"
-                  placeholder="351911019866"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">Formato: código país + número</p>
-              </div>
+              <PhoneInput
+                value={to}
+                onChange={setTo}
+                label="Número de Destino"
+                placeholder="911019866"
+                defaultDdi="+351"
+                required
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="from">Número de Origem *</Label>
-                <Input
-                  id="from"
-                  type="tel"
-                  placeholder="447418373268"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  required
-                />
-              </div>
+              <PhoneInput
+                value={from}
+                onChange={setFrom}
+                label="Número de Origem"
+                placeholder="447418373268"
+                defaultDdi="+44"
+                required
+              />
             </div>
           </div>
 
@@ -209,20 +203,15 @@ export function IVRMenuFormV2() {
               Configuração de Transferência
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="assistantNumber">Número do Assistente *</Label>
-                <Input
-                  id="assistantNumber"
-                  type="tel"
-                  placeholder="351912345678"
-                  value={assistantNumber}
-                  onChange={(e) => setAssistantNumber(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Número para transferir quando pressionar 2
-                </p>
-              </div>
+              <PhoneInput
+                value={assistantNumber}
+                onChange={setAssistantNumber}
+                label="Número do Assistente"
+                placeholder="912345678"
+                defaultDdi="+351"
+                required
+                className="md:col-span-2"
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="transferTimeout">Tempo de Espera (segundos)</Label>

@@ -9,14 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
 }
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
-  const [to, setTo] = useState("351911019866");
-  const [from, setFrom] = useState("447418373592");
+  const [to, setTo] = useState("+351911019866");
+  const [from, setFrom] = useState("+1");
   const [message, setMessage] = useState("Hello from Voice API");
   const [language, setLanguage] = useState("en-US");
   const [style, setStyle] = useState("0");
@@ -88,35 +89,23 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         </CardHeader>
         <CardContent className="pt-8 px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2.5">
-              <Label htmlFor="from" className="text-sm font-medium text-foreground">
-                Número de Origem
-              </Label>
-              <Input
-                id="from"
-                type="tel"
-                placeholder="447418373592"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                required
-                className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            <PhoneInput
+              value={from}
+              onChange={setFrom}
+              label="Número de Origem"
+              placeholder="123456789"
+              defaultDdi="+1"
+              required
+            />
 
-            <div className="space-y-2.5">
-              <Label htmlFor="to" className="text-sm font-medium text-foreground">
-                Número de Destino <span className="text-muted-foreground text-xs">ⓘ</span>
-              </Label>
-              <Input
-                id="to"
-                type="tel"
-                placeholder="351911019866"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                required
-                className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            <PhoneInput
+              value={to}
+              onChange={setTo}
+              label="Número de Destino"
+              placeholder="911019866"
+              defaultDdi="+351"
+              required
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2.5">

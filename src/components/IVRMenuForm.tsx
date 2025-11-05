@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const templates = {
   "main-menu": {
@@ -149,8 +150,8 @@ const templates = {
 };
 
 export function IVRMenuForm() {
-  const [to, setTo] = useState("");
-  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("+351");
+  const [from, setFrom] = useState("+44447418373268");
   const [language, setLanguage] = useState("pt-BR");
   const [style, setStyle] = useState("2");
   const [premium, setPremium] = useState(false);
@@ -241,30 +242,23 @@ export function IVRMenuForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="to">Número de Destino *</Label>
-              <Input
-                id="to"
-                type="tel"
-                placeholder="351911019866"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Formato: código país + número</p>
-            </div>
+            <PhoneInput
+              value={to}
+              onChange={setTo}
+              label="Número de Destino"
+              placeholder="911019866"
+              defaultDdi="+351"
+              required
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="from">Número de Origem *</Label>
-              <Input
-                id="from"
-                type="tel"
-                placeholder="447418373268"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                required
-              />
-            </div>
+            <PhoneInput
+              value={from}
+              onChange={setFrom}
+              label="Número de Origem"
+              placeholder="447418373268"
+              defaultDdi="+44"
+              required
+            />
           </div>
 
           <div className="space-y-2">

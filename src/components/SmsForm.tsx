@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PhoneInput } from "@/components/ui/phone-input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Loader2 } from "lucide-react";
@@ -182,14 +181,20 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             />
           </div>
 
-          <PhoneInput
-            value={to}
-            onChange={setTo}
-            label="Número de Destino"
-            placeholder="1234567890"
-            defaultDdi="+351"
-            required
-          />
+          <div className="space-y-2.5">
+            <Label htmlFor="to" className="text-sm font-medium text-foreground">
+              Número de Destino
+            </Label>
+            <Input
+              id="to"
+              type="tel"
+              placeholder="+1234567890"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              required
+              className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">

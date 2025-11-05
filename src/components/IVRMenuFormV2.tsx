@@ -155,6 +155,22 @@ export function IVRMenuFormV2() {
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex justify-center pb-4">
+            <Button type="submit" className="max-w-md w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando Chamada IVR 2.0...
+                </>
+              ) : (
+                <>
+                  <PhoneForwarded className="mr-2 h-4 w-4" />
+                  Iniciar Chamada IVR 2.0
+                </>
+              )}
+            </Button>
+          </div>
+
           {/* Configuração Básica */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configuração Básica</h3>
@@ -328,21 +344,6 @@ export function IVRMenuFormV2() {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <Button type="submit" className="max-w-md w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando Chamada IVR 2.0...
-                </>
-              ) : (
-                <>
-                  <PhoneForwarded className="mr-2 h-4 w-4" />
-                  Iniciar Chamada IVR 2.0
-                </>
-              )}
-            </Button>
-          </div>
         </form>
       </CardContent>
     </Card>

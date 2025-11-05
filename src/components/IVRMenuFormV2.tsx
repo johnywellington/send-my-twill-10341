@@ -328,19 +328,21 @@ export function IVRMenuFormV2() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Iniciando Chamada IVR 2.0...
-              </>
-            ) : (
-              <>
-                <PhoneForwarded className="mr-2 h-4 w-4" />
-                Iniciar Chamada IVR 2.0
-              </>
-            )}
-          </Button>
+          <div className="flex justify-center">
+            <Button type="submit" className="max-w-md w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando Chamada IVR 2.0...
+                </>
+              ) : (
+                <>
+                  <PhoneForwarded className="mr-2 h-4 w-4" />
+                  Iniciar Chamada IVR 2.0
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

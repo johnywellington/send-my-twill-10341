@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -57,7 +56,12 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       iat: getNumericDate(0), // now
       nbf: getNumericDate(0),
       exp: getNumericDate(60 * 15), // 15 minutos
-      jti: crypto.randomUUID()
+      jti: crypto.randomUUID(),
+      acl: {
+        paths: {
+          "/v1/calls/**": {}
+        }
+      }
     };
     
     // Gerar JWT
@@ -154,6 +158,8 @@ serve(async (req: Request) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'LovableVoice/1.0',
         'Authorization': `Bearer ${jwt}`
       },
       body: JSON.stringify({
@@ -170,6 +176,8 @@ serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'LovableVoice/1.0',
           'Authorization': `Bearer ${jwt}`
         },
         body: JSON.stringify({
@@ -178,6 +186,16 @@ serve(async (req: Request) => {
           ncco: nccoWithWebhook
         })
       });
+    }
+
+    const contentType = vonageResponse.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const textResponse = await vonageResponse.text();
+      console.error('Non-JSON response received (IVR):', textResponse.substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'Vonage API returned non-JSON response', details: textResponse.substring(0, 200) }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const responseData = await vonageResponse.json();

@@ -46,6 +46,11 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       nbf: getNumericDate(0),
       exp: getNumericDate(60 * 15),
       jti: crypto.randomUUID(),
+      acl: {
+        paths: {
+          "/v1/calls/**": {}
+        }
+      }
     } as const;
 
     const jwt = await create({ alg: 'RS256', typ: 'JWT' }, payload, cryptoKey);
@@ -128,6 +133,8 @@ serve(async (req: Request) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'LovableVoice/1.0',
         'Authorization': `Bearer ${jwt}`,
       },
       body: JSON.stringify(vonagePayload),

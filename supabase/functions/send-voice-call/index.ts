@@ -141,18 +141,37 @@ serve(async (req: Request) => {
     console.log('Vonage API response status:', response.status);
     console.log('Response Content-Type:', response.headers.get('content-type'));
 
-    if (response.status === 401 || response.status === 404 || response.status === 403) {
-      console.warn('Primary host returned', response.status, '- trying legacy host api.nexmo.com');
-      response = await fetch('https://api.nexmo.com/v1/calls', {
-        method: 'POST',
-        headers: {
+      if (response.status === 401 || response.status === 404 || response.status === 403) {
+        console.warn('Primary host returned', response.status, '- trying alternative hosts');
+
+        const payloadBody = JSON.stringify(vonagePayload);
+        const commonHeaders = {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'LovableVoice/1.0',
           'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify(vonagePayload),
-      });
-      console.log('Legacy host response status:', response.status);
-    }
+        } as const;
+
+        const endpoints = [
+          'https://api.nexmo.com/v1/calls',
+          'https://api-us-1.vonage.com/v1/calls',
+          'https://api-eu-1.vonage.com/v1/calls',
+        ];
+
+        for (const url of endpoints) {
+          console.warn('Trying endpoint:', url);
+          const tryResp = await fetch(url, {
+            method: 'POST',
+            headers: commonHeaders,
+            body: payloadBody,
+          });
+          const ct = tryResp.headers.get('content-type') || '';
+          if (tryResp.ok || ct.includes('application/json')) {
+            response = tryResp;
+            break;
+          }
+        }
+      }
 
     // Verificar se a resposta é realmente JSON
     const contentType = response.headers.get('content-type');

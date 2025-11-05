@@ -48,12 +48,14 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       ['sign']
     );
     
-    // Criar payload (Vonage Voice JWT - sem iss/sub)
+    // Criar payload
     const payload = {
       application_id: applicationId,
+      sub: applicationId,
+      iss: applicationId,
       iat: getNumericDate(0), // now
       nbf: getNumericDate(0),
-      exp: getNumericDate(60 * 5), // 5 minutos
+      exp: getNumericDate(60 * 10), // 10 minutos
       jti: crypto.randomUUID(),
       acl: {
         paths: {
@@ -169,21 +171,40 @@ serve(async (req: Request) => {
 
     // Fallback para domínio legacy se necessário
     if (vonageResponse.status === 401 || vonageResponse.status === 404 || vonageResponse.status === 403) {
-      console.warn('Primary host returned', vonageResponse.status, '- trying legacy host api.nexmo.com');
-      vonageResponse = await fetch('https://api.nexmo.com/v1/calls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'LovableVoice/1.0',
-          'Authorization': `Bearer ${jwt}`
-        },
-        body: JSON.stringify({
-          to: [{ type: 'phone', number: to }],
-          from: { type: 'phone', number: from },
-          ncco: nccoWithWebhook
-        })
+      console.warn('Primary host returned', vonageResponse.status, '- trying alternative hosts');
+
+      const payloadBody = JSON.stringify({
+        to: [{ type: 'phone', number: to }],
+        from: { type: 'phone', number: from },
+        ncco: nccoWithWebhook
       });
+
+      const commonHeaders = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'LovableVoice/1.0',
+        'Authorization': `Bearer ${jwt}`
+      } as const;
+
+      const endpoints = [
+        'https://api.nexmo.com/v1/calls',
+        'https://api-us-1.vonage.com/v1/calls',
+        'https://api-eu-1.vonage.com/v1/calls'
+      ];
+
+      for (const url of endpoints) {
+        console.warn('Trying endpoint:', url);
+        const tryResp = await fetch(url, {
+          method: 'POST',
+          headers: commonHeaders,
+          body: payloadBody,
+        });
+        const ct = tryResp.headers.get('content-type') || '';
+        if (tryResp.ok || ct.includes('application/json')) {
+          vonageResponse = tryResp;
+          break;
+        }
+      }
     }
 
     const contentType = vonageResponse.headers.get('content-type');

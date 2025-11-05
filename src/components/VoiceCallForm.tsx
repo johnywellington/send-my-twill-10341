@@ -27,18 +27,6 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const messageLength = message.length;
   const isNearLimit = messageLength > maxLength * 0.8;
 
-  // Gerar preview do request
-  const requestPreview = {
-    from: { type: "phone", number: from },
-    to: [{ type: "phone", number: to }],
-    ncco: [{
-      action: "talk",
-      language: language,
-      style: parseInt(style),
-      premium: premium,
-      text: message
-    }]
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +78,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       <Card className="w-full glass-effect animate-slide-up shadow-[var(--shadow-elegant)] hover-lift">
         <CardHeader className="space-y-2 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-xl pb-8 pt-6">
           <CardTitle className="text-3xl font-bold tracking-tight">Experimente</CardTitle>
@@ -229,41 +217,6 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card className="w-full glass-effect animate-slide-up shadow-[var(--shadow-elegant)]">
-        <CardHeader className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-t-xl">
-          <CardTitle className="text-2xl font-bold flex items-center gap-2">
-            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-            Request da API de Voz
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-sm p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <span className="font-bold text-primary bg-primary/10 px-3 py-1 rounded">POST</span>
-              <code className="text-xs font-mono text-foreground flex-1">
-                https://api.nexmo.com/v1/calls
-              </code>
-            </div>
-            <pre className="bg-muted/80 p-5 rounded-xl overflow-x-auto text-xs font-mono border border-border shadow-inner max-h-[400px] overflow-y-auto">
-{JSON.stringify(requestPreview, null, 2)}
-            </pre>
-            <a 
-              href="https://developer.vonage.com/en/voice/voice-api/overview" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:text-accent transition-colors inline-flex items-center gap-1.5 font-medium hover:gap-2 duration-200"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Saiba mais sobre a API
-            </a>
-          </div>
         </CardContent>
       </Card>
     </div>

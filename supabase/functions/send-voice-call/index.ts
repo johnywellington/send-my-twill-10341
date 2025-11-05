@@ -15,7 +15,6 @@ interface VoiceCallRequest {
   premium?: boolean;
 }
 
-// Gera JWT para autenticação no Vonage Voice API
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
   try {
     let formattedKey = privateKey.trim();
@@ -62,7 +61,6 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -70,7 +68,6 @@ serve(async (req: Request) => {
   try {
     const { to, from, text, language = "en-US", style = 0, premium = false }: VoiceCallRequest = await req.json();
 
-    // Validate required fields
     if (!to || !from || !text) {
       return new Response(
         JSON.stringify({
@@ -84,7 +81,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Credenciais via Application ID e Private Key
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
@@ -100,8 +96,7 @@ serve(async (req: Request) => {
         }
       );
     }
-    
-    // Validate Application ID format (must be UUID) and Private Key format
+
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(applicationId);
     if (!isUuid) {
       console.error('Invalid VONAGE_APPLICATION_ID format. Expected Application UUID.');
@@ -113,6 +108,7 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     if (privateKey.includes('BEGIN PUBLIC KEY')) {
       console.error('Provided key appears to be a PUBLIC key.');
       return new Response(
@@ -120,6 +116,7 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     if (privateKey.includes('BEGIN RSA PRIVATE KEY')) {
       console.error('Provided key appears to be PKCS#1 (RSA PRIVATE KEY).');
       return new Response(
@@ -130,7 +127,6 @@ serve(async (req: Request) => {
 
     console.log(`Making voice call from ${from} to ${to}`);
 
-    // Prepare Vonage Voice API request
     const vonagePayload = {
       to: [{ type: "phone", number: (to || '').replace(/[^0-9]/g, '') }],
       from: { type: "phone", number: (from || '').replace(/[^0-9]/g, '') },
@@ -143,7 +139,6 @@ serve(async (req: Request) => {
       }]
     };
 
-    // Gerar JWT e chamar a API (com fallback de host)
     let jwt: string;
     try {
       jwt = await generateJWT(applicationId, privateKey);
@@ -170,39 +165,38 @@ serve(async (req: Request) => {
     console.log('Vonage API response status:', response.status);
     console.log('Response Content-Type:', response.headers.get('content-type'));
 
-      if (response.status === 401 || response.status === 404 || response.status === 403) {
-        console.warn('Primary host returned', response.status, '- trying alternative hosts');
+    if (response.status === 401 || response.status === 404 || response.status === 403) {
+      console.warn('Primary host returned', response.status, '- trying alternative hosts');
 
-        const payloadBody = JSON.stringify(vonagePayload);
-        const commonHeaders = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'LovableVoice/1.0',
-          'Authorization': `Bearer ${jwt}`,
-        } as const;
+      const payloadBody = JSON.stringify(vonagePayload);
+      const commonHeaders = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'LovableVoice/1.0',
+        'Authorization': `Bearer ${jwt}`,
+      } as const;
 
-        const endpoints = [
-          'https://api.nexmo.com/v1/calls',
-          'https://api-us-1.vonage.com/v1/calls',
-          'https://api-eu-1.vonage.com/v1/calls',
-        ];
+      const endpoints = [
+        'https://api.nexmo.com/v1/calls',
+        'https://api-us-1.vonage.com/v1/calls',
+        'https://api-eu-1.vonage.com/v1/calls',
+      ];
 
-        for (const url of endpoints) {
-          console.warn('Trying endpoint:', url);
-          const tryResp = await fetch(url, {
-            method: 'POST',
-            headers: commonHeaders,
-            body: payloadBody,
-          });
-          const ct = tryResp.headers.get('content-type') || '';
-          if (tryResp.ok || ct.includes('application/json')) {
-            response = tryResp;
-            break;
-          }
+      for (const url of endpoints) {
+        console.warn('Trying endpoint:', url);
+        const tryResp = await fetch(url, {
+          method: 'POST',
+          headers: commonHeaders,
+          body: payloadBody,
+        });
+        const ct = tryResp.headers.get('content-type') || '';
+        if (tryResp.ok || ct.includes('application/json')) {
+          response = tryResp;
+          break;
         }
       }
+    }
 
-    // Verificar se a resposta é realmente JSON
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       const textResponse = await response.text();

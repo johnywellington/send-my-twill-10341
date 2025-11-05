@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -15,28 +16,21 @@ interface IVRRequest {
   ncco: any[];
 }
 
-// Função para gerar JWT para autenticação Vonage usando djwt
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
   try {
-    // Garantir que a private key está no formato correto
     let formattedKey = privateKey.trim();
     
-    // Se não tiver os headers, adicionar
     if (!formattedKey.includes('BEGIN PRIVATE KEY')) {
       formattedKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`;
     }
     
-    // Importar a chave privada usando Web Crypto API
-    // Remover headers e quebras de linha
     const pemContents = formattedKey
       .replace('-----BEGIN PRIVATE KEY-----', '')
       .replace('-----END PRIVATE KEY-----', '')
       .replace(/\s/g, '');
     
-    // Decodificar base64
     const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
     
-    // Importar como CryptoKey
     const cryptoKey = await crypto.subtle.importKey(
       'pkcs8',
       binaryDer,
@@ -48,12 +42,11 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       ['sign']
     );
     
-    // Criar payload (Vonage Voice JWT)
     const payload = {
       application_id: applicationId,
-      iat: getNumericDate(0), // now
+      iat: getNumericDate(0),
       nbf: getNumericDate(0),
-      exp: getNumericDate(60 * 10), // 10 minutos
+      exp: getNumericDate(60 * 10),
       jti: crypto.randomUUID(),
       acl: {
         paths: {
@@ -64,7 +57,6 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       }
     } as const;
     
-    // Gerar JWT
     const jwt = await create(
       { alg: "RS256", typ: "JWT" },
       payload,
@@ -79,7 +71,6 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
 }
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -87,7 +78,6 @@ serve(async (req: Request) => {
   try {
     const { to, from, language = "pt-BR", style = 2, premium = false, template, ncco }: IVRRequest = await req.json();
 
-    // Validar campos obrigatórios
     if (!to || !from || !ncco || !Array.isArray(ncco) || ncco.length === 0) {
       console.error('Missing required fields:', { to, from, hasNCCO: !!ncco });
       return new Response(
@@ -96,7 +86,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Obter credenciais do Vonage
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
@@ -108,7 +97,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validate Application ID (UUID) and Private Key format
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(applicationId);
     if (!isUuid) {
       console.error('Invalid VONAGE_APPLICATION_ID format (expected Application UUID)');
@@ -117,6 +105,7 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     if (privateKey.includes('BEGIN PUBLIC KEY')) {
       console.error('Provided key appears to be a PUBLIC key.');
       return new Response(
@@ -124,6 +113,7 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     if (privateKey.includes('BEGIN RSA PRIVATE KEY')) {
       console.error('Provided key appears to be PKCS#1 (RSA PRIVATE KEY).');
       return new Response(
@@ -134,7 +124,6 @@ serve(async (req: Request) => {
 
     console.log(`Making IVR call from ${from} to ${to} with template: ${template}`);
 
-    // Processar NCCO para adicionar configurações de idioma, estilo e premium
     const processedNCCO = ncco.map(action => {
       if (action.action === 'talk') {
         return {
@@ -147,7 +136,6 @@ serve(async (req: Request) => {
       return action;
     });
 
-    // Adicionar eventUrl ao webhook se houver ações de input
     const projectRef = Deno.env.get('SUPABASE_URL')?.split('//')[1]?.split('.')[0];
     const nccoWithWebhook = processedNCCO.map(action => {
       if (action.action === 'input' && projectRef) {
@@ -161,7 +149,6 @@ serve(async (req: Request) => {
 
     console.log('Processed NCCO:', JSON.stringify(nccoWithWebhook, null, 2));
 
-    // Gerar JWT para autenticação
     let jwt: string;
     try {
       jwt = await generateJWT(applicationId, privateKey);
@@ -177,7 +164,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Fazer requisição para API do Vonage Voice (tenta domínio moderno)
     let vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
       method: 'POST',
       headers: {
@@ -193,7 +179,6 @@ serve(async (req: Request) => {
       })
     });
 
-    // Fallback para domínio legacy se necessário
     if (vonageResponse.status === 401 || vonageResponse.status === 404 || vonageResponse.status === 403) {
       console.warn('Primary host returned', vonageResponse.status, '- trying alternative hosts');
 

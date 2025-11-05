@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ivr_responses: {
+        Row: {
+          conversation_uuid: string
+          created_at: string
+          dtmf_digits: string | null
+          event_data: Json | null
+          id: string
+          phone_number: string
+          template_used: string | null
+          timed_out: boolean | null
+        }
+        Insert: {
+          conversation_uuid: string
+          created_at?: string
+          dtmf_digits?: string | null
+          event_data?: Json | null
+          id?: string
+          phone_number: string
+          template_used?: string | null
+          timed_out?: boolean | null
+        }
+        Update: {
+          conversation_uuid?: string
+          created_at?: string
+          dtmf_digits?: string | null
+          event_data?: Json | null
+          id?: string
+          phone_number?: string
+          template_used?: string | null
+          timed_out?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

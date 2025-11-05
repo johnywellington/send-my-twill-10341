@@ -52,7 +52,10 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
     // Criar payload
     const payload = {
       application_id: applicationId,
+      sub: applicationId,
+      iss: applicationId,
       iat: getNumericDate(0), // now
+      nbf: getNumericDate(0),
       exp: getNumericDate(60 * 15), // 15 minutos
       jti: crypto.randomUUID()
     };
@@ -146,25 +149,36 @@ serve(async (req: Request) => {
       );
     }
 
-    // Fazer requisição para API do Vonage Voice
-    const vonageResponse = await fetch('https://api.nexmo.com/v1/calls', {
+    // Fazer requisição para API do Vonage Voice (tenta domínio moderno)
+    let vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${jwt}`
       },
       body: JSON.stringify({
-        to: [{
-          type: 'phone',
-          number: to
-        }],
-        from: {
-          type: 'phone',
-          number: from
-        },
+        to: [{ type: 'phone', number: to }],
+        from: { type: 'phone', number: from },
         ncco: nccoWithWebhook
       })
     });
+
+    // Fallback para domínio legacy se necessário
+    if (vonageResponse.status === 401 || vonageResponse.status === 404) {
+      console.warn('Primary host returned', vonageResponse.status, '- trying legacy host api.nexmo.com');
+      vonageResponse = await fetch('https://api.nexmo.com/v1/calls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwt}`
+        },
+        body: JSON.stringify({
+          to: [{ type: 'phone', number: to }],
+          from: { type: 'phone', number: from },
+          ncco: nccoWithWebhook
+        })
+      });
+    }
 
     const responseData = await vonageResponse.json();
 

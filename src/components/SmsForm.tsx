@@ -25,12 +25,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const { data, error } = await supabase.functions.invoke('send-sms', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
-        },
         body: {
           to,
           from,

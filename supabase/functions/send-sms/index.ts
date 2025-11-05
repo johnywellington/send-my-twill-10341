@@ -21,38 +21,6 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log('=== SMS Send Request Started ===');
-    
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
-    
-    if (!authHeader) {
-      console.error('No authorization header provided');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Autenticação necessária' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Extract bearer token and validate user explicitly
-    const token = authHeader.replace('Bearer', '').trim();
-
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('User authentication failed:', userError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Autenticação inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    console.log('User authenticated:', user.id);
 
     const { to, from, body, provider = "twilio" }: SmsRequest = await req.json();
 

@@ -175,7 +175,7 @@ export function IVRMenuFormV2() {
           {/* Configuração Básica */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configuração Básica</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <PhoneInput
                 value={to}
                 onChange={setTo}
@@ -202,7 +202,7 @@ export function IVRMenuFormV2() {
               <PhoneForwarded className="w-4 h-4 text-accent" />
               Configuração de Transferência
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <PhoneInput
                 value={assistantNumber}
                 onChange={setAssistantNumber}
@@ -210,7 +210,6 @@ export function IVRMenuFormV2() {
                 placeholder="912345678"
                 defaultDdi="+351"
                 required
-                className="md:col-span-2"
               />
 
               <div className="space-y-2">

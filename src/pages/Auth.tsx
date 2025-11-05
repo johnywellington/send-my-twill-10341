@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Loader2 } from "lucide-react";
 
@@ -12,6 +13,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -35,6 +37,49 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  useEffect(() => {
+    // Limpar campos ao trocar entre Login e Signup
+    setEmail("");
+    setPassword("");
+  }, [isLogin]);
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!email || !password) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast({
+        title: "Erro ao fazer login",
+        description: error.message === "Invalid login credentials" 
+          ? "Email ou senha incorretos" 
+          : error.message,
+        variant: "destructive",
+      });
+    } else if (data.session) {
+      toast({
+        title: "Login realizado!",
+        description: "Bem-vindo de volta",
+      });
+    }
+
+    setLoading(false);
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +116,13 @@ const Auth = () => {
     });
 
     if (error) {
+      const friendlyMessage = error.message === "User already registered"
+        ? "Este email já está cadastrado. Use a aba 'Entrar' para fazer login."
+        : error.message;
+      
       toast({
         title: "Erro ao criar conta",
-        description: error.message,
+        description: friendlyMessage,
         variant: "destructive",
       });
     } else if (data.session) {
@@ -112,15 +161,25 @@ const Auth = () => {
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Criar Conta</CardTitle>
-            <CardDescription>Registre-se para começar a enviar SMS</CardDescription>
+            <Tabs value={isLogin ? "login" : "signup"} onValueChange={(value) => setIsLogin(value === "login")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Entrar</TabsTrigger>
+                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <CardTitle className="pt-4">{isLogin ? "Login" : "Criar Conta"}</CardTitle>
+            <CardDescription>
+              {isLogin 
+                ? "Entre com suas credenciais para acessar o sistema" 
+                : "Registre-se para começar a enviar SMS"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignUp} className="space-y-4">
+            <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="signup-email"
+                  id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
@@ -130,21 +189,21 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Senha</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Input
-                  id="signup-password"
+                  id="password"
                   type="password"
                   placeholder="••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   required
-                  minLength={6}
+                  minLength={isLogin ? undefined : 6}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar Conta
+                {isLogin ? "Entrar" : "Criar Conta"}
               </Button>
             </form>
           </CardContent>

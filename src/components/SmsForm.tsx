@@ -19,6 +19,10 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [message, setMessage] = useState("");
   const [provider, setProvider] = useState<"twilio" | "vonage">("twilio");
   const [loading, setLoading] = useState(false);
+  
+  const maxLength = 160;
+  const messageLength = message.length;
+  const isNearLimit = messageLength > maxLength * 0.8;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,30 +138,38 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-lg shadow-lg border-primary/20">
-      <CardHeader className="space-y-1 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-lg">
-        <CardTitle className="text-2xl font-bold">Enviar SMS</CardTitle>
-        <CardDescription className="text-primary-foreground/90">
+    <Card className="w-full max-w-lg glass-effect animate-slide-up shadow-[var(--shadow-elegant)] hover-lift">
+      <CardHeader className="space-y-2 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-xl pb-8 pt-6">
+        <CardTitle className="text-3xl font-bold tracking-tight">Enviar SMS</CardTitle>
+        <CardDescription className="text-primary-foreground/90 text-base">
           Envie mensagens SMS usando Twilio ou Vonage
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provedor SMS</Label>
+      <CardContent className="pt-8 px-6 pb-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2.5">
+            <Label htmlFor="provider" className="text-sm font-medium text-foreground">
+              Provedor SMS
+            </Label>
             <Select value={provider} onValueChange={(value: "twilio" | "vonage") => setProvider(value)}>
-              <SelectTrigger id="provider" className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]">
+              <SelectTrigger id="provider" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
                 <SelectValue placeholder="Selecione o provedor" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="twilio">Twilio</SelectItem>
-                <SelectItem value="vonage">Vonage</SelectItem>
+              <SelectContent className="bg-popover">
+                <SelectItem value="twilio" className="cursor-pointer">
+                  <span className="font-medium">Twilio</span>
+                </SelectItem>
+                <SelectItem value="vonage" className="cursor-pointer">
+                  <span className="font-medium">Vonage</span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="from">Número de Origem</Label>
+          <div className="space-y-2.5">
+            <Label htmlFor="from" className="text-sm font-medium text-foreground">
+              Número de Origem
+            </Label>
             <Input
               id="from"
               type="tel"
@@ -165,12 +177,14 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               required
-              className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
+              className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="to">Número de Destino</Label>
+          <div className="space-y-2.5">
+            <Label htmlFor="to" className="text-sm font-medium text-foreground">
+              Número de Destino
+            </Label>
             <Input
               id="to"
               type="tel"
@@ -178,36 +192,46 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               required
-              className="transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
+              className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="message">Mensagem</Label>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="message" className="text-sm font-medium text-foreground">
+                Mensagem
+              </Label>
+              <span className={`text-xs font-medium transition-colors ${
+                isNearLimit ? 'text-destructive' : 'text-muted-foreground'
+              }`}>
+                {messageLength}/{maxLength}
+              </span>
+            </div>
             <Textarea
               id="message"
               placeholder="Digite sua mensagem aqui..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
-              rows={4}
-              className="resize-none transition-all focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.1)]"
+              rows={5}
+              maxLength={maxLength}
+              className="resize-none transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300 shadow-[var(--shadow-glow)]"
+            className="w-full h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold mt-8"
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
                 Enviando...
               </>
             ) : (
               <>
-                <Send className="mr-2 h-4 w-4" />
+                <Send className="mr-2.5 h-5 w-5" />
                 Enviar SMS
               </>
             )}

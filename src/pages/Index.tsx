@@ -29,34 +29,34 @@ const Index = () => {
   const Icon = icons[activeTab];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="w-full max-w-4xl space-y-8 animate-slide-up">
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)] mb-4">
-            <Icon className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-elegant)] mb-6 hover-lift">
+            <Icon className="w-10 h-10" />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent tracking-tight">
             {titles[activeTab]}
           </h1>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
             {descriptions[activeTab]}
           </p>
         </div>
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full max-w-lg">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="sms" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-3 mb-8 h-12 p-1.5 glass-effect">
+              <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />
-                SMS
+                <span className="hidden sm:inline">SMS</span>
               </TabsTrigger>
-              <TabsTrigger value="voice" className="flex items-center gap-2">
+              <TabsTrigger value="voice" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Phone className="w-4 h-4" />
-                Voice Call
+                <span className="hidden sm:inline">Voice</span>
               </TabsTrigger>
-              <TabsTrigger value="ivr" className="flex items-center gap-2">
+              <TabsTrigger value="ivr" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Menu className="w-4 h-4" />
-                IVR Menu
+                <span className="hidden sm:inline">IVR</span>
               </TabsTrigger>
             </TabsList>
             

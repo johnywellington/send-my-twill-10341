@@ -168,17 +168,20 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
 
           <div className="space-y-2.5">
             <Label htmlFor="from" className="text-sm font-medium text-foreground">
-              Número de Origem
+              Número de Origem / Sender ID
             </Label>
             <Input
               id="from"
-              type="tel"
-              placeholder="+1234567890"
+              type="text"
+              placeholder="Ex: MinhaLoja ou +351911019860"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               required
               className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
+            <p className="text-xs text-muted-foreground">
+              Use um nome (3-11 caracteres) ou número no formato +351911019860
+            </p>
           </div>
 
           <div className="space-y-2.5">

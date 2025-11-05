@@ -65,17 +65,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validar formato de telefone (E.164: +[país][número])
+    // Validar formato de telefone de destino (E.164: +[país][número])
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    
+    // Validar Sender ID alfanumérico (3-11 caracteres, apenas letras e números)
+    const senderIdRegex = /^[A-Za-z0-9]{3,11}$/;
+    
+    // Função para validar "from" (aceita número E.164 OU Sender ID alfanumérico)
+    const isValidFrom = (from: string): boolean => {
+      const cleanFrom = from.replace(/\s/g, '');
+      return phoneRegex.test(cleanFrom) || senderIdRegex.test(cleanFrom);
+    };
+
+    // Validar "to" (destino sempre deve ser número E.164)
     if (!phoneRegex.test(to.replace(/\s/g, ''))) {
       return new Response(
         JSON.stringify({ success: false, error: 'Formato de número de destino inválido. Use formato internacional: +5511999999999' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
-    if (!phoneRegex.test(from.replace(/\s/g, ''))) {
+    
+    // Validar "from" (aceita número E.164 OU Sender ID alfanumérico)
+    if (!isValidFrom(from)) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Formato de número de origem inválido. Use formato internacional: +1234567890' }),
+        JSON.stringify({ success: false, error: 'Formato de origem inválido. Use um Sender ID (3-11 caracteres alfanuméricos) ou número internacional (+351911019860)' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }

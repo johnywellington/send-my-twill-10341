@@ -57,7 +57,9 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       jti: crypto.randomUUID(),
       acl: {
         paths: {
-          "/v1/calls/**": {}
+          "/v1/calls/**": {},
+          "/v1/applications/**": {},
+          "/v2/applications/**": {}
         }
       }
     } as const;
@@ -103,6 +105,30 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: 'Vonage credentials not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate Application ID (UUID) and Private Key format
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(applicationId);
+    if (!isUuid) {
+      console.error('Invalid VONAGE_APPLICATION_ID format (expected Application UUID)');
+      return new Response(
+        JSON.stringify({ error: 'Invalid VONAGE_APPLICATION_ID. Use the Application UUID (not API key or name).' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (privateKey.includes('BEGIN PUBLIC KEY')) {
+      console.error('Provided key appears to be a PUBLIC key.');
+      return new Response(
+        JSON.stringify({ error: 'Provided key is PUBLIC. Export the application PRIVATE key (PKCS#8).' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (privateKey.includes('BEGIN RSA PRIVATE KEY')) {
+      console.error('Provided key appears to be PKCS#1 (RSA PRIVATE KEY).');
+      return new Response(
+        JSON.stringify({ error: 'Private key is PKCS#1. Export PKCS#8 format (BEGIN PRIVATE KEY).' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

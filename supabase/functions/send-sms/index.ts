@@ -39,8 +39,9 @@ const handler = async (req: Request): Promise<Response> => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verificar se o usuário está autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Verificar se o usuário está autenticado (usar token explícito para evitar AuthSessionMissingError)
+    const jwt = authHeader.replace('Bearer', '').trim();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     if (authError || !user) {
       console.error('Authentication failed:', authError);
       return new Response(

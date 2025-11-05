@@ -48,11 +48,9 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       ['sign']
     );
     
-    // Criar payload
+    // Criar payload (Vonage Voice JWT)
     const payload = {
       application_id: applicationId,
-      sub: applicationId,
-      iss: applicationId,
       iat: getNumericDate(0), // now
       nbf: getNumericDate(0),
       exp: getNumericDate(60 * 10), // 10 minutos
@@ -163,8 +161,8 @@ serve(async (req: Request) => {
         'Authorization': `Bearer ${jwt}`
       },
       body: JSON.stringify({
-        to: [{ type: 'phone', number: to }],
-        from: { type: 'phone', number: from },
+        to: [{ type: 'phone', number: (to || '').replace(/[^0-9]/g, '') }],
+        from: { type: 'phone', number: (from || '').replace(/[^0-9]/g, '') },
         ncco: nccoWithWebhook
       })
     });
@@ -174,8 +172,8 @@ serve(async (req: Request) => {
       console.warn('Primary host returned', vonageResponse.status, '- trying alternative hosts');
 
       const payloadBody = JSON.stringify({
-        to: [{ type: 'phone', number: to }],
-        from: { type: 'phone', number: from },
+        to: [{ type: 'phone', number: (to || '').replace(/[^0-9]/g, '') }],
+        from: { type: 'phone', number: (from || '').replace(/[^0-9]/g, '') },
         ncco: nccoWithWebhook
       });
 

@@ -42,7 +42,7 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       application_id: applicationId,
       iat: getNumericDate(0),
       nbf: getNumericDate(0),
-      exp: getNumericDate(60 * 5),
+      exp: getNumericDate(60 * 10),
       jti: crypto.randomUUID(),
       acl: {
         paths: {
@@ -103,8 +103,8 @@ serve(async (req: Request) => {
 
     // Prepare Vonage Voice API request
     const vonagePayload = {
-      to: [{ type: "phone", number: to }],
-      from: { type: "phone", number: from },
+      to: [{ type: "phone", number: (to || '').replace(/[^0-9]/g, '') }],
+      from: { type: "phone", number: (from || '').replace(/[^0-9]/g, '') },
       ncco: [{
         action: "talk",
         text: text,

@@ -143,7 +143,7 @@ serve(async (req: Request) => {
     console.log('Vonage API response status:', response.status);
     console.log('Response Content-Type:', response.headers.get('content-type'));
 
-    if (response.status === 401 || response.status === 404) {
+    if (response.status === 401 || response.status === 404 || response.status === 403) {
       console.warn('Primary host returned', response.status, '- trying legacy host api.nexmo.com');
       response = await fetch('https://api.nexmo.com/v1/calls', {
         method: 'POST',

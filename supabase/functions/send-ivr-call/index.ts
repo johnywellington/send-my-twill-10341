@@ -170,7 +170,7 @@ serve(async (req: Request) => {
     });
 
     // Fallback para domínio legacy se necessário
-    if (vonageResponse.status === 401 || vonageResponse.status === 404) {
+    if (vonageResponse.status === 401 || vonageResponse.status === 404 || vonageResponse.status === 403) {
       console.warn('Primary host returned', vonageResponse.status, '- trying legacy host api.nexmo.com');
       vonageResponse = await fetch('https://api.nexmo.com/v1/calls', {
         method: 'POST',

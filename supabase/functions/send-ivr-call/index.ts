@@ -48,21 +48,19 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
       ['sign']
     );
     
-    // Criar payload
+    // Criar payload (Vonage Voice JWT - sem iss/sub)
     const payload = {
       application_id: applicationId,
-      sub: applicationId,
-      iss: applicationId,
       iat: getNumericDate(0), // now
       nbf: getNumericDate(0),
-      exp: getNumericDate(60 * 15), // 15 minutos
+      exp: getNumericDate(60 * 5), // 5 minutos
       jti: crypto.randomUUID(),
       acl: {
         paths: {
           "/v1/calls/**": {}
         }
       }
-    };
+    } as const;
     
     // Gerar JWT
     const jwt = await create(

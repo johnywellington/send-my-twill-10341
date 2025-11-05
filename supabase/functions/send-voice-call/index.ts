@@ -40,11 +40,9 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
 
     const payload = {
       application_id: applicationId,
-      sub: applicationId,
-      iss: applicationId,
       iat: getNumericDate(0),
       nbf: getNumericDate(0),
-      exp: getNumericDate(60 * 15),
+      exp: getNumericDate(60 * 5),
       jti: crypto.randomUUID(),
       acl: {
         paths: {

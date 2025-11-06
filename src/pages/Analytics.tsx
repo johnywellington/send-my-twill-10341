@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BulkSendStats } from "@/components/analytics/BulkSendStats";
+import { ReceivedAnalytics } from "@/components/analytics/ReceivedAnalytics";
+import { Inbox } from "lucide-react";
 
 interface AnalyticsData {
   totalSent: number;
@@ -31,7 +33,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [dateRange, setDateRange] = useState<"7" | "30" | "90">("7");
-  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ivr" | "bulk">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ivr" | "bulk" | "received">("overview");
   const [bulkSendLogs, setBulkSendLogs] = useState<any[]>([]);
 
   useEffect(() => {
@@ -261,19 +263,27 @@ export default function Analytics() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="voice">Voice</TabsTrigger>
             <TabsTrigger value="ivr">IVR</TabsTrigger>
             <TabsTrigger value="bulk">Envio em Massa</TabsTrigger>
+            <TabsTrigger value="received">
+              <Inbox className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Recebimento</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bulk" className="space-y-6 mt-6">
             <BulkSendStats logs={bulkSendLogs} />
           </TabsContent>
 
-          {activeTab !== 'bulk' && (
+          <TabsContent value="received" className="space-y-6 mt-6">
+            <ReceivedAnalytics dateRange={parseInt(dateRange)} />
+          </TabsContent>
+
+          {activeTab !== 'bulk' && activeTab !== 'received' && (
             <TabsContent value={activeTab} className="space-y-6 mt-6">
             {/* Empty State */}
             {analytics.totalSent === 0 && (

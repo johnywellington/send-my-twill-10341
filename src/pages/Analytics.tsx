@@ -51,6 +51,7 @@ export default function Analytics() {
       return;
     }
     setLoading(false);
+    fetchAnalytics();
   };
 
   const fetchAnalytics = async () => {
@@ -195,9 +196,20 @@ export default function Analytics() {
         statusDistribution,
         commonErrors
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching analytics:", error);
-      toast.error("Erro ao carregar analytics");
+      toast.error(`Erro ao carregar analytics: ${error.message || 'Erro desconhecido'}`);
+      setAnalytics({
+        totalSent: 0,
+        successRate: 0,
+        failureRate: 0,
+        avgDeliveryTime: 0,
+        totalCost: 0,
+        providerStats: [],
+        volumeByDate: [],
+        statusDistribution: [],
+        commonErrors: []
+      });
     } finally {
       setLoading(false);
     }
@@ -263,7 +275,22 @@ export default function Analytics() {
 
           {activeTab !== 'bulk' && (
             <TabsContent value={activeTab} className="space-y-6 mt-6">
+            {/* Empty State */}
+            {analytics.totalSent === 0 && (
+              <Card className="glass-effect">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <AlertCircle className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum dado ainda</h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-md">
+                    Envie algumas mensagens ou faça chamadas para ver suas métricas aqui.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Key Metrics */}
+            {analytics.totalSent > 0 && (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="glass-effect">
                 <CardHeader className="pb-3">
@@ -455,6 +482,8 @@ export default function Analytics() {
                   </Table>
                 </CardContent>
               </Card>
+            )}
+            </>
             )}
           </TabsContent>
           )}

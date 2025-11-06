@@ -10,6 +10,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Activity, DollarSign, Clock, Alert
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BulkSendStats } from "@/components/analytics/BulkSendStats";
 
 interface AnalyticsData {
   totalSent: number;
@@ -30,7 +31,8 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [dateRange, setDateRange] = useState<"7" | "30" | "90">("7");
-  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ivr">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ivr" | "bulk">("overview");
+  const [bulkSendLogs, setBulkSendLogs] = useState<any[]>([]);
 
   useEffect(() => {
     checkUser();
@@ -56,6 +58,15 @@ export default function Analytics() {
     try {
       const daysAgo = new Date();
       daysAgo.setDate(daysAgo.getDate() - parseInt(dateRange));
+
+      // Fetch bulk send logs
+      const { data: bulkLogs } = await supabase
+        .from("bulk_send_logs")
+        .select("*")
+        .gte("created_at", daysAgo.toISOString())
+        .order("created_at", { ascending: false });
+      
+      setBulkSendLogs(bulkLogs || []);
 
       // Fetch SMS logs
       const { data: smsLogs } = await supabase
@@ -238,14 +249,20 @@ export default function Analytics() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="voice">Voice</TabsTrigger>
             <TabsTrigger value="ivr">IVR</TabsTrigger>
+            <TabsTrigger value="bulk">Envio em Massa</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="space-y-6 mt-6">
+          <TabsContent value="bulk" className="space-y-6 mt-6">
+            <BulkSendStats logs={bulkSendLogs} />
+          </TabsContent>
+
+          {activeTab !== 'bulk' && (
+            <TabsContent value={activeTab} className="space-y-6 mt-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="glass-effect">
@@ -440,6 +457,7 @@ export default function Analytics() {
               </Card>
             )}
           </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

@@ -40,6 +40,7 @@ export async function sendBulkSMS(
   onProgress?: (current: number, total: number) => void
 ): Promise<SendResult[]> {
   const results: SendResult[] = [];
+  const startTime = Date.now();
   
   // Calcular delay baseado no throttle
   const throttle = config.throttlePercentage || 1.0;
@@ -79,6 +80,33 @@ export async function sendBulkSMS(
     }
   }
   
+  // Save bulk send log
+  const endTime = Date.now();
+  const totalDuration = Math.round((endTime - startTime) / 1000); // seconds
+  const successCount = results.filter(r => r.success).length;
+  const failCount = results.filter(r => !r.success).length;
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('bulk_send_logs').insert({
+        user_id: user.id,
+        type: 'sms',
+        provider: config.provider,
+        total_contacts: contacts.length,
+        successful_sends: successCount,
+        failed_sends: failCount,
+        throttle_percentage: throttle,
+        avg_delay_ms: Math.round(delay),
+        total_duration_seconds: totalDuration,
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date(endTime).toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error saving bulk send log:', error);
+  }
+  
   return results;
 }
 
@@ -88,6 +116,7 @@ export async function sendBulkVoice(
   onProgress?: (current: number, total: number) => void
 ): Promise<SendResult[]> {
   const results: SendResult[] = [];
+  const startTime = Date.now();
   
   // Calcular delay baseado no throttle (Vonage Voice: 3 CPS padrão)
   const throttle = config.throttlePercentage || 1.0;
@@ -127,6 +156,33 @@ export async function sendBulkVoice(
     if (i < contacts.length - 1) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
+  }
+  
+  // Save bulk send log
+  const endTime = Date.now();
+  const totalDuration = Math.round((endTime - startTime) / 1000); // seconds
+  const successCount = results.filter(r => r.success).length;
+  const failCount = results.filter(r => !r.success).length;
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('bulk_send_logs').insert({
+        user_id: user.id,
+        type: 'voice',
+        provider: 'vonage',
+        total_contacts: contacts.length,
+        successful_sends: successCount,
+        failed_sends: failCount,
+        throttle_percentage: throttle,
+        avg_delay_ms: Math.round(delay),
+        total_duration_seconds: totalDuration,
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date(endTime).toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Error saving bulk send log:', error);
   }
   
   return results;

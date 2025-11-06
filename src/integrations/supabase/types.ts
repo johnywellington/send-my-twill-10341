@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      bulk_send_logs: {
+        Row: {
+          avg_delay_ms: number
+          completed_at: string
+          created_at: string
+          failed_sends: number
+          id: string
+          provider: string
+          started_at: string
+          successful_sends: number
+          throttle_percentage: number
+          total_contacts: number
+          total_duration_seconds: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          avg_delay_ms: number
+          completed_at?: string
+          created_at?: string
+          failed_sends?: number
+          id?: string
+          provider: string
+          started_at?: string
+          successful_sends?: number
+          throttle_percentage?: number
+          total_contacts: number
+          total_duration_seconds: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          avg_delay_ms?: number
+          completed_at?: string
+          created_at?: string
+          failed_sends?: number
+          id?: string
+          provider?: string
+          started_at?: string
+          successful_sends?: number
+          throttle_percentage?: number
+          total_contacts?: number
+          total_duration_seconds?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contact_group_members: {
         Row: {
           added_at: string

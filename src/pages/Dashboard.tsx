@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LogOut, MessageSquare, Phone, List, Calendar, Search, Filter } from "lucide-react";
+import { LogOut, MessageSquare, Phone, List, Calendar, Search, Filter, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -446,6 +446,10 @@ const Dashboard = () => {
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => navigate("/")}>
               Voltar
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/analytics")}>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
             </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />

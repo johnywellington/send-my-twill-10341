@@ -9,6 +9,25 @@ export interface VoiceOption {
   sampleText: string;
 }
 
+// Mapeamento de vozes customizadas para parâmetros Vonage válidos
+export interface VonageVoiceParams {
+  language: string;
+  style: number;
+  premium: boolean;
+}
+
+export const VOICE_MAPPING: Record<string, VonageVoiceParams> = {
+  // Portuguese Brazil - Neural Voices
+  'Camila': { language: 'pt-BR', style: 0, premium: true },
+  'Vitória': { language: 'pt-BR', style: 1, premium: true },
+  'Ricardo': { language: 'pt-BR', style: 2, premium: true },
+  'Thiago': { language: 'pt-BR', style: 3, premium: true },
+  
+  // Portuguese Portugal - Neural Voices
+  'Inês': { language: 'pt-PT', style: 0, premium: true },
+  'Cristiano': { language: 'pt-PT', style: 1, premium: true }
+};
+
 export const PORTUGUESE_VOICES: VoiceOption[] = [
   // Portuguese Brazil - Neural Voices
   {
@@ -87,4 +106,8 @@ export function getVoicesByLanguage(language: string): VoiceOption[] {
 
 export function isPortugueseLanguage(language: string): boolean {
   return language === 'pt-BR' || language === 'pt-PT';
+}
+
+export function getVonageParamsFromVoice(voiceName: string): VonageVoiceParams | null {
+  return VOICE_MAPPING[voiceName] || null;
 }

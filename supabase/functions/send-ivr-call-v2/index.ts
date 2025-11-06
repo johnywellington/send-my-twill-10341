@@ -122,6 +122,33 @@ serve(async (req: Request) => {
       ncco,
       voiceName
     }: IVRV2Request = await req.json();
+    
+    // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
+    let finalLanguage = language;
+    let finalStyle = style;
+    let finalPremium = premium;
+    
+    if (voiceName) {
+      // Mapeamento de vozes customizadas para parâmetros Vonage válidos
+      const voiceMapping: Record<string, { language: string; style: number; premium: boolean }> = {
+        'Camila': { language: 'pt-BR', style: 0, premium: true },
+        'Vitória': { language: 'pt-BR', style: 1, premium: true },
+        'Ricardo': { language: 'pt-BR', style: 2, premium: true },
+        'Thiago': { language: 'pt-BR', style: 3, premium: true },
+        'Inês': { language: 'pt-PT', style: 0, premium: true },
+        'Cristiano': { language: 'pt-PT', style: 1, premium: true }
+      };
+      
+      const voiceParams = voiceMapping[voiceName];
+      if (voiceParams) {
+        finalLanguage = voiceParams.language;
+        finalStyle = voiceParams.style;
+        finalPremium = voiceParams.premium;
+        console.log(`IVR: Mapped voice '${voiceName}' to language: ${finalLanguage}, style: ${finalStyle}, premium: ${finalPremium}`);
+      } else {
+        console.warn(`IVR: Unknown voice '${voiceName}', using default parameters`);
+      }
+    }
 
     console.log('IVR V2 Call Request:', { to, from, assistantNumber, transferTimeout, template });
 
@@ -151,17 +178,6 @@ serve(async (req: Request) => {
 
     console.log('✅ Validation passed - User:', user.id, 'Template:', template);
 
-    // Função auxiliar para detectar erro de voz inválida
-    const isInvalidVoiceError = (responseData: any): boolean => {
-      const errorStr = JSON.stringify(responseData).toLowerCase();
-      return (
-        errorStr.includes('invalid voice') ||
-        errorStr.includes('voicename') ||
-        errorStr.includes('voice not found') ||
-        responseData.type?.includes('voice')
-      );
-    };
-
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
@@ -173,19 +189,14 @@ serve(async (req: Request) => {
       );
     }
 
-    // Processar NCCO com configurações de linguagem, estilo e premium
+    // Processar NCCO com configurações de linguagem, estilo e premium (usar APENAS language + style)
     const processedNCCO = ncco.map(action => {
       if (action.action === 'talk') {
         return {
           ...action,
-          ...(voiceName ? 
-            { voiceName: action.voiceName || voiceName } : 
-            { 
-              language: action.language || language,
-              style: action.style !== undefined ? action.style : style
-            }
-          ),
-          premium: action.premium !== undefined ? action.premium : premium
+          language: action.language || finalLanguage,
+          style: action.style !== undefined ? action.style : finalStyle,
+          premium: action.premium !== undefined ? action.premium : finalPremium
         };
       }
       return action;
@@ -292,70 +303,6 @@ serve(async (req: Request) => {
 
     let responseData = await vonageResponse.json();
 
-    // Sistema de fallback automático
-    let usedFallback = false;
-    let originalVoice: string | null = null;
-
-    if (!vonageResponse.ok && voiceName && isInvalidVoiceError(responseData)) {
-      console.warn(`⚠️ Voice '${voiceName}' failed in IVR, retrying with fallback...`);
-      originalVoice = voiceName;
-      
-      // Reprocessar NCCO com fallback
-      const fallbackNCCO = ncco.map(action => {
-        if (action.action === 'talk') {
-          return {
-            ...action,
-            language: action.language || language,
-            style: action.style !== undefined ? action.style : style,
-            premium: action.premium !== undefined ? action.premium : premium
-          };
-        }
-        return action;
-      });
-
-      // Reinjetar webhook
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const fallbackNCCOWithWebhook = fallbackNCCO.map(action => {
-        if (action.action === 'input' && supabaseUrl) {
-          const webhookUrl = new URL(`${supabaseUrl}/functions/v1/ivr-webhook-v2`);
-          webhookUrl.searchParams.set('assistant_number', assistantNumber);
-          webhookUrl.searchParams.set('transfer_timeout', transferTimeout.toString());
-          webhookUrl.searchParams.set('from_number', from);
-          
-          return {
-            ...action,
-            eventUrl: [webhookUrl.toString()],
-            eventMethod: 'POST'
-          };
-        }
-        return action;
-      });
-
-      const fallbackPayload = {
-        to: [{ type: 'phone', number: to.replace(/[^0-9]/g, '') }],
-        from: { type: 'phone', number: from.replace(/[^0-9]/g, '') },
-        ncco: fallbackNCCOWithWebhook
-      };
-
-      vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'LovableVoice-IVR-V2/1.0',
-          'Authorization': `Bearer ${jwt}`
-        },
-        body: JSON.stringify(fallbackPayload)
-      });
-
-      responseData = await vonageResponse.json();
-      usedFallback = vonageResponse.ok;
-
-      if (usedFallback) {
-        console.log(`✅ IVR Fallback successful: used ${language}+style:${style}`);
-      }
-    }
-
     if (!vonageResponse.ok) {
       console.error('Vonage API error (V2):', responseData);
       return new Response(
@@ -377,12 +324,10 @@ serve(async (req: Request) => {
         from_number: from,
         template_used: template,
         ncco: nccoWithWebhook,
-        language: language,
-        style: style,
-        premium: premium,
-        voice_name: voiceName,
-        used_fallback: usedFallback,
-        original_voice: originalVoice,
+        language: finalLanguage,
+        style: finalStyle,
+        premium: finalPremium,
+        voice_label: voiceName || null,
         status: 'initiated',
         call_uuid: responseData.uuid,
         conversation_uuid: responseData.conversation_uuid

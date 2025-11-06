@@ -99,6 +99,33 @@ serve(async (req: Request) => {
 
     const userId = user.id;
     const { to, from, text, language = "en-US", style = 0, premium = false, voiceName }: VoiceCallRequest = await req.json();
+    
+    // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
+    let finalLanguage = language;
+    let finalStyle = style;
+    let finalPremium = premium;
+    
+    if (voiceName) {
+      // Mapeamento de vozes customizadas para parâmetros Vonage válidos
+      const voiceMapping: Record<string, { language: string; style: number; premium: boolean }> = {
+        'Camila': { language: 'pt-BR', style: 0, premium: true },
+        'Vitória': { language: 'pt-BR', style: 1, premium: true },
+        'Ricardo': { language: 'pt-BR', style: 2, premium: true },
+        'Thiago': { language: 'pt-BR', style: 3, premium: true },
+        'Inês': { language: 'pt-PT', style: 0, premium: true },
+        'Cristiano': { language: 'pt-PT', style: 1, premium: true }
+      };
+      
+      const voiceParams = voiceMapping[voiceName];
+      if (voiceParams) {
+        finalLanguage = voiceParams.language;
+        finalStyle = voiceParams.style;
+        finalPremium = voiceParams.premium;
+        console.log(`Mapped voice '${voiceName}' to language: ${finalLanguage}, style: ${finalStyle}, premium: ${finalPremium}`);
+      } else {
+        console.warn(`Unknown voice '${voiceName}', using default parameters`);
+      }
+    }
 
     if (!to || !from || !text) {
       return new Response(
@@ -157,38 +184,23 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Making voice call from ${from} to ${to}`);
+    console.log(`Making voice call from ${from} to ${to} with language: ${finalLanguage}, style: ${finalStyle}, premium: ${finalPremium}`);
 
     const eventUrl = `${supabaseUrl}/functions/v1/vonage-voice-webhook`;
 
-    // Função auxiliar para detectar erro de voz inválida
-    const isInvalidVoiceError = (responseData: any): boolean => {
-      const errorStr = JSON.stringify(responseData).toLowerCase();
-      return (
-        errorStr.includes('invalid voice') ||
-        errorStr.includes('voicename') ||
-        errorStr.includes('voice not found') ||
-        responseData.type?.includes('voice')
-      );
-    };
-
-    // Função para criar payload Vonage (reutilizável)
-    const createVonagePayload = (useFallback = false) => ({
+    // Criar payload Vonage usando APENAS language + style
+    const vonagePayload = {
       to: [{ type: "phone", number: (to || '').replace(/[^0-9]/g, '') }],
       from: { type: "phone", number: (from || '').replace(/[^0-9]/g, '') },
       event_url: [eventUrl],
       ncco: [{
         action: "talk",
         text: text,
-        ...(useFallback || !voiceName 
-          ? { language: language || 'pt-PT', style: style ?? 0 } 
-          : { voiceName: voiceName }
-        ),
-        premium: premium ?? false
+        language: finalLanguage,
+        style: finalStyle,
+        premium: finalPremium
       }]
-    });
-
-    let vonagePayload = createVonagePayload();
+    };
 
     let jwt: string;
     try {
@@ -264,36 +276,6 @@ serve(async (req: Request) => {
 
     let responseData = await response.json();
 
-    // Sistema de fallback automático
-    let usedFallback = false;
-    let originalVoice: string | null = null;
-
-    if (!response.ok && voiceName && isInvalidVoiceError(responseData)) {
-      console.warn(`⚠️ Voice '${voiceName}' failed, retrying with fallback (language+style)...`);
-      originalVoice = voiceName;
-      
-      // RETRY com fallback para language+style
-      vonagePayload = createVonagePayload(true);
-      
-      response = await fetch('https://api.vonage.com/v1/calls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'LovableVoice/1.0',
-          'Authorization': `Bearer ${jwt}`,
-        },
-        body: JSON.stringify(vonagePayload),
-      });
-      
-      responseData = await response.json();
-      usedFallback = response.ok;
-      
-      if (usedFallback) {
-        console.log(`✅ Fallback successful: used ${language}+style:${style} instead of ${voiceName}`);
-      }
-    }
-
     if (!response.ok) {
       console.error('Vonage API error:', responseData);
       return new Response(
@@ -319,12 +301,10 @@ serve(async (req: Request) => {
         to_number: to,
         from_number: from,
         message: text,
-        language: language,
-        style: style,
-        premium: premium,
-        voice_name: voiceName,
-        used_fallback: usedFallback,
-        original_voice: originalVoice,
+        language: finalLanguage,
+        style: finalStyle,
+        premium: finalPremium,
+        voice_label: voiceName || null,
         status: 'initiated',
         call_uuid: responseData.uuid
       };
@@ -342,9 +322,7 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         uuid: responseData.uuid,
-        status: responseData.status,
-        usedFallback: usedFallback,
-        originalVoice: originalVoice
+        status: responseData.status
       }),
       {
         status: 200,

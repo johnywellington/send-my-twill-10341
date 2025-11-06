@@ -130,6 +130,7 @@ export async function sendBulkVoice(
     const personalizedMessage = replaceVariables(config.message, contact);
     
     try {
+      // Se voiceName foi fornecido, o backend irá mapear automaticamente
       const { data, error } = await supabase.functions.invoke('send-voice-call', {
         body: {
           to: contact.phone_number,
@@ -138,7 +139,7 @@ export async function sendBulkVoice(
           language: config.language,
           style: config.style,
           premium: config.premium,
-          voiceName: config.voiceName
+          voiceName: config.voiceName // Backend fará o mapeamento
         }
       });
       

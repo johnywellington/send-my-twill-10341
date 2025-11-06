@@ -1,9 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Zap, Clock, Activity, CheckCircle, XCircle, Shield } from "lucide-react";
+import { TrendingUp, Zap, Clock, Activity, CheckCircle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface BulkSendLog {
   id: string;
@@ -23,24 +21,6 @@ interface BulkSendStatsProps {
 }
 
 export function BulkSendStats({ logs }: BulkSendStatsProps) {
-  const [fallbackStats, setFallbackStats] = useState<any[]>([]);
-  
-  useEffect(() => {
-    const fetchFallbackStats = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('voice_logs')
-        .select('used_fallback, original_voice')
-        .eq('user_id', user.id)
-        .eq('used_fallback', true);
-
-      setFallbackStats(data || []);
-    };
-
-    fetchFallbackStats();
-  }, []);
 
   // Calculate aggregate metrics
   const totalSends = logs.length;
@@ -166,48 +146,6 @@ export function BulkSendStats({ logs }: BulkSendStatsProps) {
         </Card>
       </div>
 
-      {/* Fallback Analytics Card */}
-      {fallbackStats.length > 0 && (
-        <Card className="glass-effect">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Shield className="w-4 h-4 text-amber-500" />
-              Fallback de Vozes
-            </CardTitle>
-            <CardDescription>Chamadas que usaram voz alternativa automaticamente</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{fallbackStats.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {totalContacts > 0 
-                ? `${(Number(fallbackStats.length) / Number(totalContacts) * 100).toFixed(1)}% das chamadas`
-                : 'Nenhuma chamada ainda'
-              }
-            </p>
-            
-            {fallbackStats.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <p className="text-xs font-medium">Vozes que mais falharam:</p>
-                {Object.entries(
-                  fallbackStats.reduce((acc: Record<string, number>, item: any) => {
-                    const voice = item.original_voice || 'Desconhecida';
-                    acc[voice] = (acc[voice] || 0) + 1;
-                    return acc;
-                  }, {})
-                )
-                .sort((a, b) => Number(b[1]) - Number(a[1]))
-                .slice(0, 3)
-                .map(([voice, count]: [string, unknown]) => (
-                  <div key={voice} className="flex justify-between text-xs">
-                    <span>{voice}</span>
-                    <Badge variant="outline">{String(count)}x</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

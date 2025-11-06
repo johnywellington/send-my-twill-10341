@@ -11,6 +11,7 @@ interface SmsRequest {
   from: string;
   body: string;
   provider?: "twilio" | "vonage";
+  dryRun?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -52,9 +53,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Authenticated user:', user.id);
 
-    const { to, from, body, provider = "twilio" }: SmsRequest = await req.json();
+    const { to, from, body, provider = "twilio", dryRun = false }: SmsRequest = await req.json();
 
-    console.log('SMS details:', { to, from, bodyLength: body.length, provider });
+    console.log('SMS details:', { to, from, bodyLength: body.length, provider, dryRun });
 
     // ✅ VALIDAÇÃO DE INPUTS
     if (!to || !from || !body) {
@@ -112,6 +113,41 @@ const handler = async (req: Request): Promise<Response> => {
     
     const userId = user.id;
     let response;
+    
+    // 🧪 MODO DRY-RUN: Simular envio sem chamar API
+    if (dryRun) {
+      console.log('🧪 DRY-RUN MODE: Skipping actual SMS send');
+      
+      // Simular latência (50-200ms)
+      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 150));
+      
+      const mockMessageId = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Log dry-run SMS
+      if (userId) {
+        await supabase.from('sms_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          message: body,
+          provider: provider,
+          status: 'dry-run',
+          external_id: mockMessageId
+        });
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          messageSid: mockMessageId,
+          status: 'dry-run',
+          provider: provider,
+          dryRun: true,
+          message: 'Teste realizado sem envio real'
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
     
     if (provider === "vonage") {
       // Get Vonage credentials from environment

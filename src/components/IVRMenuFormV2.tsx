@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Info, PhoneForwarded } from "lucide-react";
+import { Loader2, Info, PhoneForwarded, Beaker } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
@@ -56,6 +57,7 @@ export function IVRMenuFormV2() {
   const [customNCCO, setCustomNCCO] = useState("");
   const [editedNCCO, setEditedNCCO] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +119,8 @@ export function IVRMenuFormV2() {
           premium,
           template,
           ncco: nccoToSend,
-          voiceName: voiceName || undefined
+          voiceName: voiceName || undefined,
+          dryRun
         }
       });
 
@@ -364,6 +367,20 @@ export function IVRMenuFormV2() {
                 </Label>
               </div>
             </div>
+          </div>
+
+          {/* Modo Teste */}
+          <div className="flex items-center space-x-2 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+            <Beaker className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1">
+              <Label htmlFor="dryRun" className="font-medium cursor-pointer">Modo Teste</Label>
+              <p className="text-xs text-muted-foreground">Teste sem fazer chamada IVR real</p>
+            </div>
+            <Switch
+              id="dryRun"
+              checked={dryRun}
+              onCheckedChange={setDryRun}
+            />
           </div>
 
         </form>

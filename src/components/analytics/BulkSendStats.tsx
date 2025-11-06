@@ -24,6 +24,8 @@ interface BulkSendStatsProps {
 }
 
 export function BulkSendStats({ logs }: BulkSendStatsProps) {
+  // Note: dry-run logs are not saved to bulk_send_logs table
+  // They are only logged individually to sms_logs/voice_logs/ivr_logs
 
   // Calculate aggregate metrics
   const totalSends = logs.length;

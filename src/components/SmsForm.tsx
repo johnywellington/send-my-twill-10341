@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Loader2, Save } from "lucide-react";
+import { Send, Loader2, Save, Beaker } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/hooks/use-templates";
@@ -23,6 +24,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [message, setMessage] = useState("");
   const [provider, setProvider] = useState<"twilio" | "vonage">("twilio");
   const [loading, setLoading] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
   
@@ -40,7 +42,8 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           to,
           from,
           body: message,
-          provider
+          provider,
+          dryRun
         }
       });
 
@@ -237,6 +240,19 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               rows={5}
               maxLength={maxLength}
               className="resize-none transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+            <Beaker className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1">
+              <Label htmlFor="dryRun" className="font-medium cursor-pointer">Modo Teste</Label>
+              <p className="text-xs text-muted-foreground">Teste sem enviar de verdade</p>
+            </div>
+            <Switch
+              id="dryRun"
+              checked={dryRun}
+              onCheckedChange={setDryRun}
             />
           </div>
 

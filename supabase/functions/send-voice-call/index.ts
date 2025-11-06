@@ -15,6 +15,7 @@ interface VoiceCallRequest {
   style?: number;
   premium?: boolean;
   voiceName?: string;
+  dryRun?: boolean;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -98,7 +99,7 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName }: VoiceCallRequest = await req.json();
+    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, dryRun = false }: VoiceCallRequest = await req.json();
     
     // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
     let finalLanguage = language;
@@ -184,7 +185,44 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Making voice call from ${from} to ${to} with language: ${finalLanguage}, style: ${finalStyle}, premium: ${finalPremium}`);
+    console.log(`Making voice call from ${from} to ${to} with language: ${finalLanguage}, style: ${finalStyle}, premium: ${finalPremium}, dryRun: ${dryRun}`);
+
+    // 🧪 MODO DRY-RUN: Simular chamada sem usar API
+    if (dryRun) {
+      console.log('🧪 DRY-RUN MODE: Skipping actual voice call');
+      
+      // Simular latência (100-300ms)
+      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+      
+      const mockUuid = `mock-uuid-${Date.now()}-${crypto.randomUUID()}`;
+      
+      // Log dry-run voice call
+      if (userId) {
+        await supabase.from('voice_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          message: text,
+          language: finalLanguage,
+          style: finalStyle,
+          premium: finalPremium,
+          voice_label: voiceName || null,
+          status: 'dry-run',
+          call_uuid: mockUuid
+        });
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          uuid: mockUuid,
+          status: 'dry-run',
+          dryRun: true,
+          message: 'Teste realizado sem chamada real'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const eventUrl = `${supabaseUrl}/functions/v1/vonage-voice-webhook`;
 

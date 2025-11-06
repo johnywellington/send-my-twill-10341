@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, Beaker } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useEdgeFunctionTest } from "@/hooks/use-edge-function-test";
 import { TestResult } from "@/pages/ApiTest";
 import { RequestViewer } from "./RequestViewer";
@@ -34,7 +35,7 @@ export const TestCard = ({
   fields,
   onTestComplete,
 }: TestCardProps) => {
-  const [params, setParams] = useState(defaultParams);
+  const [params, setParams] = useState({ ...defaultParams, dryRun: true });
   const { test, loading, result } = useEdgeFunctionTest(functionName);
 
   const handleChange = (name: string, value: any) => {
@@ -52,6 +53,25 @@ export const TestCard = ({
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Toggle Dry-Run */}
+        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Beaker className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div>
+              <Label className="font-medium text-blue-900 dark:text-blue-100">
+                Modo Teste (Dry-Run)
+              </Label>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Teste sem gastar créditos reais
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={params.dryRun}
+            onCheckedChange={(checked) => handleChange('dryRun', checked)}
+          />
+        </div>
+
         {/* Form Fields */}
         {fields.map((field) => (
           <div key={field.name} className="space-y-2">

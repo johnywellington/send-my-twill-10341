@@ -18,6 +18,7 @@ interface IVRV2Request {
   template: string;
   ncco: any[];
   voiceName?: string;
+  dryRun?: boolean;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -120,7 +121,8 @@ serve(async (req: Request) => {
       premium = false, 
       template, 
       ncco,
-      voiceName
+      voiceName,
+      dryRun = false
     }: IVRV2Request = await req.json();
     
     // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
@@ -222,6 +224,48 @@ serve(async (req: Request) => {
     });
 
     console.log('Processed NCCO V2:', JSON.stringify(nccoWithWebhook, null, 2));
+
+    // 🧪 MODO DRY-RUN: Simular IVR V2 sem usar API
+    if (dryRun) {
+      console.log('🧪 DRY-RUN MODE: Skipping actual IVR V2 call');
+      
+      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+      
+      const mockUuid = `mock-ivr-v2-${Date.now()}-${crypto.randomUUID()}`;
+      const mockConvUuid = `mock-conv-v2-${Date.now()}-${crypto.randomUUID()}`;
+      
+      // Log dry-run IVR V2 call
+      if (userId) {
+        await authSupabase.from('ivr_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          template_used: template,
+          ncco: nccoWithWebhook,
+          language: finalLanguage,
+          style: finalStyle,
+          premium: finalPremium,
+          voice_label: voiceName || null,
+          status: 'dry-run',
+          call_uuid: mockUuid,
+          conversation_uuid: mockConvUuid
+        });
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          uuid: mockUuid,
+          status: 'dry-run',
+          conversation_uuid: mockConvUuid,
+          version: 'v2',
+          assistant_number: assistantNumber,
+          dryRun: true,
+          message: 'Teste realizado sem chamada IVR V2 real'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Gerar JWT
     let jwt: string;

@@ -15,6 +15,7 @@ interface IVRRequest {
   premium?: boolean;
   template: string;
   ncco: any[];
+  dryRun?: boolean;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -107,7 +108,7 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, language = "pt-BR", style = 2, premium = false, template, ncco }: IVRRequest = await req.json();
+    const { to, from, language = "pt-BR", style = 2, premium = false, template, ncco, dryRun = false }: IVRRequest = await req.json();
 
     // ✅ VALIDAÇÃO DE INPUTS
     if (!to || !from || !ncco || !Array.isArray(ncco) || ncco.length === 0) {
@@ -191,6 +192,45 @@ serve(async (req: Request) => {
     });
 
     console.log('Processed NCCO:', JSON.stringify(nccoWithWebhook, null, 2));
+
+    // 🧪 MODO DRY-RUN: Simular IVR sem usar API
+    if (dryRun) {
+      console.log('🧪 DRY-RUN MODE: Skipping actual IVR call');
+      
+      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+      
+      const mockUuid = `mock-ivr-${Date.now()}-${crypto.randomUUID()}`;
+      const mockConvUuid = `mock-conv-${Date.now()}-${crypto.randomUUID()}`;
+      
+      // Log dry-run IVR call
+      if (userId) {
+        await supabase.from('ivr_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          template_used: template,
+          ncco: nccoWithWebhook,
+          language: language,
+          style: style,
+          premium: premium,
+          status: 'dry-run',
+          call_uuid: mockUuid,
+          conversation_uuid: mockConvUuid
+        });
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          uuid: mockUuid,
+          status: 'dry-run',
+          conversation_uuid: mockConvUuid,
+          dryRun: true,
+          message: 'Teste realizado sem chamada IVR real'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let jwt: string;
     try {

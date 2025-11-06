@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Beaker } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/hooks/use-templates";
@@ -28,6 +29,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [voiceName, setVoiceName] = useState("");
   const [premium, setPremium] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
   
@@ -55,7 +57,8 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           language,
           style: parseInt(style),
           premium,
-          voiceName: voiceName || undefined
+          voiceName: voiceName || undefined,
+          dryRun
         }
       });
 
@@ -232,6 +235,19 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               <p className="text-xs text-muted-foreground">
                 💡 <strong>Dica:</strong> Textos mais longos levam mais tempo para serem falados. Limite máximo: 5000 caracteres.
               </p>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+              <Beaker className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <div className="flex-1">
+                <Label htmlFor="dryRun" className="font-medium cursor-pointer">Modo Teste</Label>
+                <p className="text-xs text-muted-foreground">Teste sem fazer chamada real</p>
+              </div>
+              <Switch
+                id="dryRun"
+                checked={dryRun}
+                onCheckedChange={setDryRun}
+              />
             </div>
 
             <div className="flex gap-2">

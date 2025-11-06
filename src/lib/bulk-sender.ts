@@ -11,6 +11,7 @@ export interface SMSConfig {
   message: string;
   provider: 'twilio' | 'vonage';
   throttlePercentage?: number;
+  dryRun?: boolean;
 }
 
 export interface VoiceConfig {
@@ -21,6 +22,7 @@ export interface VoiceConfig {
   premium: boolean;
   throttlePercentage?: number;
   voiceName?: string;
+  dryRun?: boolean;
 }
 
 export interface SendResult {
@@ -58,7 +60,8 @@ export async function sendBulkSMS(
           to: contact.phone_number,
           from: config.from,
           body: personalizedMessage,
-          provider: config.provider
+          provider: config.provider,
+          dryRun: config.dryRun || false
         }
       });
       
@@ -145,7 +148,8 @@ export async function sendBulkVoice(
             language: config.language,
             style: config.style,
             premium: config.premium,
-            voiceName: config.voiceName
+            voiceName: config.voiceName,
+            dryRun: config.dryRun || false
           }
         });
         

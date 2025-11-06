@@ -191,22 +191,47 @@ const ApiTest = () => {
 
           <TabsContent value="ivr-v2" className="space-y-6">
             <TestCard
-              title="Testar IVR Avançado"
+              title="Testar IVR Avançado (com Transferência)"
               functionName="send-ivr-call-v2"
               defaultParams={{
                 to: "",
                 from: "",
+                assistantNumber: "",
+                transferTimeout: 30,
+                template: "bank-security-v2",
+                language: "pt-PT",
+                style: 2,
+                premium: false,
+                voiceName: "Inês",
                 ncco: [
                   {
                     action: "talk",
-                    text: "Bem-vindo ao sistema",
-                    voiceName: "Camila"
+                    text: "Está a falar com o serviço de segurança. Prima 1 para continuar ou 2 para falar com assistente.",
+                    language: "pt-PT",
+                    style: 2,
+                    bargeIn: true
+                  },
+                  {
+                    action: "input",
+                    type: ["dtmf"],
+                    dtmf: {
+                      maxDigits: 1,
+                      timeOut: 10,
+                      submitOnHash: false
+                    }
                   }
                 ]
               }}
               fields={[
-                { name: "to", label: "Para (To)", type: "text", placeholder: "+5511999999999" },
+                { name: "to", label: "Para (To)", type: "text", placeholder: "+351911019866" },
                 { name: "from", label: "De (From)", type: "text", placeholder: "+442033222305" },
+                { name: "assistantNumber", label: "Número do Assistente", type: "text", placeholder: "+351912345678" },
+                { name: "transferTimeout", label: "Timeout Transferência (s)", type: "number", placeholder: "30" },
+                { name: "template", label: "Template", type: "text", placeholder: "bank-security-v2" },
+                { name: "voiceName", label: "Voz", type: "text", placeholder: "Inês" },
+                { name: "language", label: "Idioma", type: "text", placeholder: "pt-PT" },
+                { name: "style", label: "Estilo", type: "number", placeholder: "2" },
+                { name: "premium", label: "Premium", type: "checkbox" },
                 { name: "ncco", label: "NCCO (JSON)", type: "json", placeholder: "[]" }
               ]}
               onTestComplete={handleTestComplete}

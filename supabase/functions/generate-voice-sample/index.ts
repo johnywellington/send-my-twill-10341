@@ -98,70 +98,39 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log('📡 Generating sample via Vonage API (OPÇÃO A)...');
+    console.log('⚠️ Sample não disponível no Storage');
 
-    // Gerar via Vonage API (OPÇÃO A)
-    const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID')!;
-    const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY')!;
-
-    const jwt = await generateJWT(vonageAppId, vonagePrivateKey);
-
-    const text = SAMPLE_TEXTS[voiceName] || 'Olá! Esta é uma demonstração de voz.';
+    // A geração automática de samples via Vonage API requer um fluxo complexo:
+    // 1. Fazer chamada telefônica
+    // 2. Gravar a chamada
+    // 3. Processar webhook assíncrono
+    // 4. Baixar gravação
+    // 
+    // Para preview de vozes, recomenda-se:
+    // - Upload manual de samples para o bucket 'voice-samples'
+    // - Ou integrar com API de TTS síncrona (Google TTS, AWS Polly, ElevenLabs)
     
-    // Criar chamada curta apenas para gerar áudio
-    const vonagePayload = {
-      to: [{ type: "websocket", uri: "wss://example.com/socket" }],
-      from: { type: "phone", number: "447418342134" },
-      ncco: [{
-        action: "talk",
-        text: text,
-        voiceName: voiceName,
-        premium: premium
-      }, {
-        action: "record",
-        format: "mp3",
-        endOnSilence: 1,
-        channels: 1,
-        split: "conversation"
-      }]
-    };
-
-    const vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${jwt}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(vonagePayload),
-    });
-
-    if (!vonageResponse.ok) {
-      const errorData = await vonageResponse.json();
-      console.error('Vonage API error:', errorData);
-      throw new Error(`Vonage API error: ${vonageResponse.status}`);
-    }
-
-    // Por enquanto, retornar um placeholder indicando que precisa ser implementado com TTS
-    // Na produção, você usaria uma API de TTS direta como Google TTS ou Amazon Polly
-    console.log('⚠️ Note: Full audio generation requires TTS API integration');
-
-    // Temporariamente, criar um placeholder de resposta
-    const placeholderUrl = `${supabaseUrl}/storage/v1/object/public/voice-samples/${filePath}`;
-
     return new Response(
       JSON.stringify({ 
-        audioUrl: placeholderUrl,
-        source: 'generated',
-        cached: false,
-        note: 'Audio preview requires TTS API integration'
+        error: 'Sample não disponível',
+        message: `O sample de voz "${voiceName}" ainda não foi carregado. Faça upload de samples para o bucket 'voice-samples' no formato: samples/${fileName}`,
+        voiceName,
+        language,
+        expectedPath: filePath
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in generate-voice-sample:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: 'Falha ao processar solicitação de sample de voz'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

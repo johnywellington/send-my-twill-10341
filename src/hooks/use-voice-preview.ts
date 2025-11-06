@@ -156,6 +156,12 @@ export function useVoicePreview() {
         });
 
         if (error) throw error;
+        
+        // Se retornou erro 404 (sample não disponível), ignorar silenciosamente
+        if (data.error === 'Sample não disponível') {
+          console.log(`⏭️ ${voice.value} - sample não disponível, pulando`);
+          return { voice: voice.value, skipped: true };
+        }
 
         const audioUrl = data.audioUrl;
         
@@ -183,12 +189,20 @@ export function useVoicePreview() {
     const results = await Promise.allSettled(promises);
     
     let loadedCount = 0;
+    let skipped = 0;
     let errors = 0;
 
-    results.forEach((result, index) => {
+    results.forEach((result) => {
       if (result.status === 'fulfilled') {
-        loadedCount++;
-        setPreloadProgress({ loaded: loadedCount, total: voices.length });
+        const value = result.value as any;
+        if (value.skipped) {
+          skipped++;
+        } else if (!value.error) {
+          loadedCount++;
+        } else {
+          errors++;
+        }
+        setPreloadProgress({ loaded: loadedCount + skipped, total: voices.length });
       } else {
         errors++;
       }
@@ -196,14 +210,22 @@ export function useVoicePreview() {
 
     setIsPreloading(false);
 
-    if (errors === 0) {
+    if (errors === 0 && skipped === 0) {
       console.log(`✅ ${loadedCount}/${voices.length} samples pré-carregados com sucesso`);
+    } else if (skipped > 0) {
+      console.log(`ℹ️ ${loadedCount} carregados, ${skipped} não disponíveis ainda`);
+      toast({
+        title: 'Samples não disponíveis',
+        description: `${skipped} vozes ainda não têm samples. Os botões de preview não funcionarão para essas vozes.`,
+        variant: 'default',
+        duration: 4000
+      });
     } else {
       console.warn(`⚠️ ${loadedCount}/${voices.length} carregados (${errors} falhas)`);
       toast({
-        title: 'Pré-carregamento incompleto',
-        description: `${errors} samples falharam, mas você ainda pode usá-los normalmente`,
-        variant: 'default',
+        title: 'Erro ao carregar samples',
+        description: `${errors} samples falharam. Verifique sua conexão.`,
+        variant: 'destructive',
         duration: 3000
       });
     }

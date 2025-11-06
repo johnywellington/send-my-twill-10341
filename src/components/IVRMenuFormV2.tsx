@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Info, PhoneForwarded, Beaker, Plus, X } from "lucide-react";
+import { Loader2, Info, PhoneForwarded, Beaker, Plus, X, Upload } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CSVImportDialog } from "@/components/CSVImportDialog";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
@@ -58,6 +60,9 @@ export function IVRMenuFormV2() {
   const [customNCCO, setCustomNCCO] = useState("");
   const [editedNCCO, setEditedNCCO] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [sendProgress, setSendProgress] = useState(0);
+  const [currentSending, setCurrentSending] = useState(0);
+  const [totalToSend, setTotalToSend] = useState(0);
   const [dryRun, setDryRun] = useState(false);
 
   const addDestination = () => {
@@ -76,6 +81,28 @@ export function IVRMenuFormV2() {
     const updated = [...destinations];
     updated[index] = value;
     setDestinations(updated);
+  };
+
+  const handleCSVImport = (numbers: string[]) => {
+    // Remover campos vazios
+    const currentValid = destinations.filter(d => d.trim());
+    
+    // Verificar quantos podem ser adicionados
+    const available = MAX_DESTINATIONS - currentValid.length;
+    
+    if (numbers.length > available) {
+      toast.warning(`Apenas ${available} números podem ser adicionados (limite: ${MAX_DESTINATIONS})`);
+    }
+    
+    // Adicionar números (até o limite)
+    const toAdd = numbers.slice(0, available);
+    setDestinations([...currentValid, ...toAdd]);
+    
+    if (toAdd.length < numbers.length) {
+      toast.success(`✅ ${toAdd.length} números adicionados (${numbers.length - toAdd.length} ignorados por limite)`);
+    } else {
+      toast.success(`✅ ${toAdd.length} números importados com sucesso!`);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,6 +170,9 @@ export function IVRMenuFormV2() {
     }
 
     setLoading(true);
+    setTotalToSend(validDestinations.length);
+    setSendProgress(0);
+    setCurrentSending(0);
 
     let successCount = 0;
     let failCount = 0;
@@ -152,6 +182,9 @@ export function IVRMenuFormV2() {
       // Enviar para cada destino sequencialmente
       for (let i = 0; i < validDestinations.length; i++) {
         const destination = validDestinations[i];
+        
+        setCurrentSending(i + 1);
+        setSendProgress(((i + 1) / validDestinations.length) * 100);
         
         toast.info(`Enviando ${i + 1}/${validDestinations.length}: ${destination}`);
         
@@ -221,6 +254,9 @@ export function IVRMenuFormV2() {
       toast.error(error.message || "Erro ao iniciar chamadas IVR 2.0");
     } finally {
       setLoading(false);
+      setSendProgress(0);
+      setCurrentSending(0);
+      setTotalToSend(0);
     }
   };
 
@@ -250,9 +286,15 @@ export function IVRMenuFormV2() {
           {loading && (
             <Alert className="border-accent/20 bg-accent/5">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>
-                Enviando chamadas para {destinations.filter(d => d.trim()).length} destinatário(s)...
-                Aguarde, isso pode levar alguns segundos.
+              <AlertDescription className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Enviando chamadas IVR...</span>
+                  <span className="font-semibold">{currentSending}/{totalToSend}</span>
+                </div>
+                <Progress value={sendProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Progresso: {Math.round(sendProgress)}% • Tempo estimado: ~{Math.ceil((totalToSend - currentSending) * 0.5)}s
+                </p>
               </AlertDescription>
             </Alert>
           )}
@@ -314,21 +356,29 @@ export function IVRMenuFormV2() {
                   ))}
                 </div>
 
-                {destinations.length < MAX_DESTINATIONS && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addDestination}
-                    className="w-full border-dashed"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Número ({destinations.length}/{MAX_DESTINATIONS})
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {destinations.length < MAX_DESTINATIONS && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addDestination}
+                      className="flex-1 border-dashed"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar Número ({destinations.length}/{MAX_DESTINATIONS})
+                    </Button>
+                  )}
+                  
+                  <CSVImportDialog 
+                    onImport={handleCSVImport}
+                    currentCount={destinations.filter(d => d.trim()).length}
+                    maxCount={MAX_DESTINATIONS}
+                  />
+                </div>
                 
                 <p className="text-xs text-muted-foreground">
-                  Formato: código país + número (sem + ou espaços)
+                  Formato: código país + número (sem + ou espaços). Ou importe via CSV.
                 </p>
               </div>
 

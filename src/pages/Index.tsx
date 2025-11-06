@@ -103,32 +103,32 @@ const Index = () => {
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' || activeTab === 'receive-sms' || activeTab === 'receive-calls' ? 'max-w-4xl' : 'max-w-lg'}`}>
-            <TabsList className="grid w-full grid-cols-7 mb-8 h-12 p-1.5 glass-effect">
-              <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+            <TabsList className="flex w-full overflow-x-auto scrollbar-hide mb-8 h-12 p-1.5 glass-effect">
+              <TabsTrigger value="sms" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">SMS</span>
               </TabsTrigger>
-              <TabsTrigger value="voice" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="voice" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Phone className="w-4 h-4" />
                 <span className="hidden sm:inline">Voice</span>
               </TabsTrigger>
-              <TabsTrigger value="ivr" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="ivr" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Menu className="w-4 h-4" />
                 <span className="hidden sm:inline">IVR</span>
               </TabsTrigger>
-              <TabsTrigger value="ivr2" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="ivr2" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <PhoneForwarded className="w-4 h-4" />
                 <span className="hidden sm:inline">IVR 2.0</span>
               </TabsTrigger>
-              <TabsTrigger value="bulk" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="bulk" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Envio</span>
               </TabsTrigger>
-              <TabsTrigger value="receive-sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="receive-sms" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Inbox className="w-4 h-4" />
                 <span className="hidden sm:inline">Receber SMS</span>
               </TabsTrigger>
-              <TabsTrigger value="receive-calls" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+              <TabsTrigger value="receive-calls" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <PhoneIncoming className="w-4 h-4" />
                 <span className="hidden sm:inline">Receber Chamadas</span>
               </TabsTrigger>

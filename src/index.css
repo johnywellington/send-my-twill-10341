@@ -143,4 +143,13 @@ All colors MUST be HSL.
   .hover-lift {
     @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

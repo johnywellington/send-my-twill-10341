@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,34 +10,14 @@ import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
 import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
 import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk" | "receive-sms" | "receive-calls">("sms");
-  const [showLeftGradient, setShowLeftGradient] = useState(false);
-  const [showRightGradient, setShowRightGradient] = useState(true);
-  const tabsListRef = useRef<HTMLDivElement>(null);
+  const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const element = tabsListRef.current;
-      if (!element) return;
-
-      const { scrollLeft, scrollWidth, clientWidth } = element;
-      setShowLeftGradient(scrollLeft > 10);
-      setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 10);
-    };
-
-    const element = tabsListRef.current;
-    if (element) {
-      handleScroll();
-      element.addEventListener('scroll', handleScroll);
-      return () => element.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -107,6 +87,29 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background p-4 sm:p-6 md:p-8">
       <div className="absolute top-4 right-4 flex gap-2">
+        {/* Botões de Toggle Desktop/Mobile */}
+        <Button 
+          variant={viewMode === "desktop" ? "default" : "outline"}
+          size="sm" 
+          onClick={() => setViewMode("desktop")}
+          className="gap-2"
+        >
+          <Monitor className="w-4 h-4" />
+          Desktop
+        </Button>
+        <Button 
+          variant={viewMode === "mobile" ? "default" : "outline"}
+          size="sm" 
+          onClick={() => setViewMode("mobile")}
+          className="gap-2"
+        >
+          <Smartphone className="w-4 h-4" />
+          Mobile
+        </Button>
+        
+        {/* Separador visual */}
+        <div className="w-px h-8 bg-border" />
+        
         <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="gap-2">
           <Users className="w-4 h-4" />
           Contatos
@@ -148,69 +151,57 @@ const Index = () => {
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' || activeTab === 'receive-sms' || activeTab === 'receive-calls' ? 'max-w-4xl' : 'max-w-lg'}`}>
-            {/* Mobile Dropdown (<640px) */}
-            <div className="sm:hidden mb-8">
-              <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-                <SelectTrigger className="w-full h-12 glass-effect">
-                  <SelectValue>
-                    <div className="flex items-center gap-2">
-                      {(() => {
-                        const TabIcon = tabConfig[activeTab].icon;
-                        return <TabIcon className="w-4 h-4" />;
-                      })()}
-                      <span>{tabConfig[activeTab].title}</span>
-                    </div>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="z-50">
+            {viewMode === "mobile" ? (
+              /* === MOBILE VIEW (Select Dropdown) === */
+              <div className="mb-8">
+                <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+                  <SelectTrigger className="w-full h-12 glass-effect">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const TabIcon = tabConfig[activeTab].icon;
+                          return <TabIcon className="w-4 h-4" />;
+                        })()}
+                        <span>{tabConfig[activeTab].title}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {Object.entries(tabConfig).map(([key, config]) => {
+                      const TabIcon = config.icon;
+                      return (
+                        <SelectItem key={key} value={key}>
+                          <div className="flex items-center gap-2">
+                            <TabIcon className="w-4 h-4" />
+                            <span>{config.title}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              /* === DESKTOP VIEW (TabsList) === */
+              <div className="mb-8">
+                <TabsList className="grid w-full grid-cols-7 h-12 p-1.5 glass-effect gap-1">
                   {Object.entries(tabConfig).map(([key, config]) => {
                     const TabIcon = config.icon;
                     return (
-                      <SelectItem key={key} value={key}>
-                        <div className="flex items-center gap-2">
-                          <TabIcon className="w-4 h-4" />
-                          <span>{config.title}</span>
-                        </div>
-                      </SelectItem>
+                      <TabsTrigger 
+                        key={key}
+                        value={key} 
+                        className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200"
+                      >
+                        <TabIcon className="w-4 h-4" />
+                        <span className="hidden lg:inline">{config.title}</span>
+                        <span className="lg:hidden">{config.short}</span>
+                      </TabsTrigger>
                     );
                   })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Desktop/Tablet Tabs (>=640px) */}
-            <div className="hidden sm:block relative mb-8">
-              {/* Left Gradient Indicator */}
-              {showLeftGradient && (
-                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background/95 to-transparent z-10 pointer-events-none animate-fade-in" />
-              )}
-              
-              {/* Right Gradient Indicator */}
-              {showRightGradient && (
-                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background/95 to-transparent z-10 pointer-events-none animate-fade-in" />
-              )}
-
-              <TabsList 
-                ref={tabsListRef}
-                className="flex w-full overflow-x-auto scrollbar-hide h-12 p-1.5 glass-effect scroll-smooth gap-1"
-              >
-                {Object.entries(tabConfig).map(([key, config]) => {
-                  const TabIcon = config.icon;
-                  return (
-                    <TabsTrigger 
-                      key={key}
-                      value={key} 
-                      className="flex items-center gap-2 flex-shrink-0 min-w-fit px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200"
-                    >
-                      <TabIcon className="w-4 h-4" />
-                      {/* Mobile: icon only, Tablet: short text, Desktop: full text */}
-                      <span className="hidden sm:inline md:hidden">{config.short}</span>
-                      <span className="hidden md:inline">{config.title}</span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
+                </TabsList>
+              </div>
+            )}
             
             <TabsContent value="sms">
               <SmsForm />

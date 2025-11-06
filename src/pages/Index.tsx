@@ -177,11 +177,11 @@ const Index = () => {
           </div>
 
           {/* Linha 2: Tabs */}
-          <div className="container mx-auto px-4 py-2 sm:py-3">
+          <div className="container mx-auto px-4 py-2 sm:py-3 flex justify-center">
             {viewMode === "mobile" ? (
               /* === MOBILE VIEW (Select Dropdown) === */
               <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-                <SelectTrigger className="w-full h-10 glass-effect">
+                <SelectTrigger className="w-full max-w-md h-10 glass-effect">
                   <SelectValue>
                     <div className="flex items-center gap-2">
                       {(() => {
@@ -208,7 +208,7 @@ const Index = () => {
               </Select>
             ) : (
               /* === DESKTOP VIEW com Indicadores === */
-              <div className="relative">
+              <div className="relative max-w-4xl mx-auto w-full">
                 {/* Gradiente Esquerdo */}
                 {showLeftArrow && (
                   <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background/80 to-transparent z-10 pointer-events-none gradient-fade" />

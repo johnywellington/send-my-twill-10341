@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Info, PhoneForwarded, Beaker } from "lucide-react";
+import { Loader2, Info, PhoneForwarded, Beaker, Plus, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
@@ -45,7 +45,8 @@ const templates = {
 };
 
 export function IVRMenuFormV2() {
-  const [to, setTo] = useState("");
+  const [destinations, setDestinations] = useState<string[]>([""]);
+  const MAX_DESTINATIONS = 5;
   const [from, setFrom] = useState("447418373268");
   const [assistantNumber, setAssistantNumber] = useState("");
   const [transferTimeout, setTransferTimeout] = useState("30");
@@ -59,16 +60,52 @@ export function IVRMenuFormV2() {
   const [loading, setLoading] = useState(false);
   const [dryRun, setDryRun] = useState(false);
 
+  const addDestination = () => {
+    if (destinations.length < MAX_DESTINATIONS) {
+      setDestinations([...destinations, ""]);
+    }
+  };
+
+  const removeDestination = (index: number) => {
+    if (destinations.length > 1) {
+      setDestinations(destinations.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateDestination = (index: number, value: string) => {
+    const updated = [...destinations];
+    updated[index] = value;
+    setDestinations(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!to || !from || !assistantNumber) {
+    // Filtrar números vazios
+    const validDestinations = destinations.filter(d => d.trim() !== "");
+
+    if (validDestinations.length === 0) {
+      toast.error("Por favor, adicione pelo menos um número de destino");
+      return;
+    }
+
+    if (!from || !assistantNumber) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
       return;
     }
 
-    // Validar formato de telefone
+    // Validar formato de cada número
     const phoneRegex = /^\d{10,15}$/;
+    const invalidNumbers = validDestinations.filter(
+      num => !phoneRegex.test(num.replace(/[^0-9]/g, ''))
+    );
+
+    if (invalidNumbers.length > 0) {
+      toast.error(`Números de destino inválidos: ${invalidNumbers.join(', ')}`);
+      return;
+    }
+
+    // Validar número do assistente
     if (!phoneRegex.test(assistantNumber.replace(/[^0-9]/g, ''))) {
       toast.error("Número do assistente inválido. Use formato E.164 (ex: 351912345678)");
       return;
@@ -106,34 +143,82 @@ export function IVRMenuFormV2() {
     }
 
     setLoading(true);
-    
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+
     try {
-      const { data, error } = await supabase.functions.invoke('send-ivr-call-v2', {
-        body: {
-          to,
-          from,
-          assistantNumber,
-          transferTimeout: parseInt(transferTimeout),
-          language,
-          style: parseInt(style),
-          premium,
-          template,
-          ncco: nccoToSend,
-          voiceName: voiceName || undefined,
-          dryRun
+      // Enviar para cada destino sequencialmente
+      for (let i = 0; i < validDestinations.length; i++) {
+        const destination = validDestinations[i];
+        
+        toast.info(`Enviando ${i + 1}/${validDestinations.length}: ${destination}`);
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('send-ivr-call-v2', {
+            body: {
+              to: destination,
+              from,
+              assistantNumber,
+              transferTimeout: parseInt(transferTimeout),
+              language,
+              style: parseInt(style),
+              premium,
+              template,
+              ncco: nccoToSend,
+              voiceName: voiceName || undefined,
+              dryRun
+            }
+          });
+
+          if (error) throw error;
+          
+          successCount++;
+          console.log(`✅ Chamada enviada para ${destination}: ${data.uuid}`);
+          
+        } catch (error: any) {
+          failCount++;
+          errors.push(`${destination}: ${error.message || 'Erro desconhecido'}`);
+          console.error(`❌ Erro ao enviar para ${destination}:`, error);
         }
-      });
-
-      if (error) throw error;
-
-      toast.success(`Chamada IVR 2.0 iniciada! UUID: ${data.uuid}`);
+        
+        // Pequeno delay entre chamadas (evitar throttling)
+        if (i < validDestinations.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
       
-      // Limpar formulário
-      setTo("");
-      setAssistantNumber("");
+      // Mostrar resultado final
+      if (successCount === validDestinations.length) {
+        toast.success(`🎉 Todas as ${successCount} chamadas foram iniciadas com sucesso!`);
+      } else if (successCount > 0) {
+        toast.warning(
+          `⚠️ ${successCount} chamadas enviadas, ${failCount} falharam`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.error('❌ Todas as chamadas falharam');
+      }
+      
+      // Mostrar erros detalhados se houver
+      if (errors.length > 0) {
+        console.error('Erros detalhados:', errors);
+        toast.error(
+          `Erros: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          { duration: 8000 }
+        );
+      }
+      
+      // Limpar apenas se houver sucesso
+      if (successCount > 0) {
+        setDestinations([""]);
+        setAssistantNumber("");
+      }
+      
     } catch (error: any) {
-      console.error('Error making IVR call:', error);
-      toast.error(error.message || "Erro ao iniciar chamada IVR 2.0");
+      console.error('Error making IVR calls:', error);
+      toast.error(error.message || "Erro ao iniciar chamadas IVR 2.0");
     } finally {
       setLoading(false);
     }
@@ -162,17 +247,27 @@ export function IVRMenuFormV2() {
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {loading && (
+            <Alert className="border-accent/20 bg-accent/5">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                Enviando chamadas para {destinations.filter(d => d.trim()).length} destinatário(s)...
+                Aguarde, isso pode levar alguns segundos.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex justify-center pb-4">
             <Button type="submit" className="max-w-md w-full" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando Chamada IVR 2.0...
+                  Enviando Chamadas IVR 2.0...
                 </>
               ) : (
                 <>
                   <PhoneForwarded className="mr-2 h-4 w-4" />
-                  Iniciar Chamada IVR 2.0
+                  Iniciar {destinations.filter(d => d.trim()).length} Chamada(s) IVR 2.0
                 </>
               )}
             </Button>
@@ -182,17 +277,59 @@ export function IVRMenuFormV2() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configuração Básica</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="to">Número de Destino *</Label>
-                <Input
-                  id="to"
-                  type="tel"
-                  placeholder="351911019866"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">Formato: código país + número</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Números de Destino *</Label>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{destinations.length} de {MAX_DESTINATIONS}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  {destinations.map((destination, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Input
+                          type="tel"
+                          placeholder={`Número ${index + 1}: 351911019866`}
+                          value={destination}
+                          onChange={(e) => updateDestination(index, e.target.value)}
+                          required
+                          className="h-11"
+                        />
+                      </div>
+                      
+                      {destinations.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeDestination(index)}
+                          className="h-11 w-11 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {destinations.length < MAX_DESTINATIONS && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addDestination}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Número ({destinations.length}/{MAX_DESTINATIONS})
+                  </Button>
+                )}
+                
+                <p className="text-xs text-muted-foreground">
+                  Formato: código país + número (sem + ou espaços)
+                </p>
               </div>
 
               <div className="space-y-2">

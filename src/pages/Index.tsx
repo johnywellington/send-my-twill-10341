@@ -82,7 +82,7 @@ const Index = () => {
     Object.entries(tabConfig).map(([key, config]) => [key, config.description])
   ) as Record<string, string>;
 
-  const Icon = tabConfig[activeTab].icon;
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
@@ -202,18 +202,13 @@ const Index = () => {
         {/* Conteúdo principal */}
         <main className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center space-y-4 mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 mb-3">
-              <Icon className="w-7 h-7 text-primary" />
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-4xl md:text-4xl font-bold text-foreground tracking-tight">
-                {titles[activeTab]}
-              </h1>
-              <p className="text-base text-muted-foreground max-w-md mx-auto">
-                {descriptions[activeTab]}
-              </p>
-            </div>
+          <div className="text-center space-y-3 mb-8">
+            <h1 className="text-4xl md:text-4xl font-bold text-foreground tracking-tight">
+              {titles[activeTab]}
+            </h1>
+            <p className="text-base text-muted-foreground max-w-md mx-auto">
+              {descriptions[activeTab]}
+            </p>
           </div>
           <div className="max-w-5xl mx-auto">
             <div className="tab-transition">

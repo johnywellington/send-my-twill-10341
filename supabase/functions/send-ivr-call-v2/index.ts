@@ -49,8 +49,8 @@ async function generateJWT(applicationId: string, privateKey: string): Promise<s
     
     const payload = {
       application_id: applicationId,
-      iat: getNumericDate(0),
-      nbf: getNumericDate(0),
+      iat: getNumericDate(-10), // clock skew buffer
+      nbf: getNumericDate(-10), // clock skew buffer
       exp: getNumericDate(60 * 10),
       jti: crypto.randomUUID(),
       acl: {
@@ -306,6 +306,26 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify(vonagePayload)
     });
+
+    // If Unauthorized, regenerate JWT once and retry primary endpoint (handles clock skew/transient auth)
+    if (vonageResponse.status === 401) {
+      console.warn('401 from primary endpoint - regenerating JWT and retrying once');
+      try {
+        jwt = await generateJWT(applicationId, privateKey);
+        vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'LovableVoice-IVR-V2/1.0',
+            'Authorization': `Bearer ${jwt}`
+          },
+          body: JSON.stringify(vonagePayload)
+        });
+      } catch (retryErr) {
+        console.error('Retry after regenerating JWT failed:', retryErr);
+      }
+    }
 
     // Fallback para hosts alternativos se necessário
     if (vonageResponse.status === 401 || vonageResponse.status === 404 || vonageResponse.status === 403) {

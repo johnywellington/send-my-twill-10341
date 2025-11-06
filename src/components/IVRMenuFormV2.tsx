@@ -48,7 +48,7 @@ export function IVRMenuFormV2() {
   const [destinations, setDestinations] = useState<string[]>([""]);
   const MAX_DESTINATIONS = 5;
   const [from, setFrom] = useState("447418373268");
-  const [assistantNumber, setAssistantNumber] = useState("");
+  const [assistantNumber, setAssistantNumber] = useState("351967344048");
   const [transferTimeout, setTransferTimeout] = useState("30");
   const [language, setLanguage] = useState("pt-PT");
   const [style, setStyle] = useState("2");
@@ -355,14 +355,28 @@ export function IVRMenuFormV2() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="assistantNumber">Número do Assistente *</Label>
-                <Input
-                  id="assistantNumber"
-                  type="tel"
-                  placeholder="351912345678"
-                  value={assistantNumber}
-                  onChange={(e) => setAssistantNumber(e.target.value)}
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="assistantNumber"
+                    type="tel"
+                    placeholder="351967344048"
+                    value={assistantNumber}
+                    onChange={(e) => setAssistantNumber(e.target.value)}
+                    required
+                    className="flex-1"
+                  />
+                  {assistantNumber && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setAssistantNumber("")}
+                      className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Número para transferir quando pressionar 2
                 </p>

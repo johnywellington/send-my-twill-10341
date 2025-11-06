@@ -357,25 +357,38 @@ export const BulkSendForm = () => {
           )}
         </div>
 
-        {/* Tipo de Envio */}
-        <div className="space-y-4">
-          <Label>Tipo de Envio</Label>
-          <RadioGroup value={sendType} onValueChange={(v) => setSendType(v as "sms" | "voice")}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="sms" id="sms-type" />
-              <Label htmlFor="sms-type" className="cursor-pointer flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                SMS
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="voice" id="voice-type" />
-              <Label htmlFor="voice-type" className="cursor-pointer flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Chamada de Voz
-              </Label>
-            </div>
-          </RadioGroup>
+        {/* Tipo de Envio e Velocidade */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Coluna 1: Tipo de Envio */}
+          <div className="space-y-4">
+            <Label>Tipo de Envio</Label>
+            <RadioGroup value={sendType} onValueChange={(v) => setSendType(v as "sms" | "voice")}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="sms" id="sms-type" />
+                <Label htmlFor="sms-type" className="cursor-pointer flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  SMS
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="voice" id="voice-type" />
+                <Label htmlFor="voice-type" className="cursor-pointer flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  Chamada de Voz
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Coluna 2: Velocidade de Envio */}
+          <div>
+            <RateLimitSelector
+              provider={sendType === 'sms' ? smsProvider : 'vonage'}
+              type={sendType}
+              value={sendType === 'sms' ? smsThrottle : voiceThrottle}
+              onChange={sendType === 'sms' ? setSmsThrottle : setVoiceThrottle}
+            />
+          </div>
         </div>
 
         {/* Configuração SMS */}
@@ -394,12 +407,6 @@ export const BulkSendForm = () => {
               </Select>
             </div>
 
-            <RateLimitSelector
-              provider={smsProvider}
-              type="sms"
-              value={smsThrottle}
-              onChange={setSmsThrottle}
-            />
 
             <div className="space-y-2">
               <Label htmlFor="sms-from">Número de Origem</Label>
@@ -471,12 +478,6 @@ export const BulkSendForm = () => {
               />
             )}
 
-            <RateLimitSelector
-              provider="vonage"
-              type="voice"
-              value={voiceThrottle}
-              onChange={setVoiceThrottle}
-            />
 
             {/* Style selector - only show when NOT using Portuguese specific voices */}
             {!isPortugueseLanguage(voiceLanguage) && (

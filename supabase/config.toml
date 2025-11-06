@@ -3,7 +3,7 @@ project_id = "baowfhikujfppwmmhwcn"
 # Edge functions que REQUEREM autenticação JWT
 # send-sms, send-voice-call, send-ivr-call, send-ivr-call-v2 agora protegidos
 
-# Webhooks permanecem públicos (validados por assinatura Vonage)
+# Webhooks permanecem públicos (validados por assinatura Vonage/Twilio)
 [functions.ivr-webhook]
 verify_jwt = false
 
@@ -11,4 +11,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.ivr-webhook-v2-events]
+verify_jwt = false
+
+[functions.twilio-sms-webhook]
+verify_jwt = false
+
+[functions.vonage-sms-webhook]
+verify_jwt = false
+
+[functions.twilio-voice-webhook]
+verify_jwt = false
+
+[functions.vonage-voice-webhook]
 verify_jwt = false

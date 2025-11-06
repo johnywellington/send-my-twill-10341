@@ -147,7 +147,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto glass-effect shadow-xl border border-border/50">
+    <Card className="w-full max-w-md mx-auto glass-effect shadow-xl border border-border/50">
       <CardHeader className="space-y-3 pb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">

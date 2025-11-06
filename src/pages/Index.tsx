@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,47 @@ import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming, Monitor, Smartphone, ChevronLeft, ChevronRight } from "lucide-react";
 import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
 import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk" | "receive-sms" | "receive-calls">("sms");
   const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = tabsScrollRef.current;
+      if (!container) return;
+      
+      setShowLeftArrow(container.scrollLeft > 10);
+      setShowRightArrow(
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+      );
+    };
+    
+    const container = tabsScrollRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      handleScroll();
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [viewMode]);
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    const container = tabsScrollRef.current;
+    if (!container) return;
+    
+    const scrollAmount = 200;
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    });
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -145,12 +178,12 @@ const Index = () => {
       {/* Conteúdo principal */}
       <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center space-y-6 mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 mb-4">
-              <Icon className="w-8 h-8 text-primary" />
+          <div className="text-center space-y-4 mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 mb-3">
+              <Icon className="w-7 h-7 text-primary" />
             </div>
             <div className="space-y-3">
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+              <h1 className="text-4xl md:text-4xl font-bold text-foreground tracking-tight">
                 {titles[activeTab]}
               </h1>
               <p className="text-base text-muted-foreground max-w-md mx-auto">
@@ -158,7 +191,7 @@ const Index = () => {
               </p>
             </div>
           </div>
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
               
               {viewMode === "mobile" ? (
@@ -192,30 +225,70 @@ const Index = () => {
                   </Select>
                 </div>
               ) : (
-                /* === DESKTOP VIEW (TabsList com Scroll Horizontal) === */
-                <div className="mb-8">
-                  <TabsList className="inline-flex w-full overflow-x-auto overflow-y-visible custom-scrollbar h-14 p-2 glass-effect gap-2 snap-x snap-mandatory">
-                    {Object.entries(tabConfig).map(([key, config]) => {
-                      const TabIcon = config.icon;
-                      return (
-                        <TabsTrigger 
-                          key={key}
-                          value={key}
-                          className="flex-shrink-0 snap-start min-w-[140px] h-10 flex items-center justify-center gap-2 px-4
-                                     data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary 
-                                     data-[state=active]:to-accent data-[state=active]:text-primary-foreground 
-                                     transition-all duration-200 rounded-lg hover:bg-muted/50"
-                        >
-                          <TabIcon className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">{config.title}</span>
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
+                /* === DESKTOP VIEW com Indicadores === */
+                <div className="mb-6 relative">
+                  {/* Gradiente Esquerdo */}
+                  {showLeftArrow && (
+                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none gradient-fade" />
+                  )}
+                  
+                  {/* Botão Esquerdo */}
+                  {showLeftArrow && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => scrollTabs('left')}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full shadow-md"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  )}
+                  
+                  {/* TabsList com scroll */}
+                  <div 
+                    ref={tabsScrollRef}
+                    className="overflow-x-auto custom-scrollbar pb-2"
+                  >
+                    <TabsList className="inline-flex w-auto h-12 p-1.5 glass-effect gap-1.5">
+                      {Object.entries(tabConfig).map(([key, config]) => {
+                        const TabIcon = config.icon;
+                        return (
+                          <TabsTrigger 
+                            key={key}
+                            value={key}
+                            className="flex-shrink-0 min-w-[140px] h-9 flex items-center justify-center gap-2 px-4
+                                       data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary 
+                                       data-[state=active]:to-accent data-[state=active]:text-primary-foreground 
+                                       transition-all duration-200 rounded-lg hover:bg-muted/50"
+                          >
+                            <TabIcon className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate text-sm font-medium">{config.title}</span>
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </div>
+                  
+                  {/* Gradiente Direito */}
+                  {showRightArrow && (
+                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none gradient-fade" />
+                  )}
+                  
+                  {/* Botão Direito */}
+                  {showRightArrow && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => scrollTabs('right')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full shadow-md"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               )}
               
-              <div className="mt-8 tab-transition">
+              <div className="mt-6 tab-transition">
                 <TabsContent value="sms">
                   <SmsForm />
                 </TabsContent>

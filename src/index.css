@@ -141,16 +141,22 @@ All colors MUST be HSL.
   
   /* Scrollbar personalizada */
   .custom-scrollbar::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
+    height: 8px;
+    width: 8px;
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-muted/30 rounded-full;
+    @apply bg-muted/40 rounded-full;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+    @apply bg-primary/40 rounded-full hover:bg-primary/60 transition-colors;
+  }
+  
+  /* Suporte para Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted) / 0.4);
   }
   
   /* Transição de tabs */
@@ -182,6 +188,19 @@ All colors MUST be HSL.
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  @keyframes fadeInGradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .gradient-fade {
+    animation: fadeInGradient 0.2s ease-in;
   }
   
   /* Hover nos botões */

@@ -121,8 +121,52 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Sistema de espaçamento consistente */
+  .section-spacing {
+    @apply py-8 md:py-12 lg:py-16;
+  }
+  
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .card-padding {
+    @apply p-5 sm:p-6;
+  }
+  
+  /* Efeito glass melhorado */
   .glass-effect {
-    @apply bg-white/80 dark:bg-card/80 backdrop-blur-lg border border-white/20;
+    @apply bg-white/90 dark:bg-card/90 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
+  
+  /* Scrollbar personalizada */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-muted/30 rounded-full;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+  }
+  
+  /* Transição de tabs */
+  .tab-transition {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   .animate-slide-up {
@@ -138,6 +182,11 @@ All colors MUST be HSL.
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  /* Hover nos botões */
+  .button-hover {
+    @apply transition-all duration-200 hover:scale-105 hover:shadow-md active:scale-95;
   }
   
   .hover-lift {

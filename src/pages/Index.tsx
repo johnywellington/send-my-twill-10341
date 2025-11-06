@@ -85,155 +85,169 @@ const Index = () => {
   const Icon = tabConfig[activeTab].icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background p-4 sm:p-6 md:p-8">
-      <div className="absolute top-4 right-4 flex gap-2">
-        {/* Botões de Toggle Desktop/Mobile */}
-        <Button 
-          variant={viewMode === "desktop" ? "default" : "outline"}
-          size="sm" 
-          onClick={() => setViewMode("desktop")}
-          className="gap-2"
-        >
-          <Monitor className="w-4 h-4" />
-          Desktop
-        </Button>
-        <Button 
-          variant={viewMode === "mobile" ? "default" : "outline"}
-          size="sm" 
-          onClick={() => setViewMode("mobile")}
-          className="gap-2"
-        >
-          <Smartphone className="w-4 h-4" />
-          Mobile
-        </Button>
-        
-        {/* Separador visual */}
-        <div className="w-px h-8 bg-border" />
-        
-        <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="gap-2">
-          <Users className="w-4 h-4" />
-          Contatos
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => navigate("/templates")} className="gap-2">
-          <FileText className="w-4 h-4" />
-          Templates
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => navigate("/analytics")} className="gap-2">
-          <TrendingUp className="w-4 h-4" />
-          Analytics
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-          <BarChart3 className="w-4 h-4" />
-          Dashboard
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => navigate("/api-test")} className="gap-2">
-          <Beaker className="w-4 h-4" />
-          API Test
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-          <LogOut className="w-4 h-4" />
-          Sair
-        </Button>
-      </div>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-full max-w-4xl space-y-8 animate-slide-up">
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[var(--shadow-elegant)] mb-6 hover-lift">
-            <Icon className="w-10 h-10" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
+      {/* Header fixo */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold hidden sm:block">SMS Platform</h2>
+            <div className="flex gap-2">
+              <Button 
+                variant={viewMode === "desktop" ? "default" : "outline"}
+                size="sm" 
+                onClick={() => setViewMode("desktop")}
+                className="gap-2"
+              >
+                <Monitor className="w-4 h-4" />
+                <span className="hidden sm:inline">Desktop</span>
+              </Button>
+              <Button 
+                variant={viewMode === "mobile" ? "default" : "outline"}
+                size="sm" 
+                onClick={() => setViewMode("mobile")}
+                className="gap-2"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span className="hidden sm:inline">Mobile</span>
+              </Button>
+            </div>
           </div>
-          <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent tracking-tight">
-            {titles[activeTab]}
-          </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
-            {descriptions[activeTab]}
-          </p>
+
+          <nav className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="gap-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden lg:inline">Contatos</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/templates")} className="gap-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden lg:inline">Templates</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/analytics")} className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden lg:inline">Analytics</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden xl:inline">Dashboard</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/api-test")} className="gap-2">
+              <Beaker className="w-4 h-4" />
+              <span className="hidden xl:inline">API</span>
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleLogout} className="gap-2">
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Sair</span>
+            </Button>
+          </nav>
         </div>
-        
-        <div className="flex justify-center">
-          <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' || activeTab === 'receive-sms' || activeTab === 'receive-calls' ? 'max-w-4xl' : 'max-w-lg'}`}>
-            {viewMode === "mobile" ? (
-              /* === MOBILE VIEW (Select Dropdown) === */
-              <div className="mb-8">
-                <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-                  <SelectTrigger className="w-full h-12 glass-effect">
-                    <SelectValue>
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const TabIcon = tabConfig[activeTab].icon;
-                          return <TabIcon className="w-4 h-4" />;
-                        })()}
-                        <span>{tabConfig[activeTab].title}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
+      </header>
+
+      {/* Conteúdo principal */}
+      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center space-y-6 mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border-2 border-primary/20 mb-4">
+              <Icon className="w-8 h-8 text-primary" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+                {titles[activeTab]}
+              </h1>
+              <p className="text-base text-muted-foreground max-w-md mx-auto">
+                {descriptions[activeTab]}
+              </p>
+            </div>
+          </div>
+          <div className="max-w-4xl mx-auto">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+              
+              {viewMode === "mobile" ? (
+                /* === MOBILE VIEW (Select Dropdown) === */
+                <div className="mb-8">
+                  <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+                    <SelectTrigger className="w-full h-12 glass-effect">
+                      <SelectValue>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const TabIcon = tabConfig[activeTab].icon;
+                            return <TabIcon className="w-4 h-4" />;
+                          })()}
+                          <span>{tabConfig[activeTab].title}</span>
+                        </div>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {Object.entries(tabConfig).map(([key, config]) => {
+                        const TabIcon = config.icon;
+                        return (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              <TabIcon className="w-4 h-4" />
+                              <span>{config.title}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                /* === DESKTOP VIEW (TabsList com Scroll Horizontal) === */
+                <div className="mb-8">
+                  <TabsList className="inline-flex w-full overflow-x-auto overflow-y-visible custom-scrollbar h-14 p-2 glass-effect gap-2 snap-x snap-mandatory">
                     {Object.entries(tabConfig).map(([key, config]) => {
                       const TabIcon = config.icon;
                       return (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex items-center gap-2">
-                            <TabIcon className="w-4 h-4" />
-                            <span>{config.title}</span>
-                          </div>
-                        </SelectItem>
+                        <TabsTrigger 
+                          key={key}
+                          value={key}
+                          className="flex-shrink-0 snap-start min-w-[140px] h-10 flex items-center justify-center gap-2 px-4
+                                     data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary 
+                                     data-[state=active]:to-accent data-[state=active]:text-primary-foreground 
+                                     transition-all duration-200 rounded-lg hover:bg-muted/50"
+                        >
+                          <TabIcon className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{config.title}</span>
+                        </TabsTrigger>
                       );
                     })}
-                  </SelectContent>
-                </Select>
+                  </TabsList>
+                </div>
+              )}
+              
+              <div className="mt-8 tab-transition">
+                <TabsContent value="sms">
+                  <SmsForm />
+                </TabsContent>
+                
+                <TabsContent value="voice">
+                  <VoiceCallForm />
+                </TabsContent>
+                
+                <TabsContent value="ivr">
+                  <IVRMenuForm />
+                </TabsContent>
+                
+                <TabsContent value="ivr2">
+                  <IVRMenuFormV2 />
+                </TabsContent>
+                
+                <TabsContent value="bulk">
+                  <BulkSendForm />
+                </TabsContent>
+                
+                <TabsContent value="receive-sms">
+                  <ReceivedSmsViewer />
+                </TabsContent>
+                
+                <TabsContent value="receive-calls">
+                  <ReceivedCallsViewer />
+                </TabsContent>
               </div>
-            ) : (
-              /* === DESKTOP VIEW (TabsList) === */
-              <div className="mb-8">
-                <TabsList className="grid w-full grid-cols-7 h-12 p-1.5 glass-effect gap-1">
-                  {Object.entries(tabConfig).map(([key, config]) => {
-                    const TabIcon = config.icon;
-                    return (
-                      <TabsTrigger 
-                        key={key}
-                        value={key} 
-                        className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200"
-                      >
-                        <TabIcon className="w-4 h-4" />
-                        <span className="hidden lg:inline">{config.title}</span>
-                        <span className="lg:hidden">{config.short}</span>
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
-              </div>
-            )}
-            
-            <TabsContent value="sms">
-              <SmsForm />
-            </TabsContent>
-            
-            <TabsContent value="voice">
-              <VoiceCallForm />
-            </TabsContent>
-            
-            <TabsContent value="ivr">
-              <IVRMenuForm />
-            </TabsContent>
-            
-            <TabsContent value="ivr2">
-              <IVRMenuFormV2 />
-            </TabsContent>
-            
-            <TabsContent value="bulk">
-              <BulkSendForm />
-            </TabsContent>
-            
-            <TabsContent value="receive-sms">
-              <ReceivedSmsViewer />
-            </TabsContent>
-            
-            <TabsContent value="receive-calls">
-              <ReceivedCallsViewer />
-            </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };

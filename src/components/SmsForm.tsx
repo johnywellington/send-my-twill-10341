@@ -147,14 +147,21 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   };
 
   return (
-    <Card className="w-full max-w-lg glass-effect animate-slide-up shadow-[var(--shadow-elegant)] hover-lift">
-      <CardHeader className="space-y-2 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-xl pb-8 pt-6">
-        <CardTitle className="text-3xl font-bold tracking-tight">Enviar SMS</CardTitle>
-        <CardDescription className="text-primary-foreground/90 text-base">
-          Envie mensagens SMS usando Twilio ou Vonage
-        </CardDescription>
+    <Card className="w-full max-w-lg mx-auto glass-effect shadow-xl border border-border/50">
+      <CardHeader className="space-y-3 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Send className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl font-semibold">Enviar SMS</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Envie mensagens usando Twilio ou Vonage
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="pt-8 px-6 pb-6">
+      <CardContent className="space-y-5 px-6 pb-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2.5">
             <Label htmlFor="provider" className="text-sm font-medium text-foreground">

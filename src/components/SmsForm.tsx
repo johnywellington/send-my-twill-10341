@@ -7,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Save } from "lucide-react";
+import { TemplateSelector } from "@/components/templates/TemplateSelector";
+import { TemplateDialog } from "@/components/templates/TemplateDialog";
+import { useCreateTemplate } from "@/hooks/use-templates";
+import { extractVariables } from "@/lib/template-utils";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -19,6 +23,8 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [message, setMessage] = useState("");
   const [provider, setProvider] = useState<"twilio" | "vonage">("twilio");
   const [loading, setLoading] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const createTemplate = useCreateTemplate();
   
   const maxLength = 160;
   const messageLength = message.length;
@@ -207,11 +213,20 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               <Label htmlFor="message" className="text-sm font-medium text-foreground">
                 Mensagem
               </Label>
-              <span className={`text-xs font-medium transition-colors ${
-                isNearLimit ? 'text-destructive' : 'text-muted-foreground'
-              }`}>
-                {messageLength}/{maxLength}
-              </span>
+              <div className="flex items-center gap-2">
+                <TemplateSelector 
+                  type="sms"
+                  onSelect={(template) => {
+                    setMessage(template.content);
+                    toast.success("Template carregado!");
+                  }}
+                />
+                <span className={`text-xs font-medium transition-colors ${
+                  isNearLimit ? 'text-destructive' : 'text-muted-foreground'
+                }`}>
+                  {messageLength}/{maxLength}
+                </span>
+              </div>
             </div>
             <Textarea
               id="message"
@@ -225,25 +240,45 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             />
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold mt-8"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2.5 h-5 w-5" />
-                Enviar SMS
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => message && setSaveDialogOpen(true)}
+              disabled={!message || loading}
+              className="h-12"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Salvar Template
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex-1 h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2.5 h-5 w-5" />
+                  Enviar SMS
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </CardContent>
+      
+      <TemplateDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        onSave={(template) => createTemplate.mutate(template)}
+        defaultType="sms"
+        defaultContent={message}
+      />
     </Card>
   );
 };

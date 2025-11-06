@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { sendBulkSMS, sendBulkVoice, Contact, SMSConfig, VoiceConfig, SendResult } from "@/lib/bulk-sender";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TemplateSelector } from "@/components/templates/TemplateSelector";
 
 interface BulkSendDialogProps {
   open: boolean;
@@ -140,7 +141,15 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
                 </div>
 
                 <div>
-                  <Label>Mensagem</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Mensagem</Label>
+                    <TemplateSelector 
+                      type="sms"
+                      onSelect={(template) => {
+                        setSmsConfig({ ...smsConfig, message: template.content });
+                      }}
+                    />
+                  </div>
                   <Textarea
                     value={smsConfig.message}
                     onChange={(e) => setSmsConfig({ ...smsConfig, message: e.target.value })}
@@ -179,7 +188,15 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
                 </div>
 
                 <div>
-                  <Label>Mensagem</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Mensagem</Label>
+                    <TemplateSelector 
+                      type="voice"
+                      onSelect={(template) => {
+                        setVoiceConfig({ ...voiceConfig, message: template.content });
+                      }}
+                    />
+                  </div>
                   <Textarea
                     value={voiceConfig.message}
                     onChange={(e) => setVoiceConfig({ ...voiceConfig, message: e.target.value })}

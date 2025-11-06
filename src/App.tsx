@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Analytics from "./pages/Analytics";
+import Templates from "./pages/Templates";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/templates"
+            element={
+              <ProtectedRoute>
+                <Templates />
               </ProtectedRoute>
             }
           />

@@ -212,6 +212,48 @@ export type Database = {
         }
         Relationships: []
       }
+      message_templates: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          is_favorite: boolean | null
+          name: string
+          type: string
+          updated_at: string
+          usage_count: number | null
+          user_id: string
+          variables: string[] | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          name: string
+          type: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id: string
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           cost: number | null

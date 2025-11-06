@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
+import { TemplateSelector } from "@/components/templates/TemplateSelector";
+import { TemplateDialog } from "@/components/templates/TemplateDialog";
+import { useCreateTemplate } from "@/hooks/use-templates";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -22,6 +25,8 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [style, setStyle] = useState("0");
   const [premium, setPremium] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const createTemplate = useCreateTemplate();
   
   const maxLength = 5000; // Vonage Voice API limit
   const messageLength = message.length;
@@ -177,11 +182,20 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
                 <Label htmlFor="message" className="text-sm font-medium text-foreground">
                   Mensagem para Voz
                 </Label>
-                <span className={`text-xs font-medium transition-colors ${
-                  isNearLimit ? 'text-destructive' : 'text-muted-foreground'
-                }`}>
-                  {messageLength}/{maxLength}
-                </span>
+                <div className="flex items-center gap-2">
+                  <TemplateSelector 
+                    type="voice"
+                    onSelect={(template) => {
+                      setMessage(template.content);
+                      toast.success("Template carregado!");
+                    }}
+                  />
+                  <span className={`text-xs font-medium transition-colors ${
+                    isNearLimit ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {messageLength}/{maxLength}
+                  </span>
+                </div>
               </div>
               <Textarea
                 id="message"
@@ -197,27 +211,47 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               </p>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold mt-8" 
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
-                  Iniciando Chamada...
-                </>
-              ) : (
-                <>
-                  <svg className="mr-2.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  Fazer Chamada
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => message && setSaveDialogOpen(true)}
+                disabled={!message || loading}
+                className="h-12"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Salvar Template
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1 h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
+                    Iniciando Chamada...
+                  </>
+                ) : (
+                  <>
+                    <svg className="mr-2.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    Fazer Chamada
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         </CardContent>
+        
+        <TemplateDialog
+          open={saveDialogOpen}
+          onOpenChange={setSaveDialogOpen}
+          onSave={(template) => createTemplate.mutate(template)}
+          defaultType="voice"
+          defaultContent={message}
+        />
       </Card>
     </div>
   );

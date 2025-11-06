@@ -9,7 +9,7 @@ import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk">("sms");
@@ -57,6 +57,10 @@ const Index = () => {
         <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="gap-2">
           <Users className="w-4 h-4" />
           Contatos
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate("/templates")} className="gap-2">
+          <FileText className="w-4 h-4" />
+          Templates
         </Button>
         <Button variant="outline" size="sm" onClick={() => navigate("/analytics")} className="gap-2">
           <TrendingUp className="w-4 h-4" />

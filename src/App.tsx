@@ -11,6 +11,7 @@ import Contacts from "./pages/Contacts";
 import Analytics from "./pages/Analytics";
 import Templates from "./pages/Templates";
 import ApiTest from "./pages/ApiTest";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ApiTest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/docs"
+            element={
+              <ProtectedRoute>
+                <ApiDocs />
               </ProtectedRoute>
             }
           />

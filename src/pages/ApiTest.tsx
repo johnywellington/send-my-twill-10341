@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, RefreshCw, BookOpen } from "lucide-react";
 import { TestCard } from "@/components/api-test/TestCard";
 import { CredentialValidator } from "@/components/api-test/CredentialValidator";
 import { RateLimitMonitor } from "@/components/api-test/RateLimitMonitor";
@@ -63,15 +63,26 @@ const ApiTest = () => {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            className="gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/docs")}
+              className="gap-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              Documentação
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Credential Validation */}

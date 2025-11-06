@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { SenderIdTooltip } from "./SenderIdTooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -42,6 +43,7 @@ export const BulkSendForm = () => {
   // SMS Config
   const [smsProvider, setSmsProvider] = useState<"twilio" | "vonage">("twilio");
   const [smsFrom, setSmsFrom] = useState("");
+  const [smsSenderId, setSmsSenderId] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
   
   // Voice Config
@@ -149,13 +151,13 @@ export const BulkSendForm = () => {
     try {
       let results;
       
-      if (sendType === 'sms') {
-        const config: SMSConfig = {
-          from: smsFrom,
-          message: smsMessage,
-          provider: smsProvider,
-          throttlePercentage: smsThrottle
-        };
+    if (sendType === 'sms') {
+      const config: SMSConfig = {
+        from: smsSenderId || smsFrom, // Usa Sender ID se fornecido
+        message: smsMessage,
+        provider: smsProvider,
+        throttlePercentage: smsThrottle
+      };
         
         results = await sendBulkSMS(selectedContacts, config, (current, total) => {
           setProgress((current / total) * 100);
@@ -408,15 +410,44 @@ export const BulkSendForm = () => {
             </div>
 
 
-            <div className="space-y-2">
-              <Label htmlFor="sms-from">Número de Origem</Label>
-              <Input
-                id="sms-from"
-                placeholder="+14789921910"
-                value={smsFrom}
-                onChange={(e) => setSmsFrom(e.target.value)}
-              />
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sms-from">Número de Origem</Label>
+                    <Input
+                      id="sms-from"
+                      placeholder="+14789921910"
+                      value={smsFrom}
+                      onChange={(e) => setSmsFrom(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sms-sender-id" className="flex items-center gap-2">
+                      Sender ID (Opcional)
+                      <SenderIdTooltip />
+                    </Label>
+                    <Input
+                      id="sms-sender-id"
+                      placeholder="Ex: EMPRESA, LOJA"
+                      value={smsSenderId}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        if (value.length <= 11) {
+                          setSmsSenderId(value);
+                        }
+                      }}
+                      maxLength={11}
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {smsSenderId ? (
+                        <>
+                          <span className="text-primary font-medium">{smsSenderId.length}/11</span> caracteres • Será usado como remetente
+                        </>
+                      ) : (
+                        'Deixe vazio para usar o número de origem'
+                      )}
+                    </p>
+                  </div>
 
             <div className="space-y-2">
               <Label htmlFor="sms-message">Mensagem</Label>

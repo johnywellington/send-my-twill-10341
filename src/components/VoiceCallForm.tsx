@@ -162,10 +162,13 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
                 </Alert>
               )}
               
-              <p className="text-xs text-muted-foreground">
-                Escolha um número cadastrado ou adicione novos em "Números"
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Escolha um número cadastrado ou adicione novos em "Números"
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Sender ID não é suportado em chamadas de voz. Use um número real.
+            </p>
+          </div>
 
             <div className="space-y-2.5">
               <Label htmlFor="to" className="text-sm font-medium text-foreground">

@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
+import { SenderIdTooltip } from "./SenderIdTooltip";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -26,6 +27,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const navigate = useNavigate();
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
+  const [senderId, setSenderId] = useState("");
   const [message, setMessage] = useState("");
   const [provider, setProvider] = useState<"twilio" | "vonage">("twilio");
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           to,
-          from,
+          from: senderId || from, // Usa Sender ID se fornecido, senão usa número
           body: message,
           provider,
           dryRun
@@ -203,7 +205,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
 
           <div className="space-y-2.5">
             <Label htmlFor="from" className="text-sm font-medium text-foreground">
-              Número de Origem / Sender ID
+              Número de Origem
             </Label>
             <Select value={from} onValueChange={setFrom}>
               <SelectTrigger id="from" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
@@ -246,6 +248,38 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             
             <p className="text-xs text-muted-foreground">
               Escolha um número cadastrado ou adicione novos em "Números"
+            </p>
+          </div>
+
+          {/* Sender ID (Opcional) */}
+          <div className="space-y-2.5">
+            <Label htmlFor="senderId" className="text-sm font-medium text-foreground flex items-center gap-2">
+              Sender ID (Opcional)
+              <SenderIdTooltip />
+            </Label>
+            <Input
+              id="senderId"
+              type="text"
+              placeholder="Ex: EMPRESA, LOJA, ALERT"
+              value={senderId}
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (value.length <= 11) {
+                  setSenderId(value);
+                }
+              }}
+              maxLength={11}
+              className="h-11 font-mono transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="text-xs text-muted-foreground">
+              {senderId ? (
+                <>
+                  <span className="text-primary font-medium">{senderId.length}/11</span> caracteres
+                  {senderId.length > 0 && <> • Será usado como remetente</>}
+                </>
+              ) : (
+                'Deixe vazio para usar o número de origem'
+              )}
             </p>
           </div>
 

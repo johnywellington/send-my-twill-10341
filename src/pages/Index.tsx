@@ -200,7 +200,7 @@ const Index = () => {
         </header>
 
         {/* Conteúdo principal */}
-        <main className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
+        <main className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-3 mb-8">
             <h1 className="text-4xl md:text-4xl font-bold text-foreground tracking-tight">
@@ -241,8 +241,25 @@ const Index = () => {
                 </TabsContent>
             </div>
           </div>
-        </div>
-      </main>
+          </div>
+        </main>
+
+        {/* Footer com crédito */}
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-t border-border py-3">
+          <div className="container mx-auto px-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Desenvolvido por{" "}
+              <a 
+                href="https://www.gordintech.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-semibold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:underline transition-all"
+              >
+                Gordin Tech
+              </a>
+            </p>
+          </div>
+        </footer>
       </Tabs>
     </div>
   );

@@ -311,6 +311,102 @@ export type Database = {
         }
         Relationships: []
       }
+      received_calls: {
+        Row: {
+          call_uuid: string
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string | null
+          duration: number | null
+          ended_at: string | null
+          from_number: string
+          id: string
+          metadata: Json | null
+          provider: string
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          to_number: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          call_uuid: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          from_number: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          call_uuid?: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          from_number?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      received_sms: {
+        Row: {
+          created_at: string | null
+          external_id: string
+          from_number: string
+          id: string
+          message: string
+          metadata: Json | null
+          provider: string
+          received_at: string | null
+          to_number: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_id: string
+          from_number: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          provider: string
+          received_at?: string | null
+          to_number: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_id?: string
+          from_number?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          provider?: string
+          received_at?: string | null
+          to_number?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           cost: number | null

@@ -9,10 +9,12 @@ import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming } from "lucide-react";
+import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
+import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk" | "receive-sms" | "receive-calls">("sms");
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -30,7 +32,9 @@ const Index = () => {
     voice: "Voice Call",
     ivr: "Menu IVR",
     ivr2: "IVR 2.0",
-    bulk: "Envio em Massa"
+    bulk: "Envio em Massa",
+    "receive-sms": "Receber SMS",
+    "receive-calls": "Receber Chamadas"
   };
 
   const descriptions = {
@@ -38,7 +42,9 @@ const Index = () => {
     voice: "Faça chamadas de voz usando a API do Vonage",
     ivr: "Crie menus interativos de atendimento com captura de DTMF",
     ivr2: "Sistema IVR avançado com redirecionamento de chamadas",
-    bulk: "Envie SMS ou chamadas de voz para múltiplos contatos"
+    bulk: "Envie SMS ou chamadas de voz para múltiplos contatos",
+    "receive-sms": "Visualize e gerencie SMS recebidos em seus números",
+    "receive-calls": "Monitore e grave chamadas recebidas em tempo real"
   };
 
   const icons = {
@@ -46,7 +52,9 @@ const Index = () => {
     voice: Phone,
     ivr: Menu,
     ivr2: PhoneForwarded,
-    bulk: Send
+    bulk: Send,
+    "receive-sms": Inbox,
+    "receive-calls": PhoneIncoming
   };
 
   const Icon = icons[activeTab];
@@ -94,8 +102,8 @@ const Index = () => {
         </div>
         
         <div className="flex justify-center">
-          <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' ? 'max-w-4xl' : 'max-w-lg'}`}>
-            <TabsList className="grid w-full grid-cols-5 mb-8 h-12 p-1.5 glass-effect">
+          <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' || activeTab === 'receive-sms' || activeTab === 'receive-calls' ? 'max-w-4xl' : 'max-w-lg'}`}>
+            <TabsList className="grid w-full grid-cols-7 mb-8 h-12 p-1.5 glass-effect">
               <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">SMS</span>
@@ -115,6 +123,14 @@ const Index = () => {
               <TabsTrigger value="bulk" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Envio</span>
+              </TabsTrigger>
+              <TabsTrigger value="receive-sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+                <Inbox className="w-4 h-4" />
+                <span className="hidden sm:inline">Receber SMS</span>
+              </TabsTrigger>
+              <TabsTrigger value="receive-calls" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+                <PhoneIncoming className="w-4 h-4" />
+                <span className="hidden sm:inline">Receber Chamadas</span>
               </TabsTrigger>
             </TabsList>
             
@@ -136,6 +152,14 @@ const Index = () => {
             
             <TabsContent value="bulk">
               <BulkSendForm />
+            </TabsContent>
+            
+            <TabsContent value="receive-sms">
+              <ReceivedSmsViewer />
+            </TabsContent>
+            
+            <TabsContent value="receive-calls">
+              <ReceivedCallsViewer />
             </TabsContent>
           </Tabs>
         </div>

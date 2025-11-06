@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      ivr_logs: {
+        Row: {
+          call_uuid: string | null
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string
+          dtmf_response: string | null
+          duration: number | null
+          error_message: string | null
+          from_number: string
+          id: string
+          language: string
+          ncco: Json
+          premium: boolean
+          status: string
+          style: number
+          template_used: string | null
+          to_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          dtmf_response?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number: string
+          id?: string
+          language?: string
+          ncco: Json
+          premium?: boolean
+          status?: string
+          style?: number
+          template_used?: string | null
+          to_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          dtmf_response?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number?: string
+          id?: string
+          language?: string
+          ncco?: Json
+          premium?: boolean
+          status?: string
+          style?: number
+          template_used?: string | null
+          to_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ivr_responses: {
         Row: {
           conversation_uuid: string
@@ -50,6 +113,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          cost: number | null
+          created_at: string
+          error_message: string | null
+          external_id: string | null
+          from_number: string
+          id: string
+          message: string
+          provider: string
+          status: string
+          to_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          from_number: string
+          id?: string
+          message: string
+          provider: string
+          status?: string
+          to_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          from_number?: string
+          id?: string
+          message?: string
+          provider?: string
+          status?: string
+          to_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -67,6 +175,60 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      voice_logs: {
+        Row: {
+          call_uuid: string | null
+          cost: number | null
+          created_at: string
+          duration: number | null
+          error_message: string | null
+          from_number: string
+          id: string
+          language: string
+          message: string
+          premium: boolean
+          status: string
+          style: number
+          to_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          error_message?: string | null
+          from_number: string
+          id?: string
+          language?: string
+          message: string
+          premium?: boolean
+          status?: string
+          style?: number
+          to_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          error_message?: string | null
+          from_number?: string
+          id?: string
+          language?: string
+          message?: string
+          premium?: boolean
+          status?: string
+          style?: number
+          to_number?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

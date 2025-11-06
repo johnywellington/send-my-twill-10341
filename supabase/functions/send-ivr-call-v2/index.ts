@@ -108,6 +108,7 @@ serve(async (req: Request) => {
 
     console.log('Authenticated user:', user.id);
 
+    const userId = user.id;
     const { 
       to, 
       from, 
@@ -285,6 +286,31 @@ serve(async (req: Request) => {
     }
 
     console.log('IVR V2 call initiated successfully:', responseData);
+
+    // Log successful IVR V2 call
+    if (userId) {
+      const logData = {
+        user_id: userId,
+        to_number: to,
+        from_number: from,
+        template_used: template,
+        ncco: nccoWithWebhook,
+        language: language,
+        style: style,
+        premium: premium,
+        status: 'initiated',
+        call_uuid: responseData.uuid,
+        conversation_uuid: responseData.conversation_uuid
+      };
+
+      const { error: logError } = await authSupabase
+        .from('ivr_logs')
+        .insert(logData);
+
+      if (logError) {
+        console.error('Error logging IVR V2 call:', logError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ 

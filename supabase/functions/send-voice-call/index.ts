@@ -96,6 +96,7 @@ serve(async (req: Request) => {
 
     console.log('Authenticated user:', user.id);
 
+    const userId = user.id;
     const { to, from, text, language = "en-US", style = 0, premium = false }: VoiceCallRequest = await req.json();
 
     if (!to || !from || !text) {
@@ -261,6 +262,29 @@ serve(async (req: Request) => {
 
     console.log('Call initiated successfully:', responseData.uuid);
 
+    // Log successful voice call
+    if (userId) {
+      const logData = {
+        user_id: userId,
+        to_number: to,
+        from_number: from,
+        message: text,
+        language: language,
+        style: style,
+        premium: premium,
+        status: 'initiated',
+        call_uuid: responseData.uuid
+      };
+
+      const { error: logError } = await supabase
+        .from('voice_logs')
+        .insert(logData);
+
+      if (logError) {
+        console.error('Error logging voice call:', logError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -275,6 +299,39 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Error making voice call:', error);
+    
+    // Try to log failed voice call if we have the necessary data
+    try {
+      const authHeader2 = req.headers.get('Authorization');
+      if (authHeader2) {
+        const supabaseUrl2 = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const supabase2 = createClient(supabaseUrl2, supabaseKey2, {
+          global: { headers: { Authorization: authHeader2 } }
+        });
+        
+        const { data: { user } } = await supabase2.auth.getUser();
+        if (user) {
+          const requestBody = await req.clone().json();
+          const logData = {
+            user_id: user.id,
+            to_number: requestBody.to || '',
+            from_number: requestBody.from || '',
+            message: requestBody.text || '',
+            language: requestBody.language || 'en-US',
+            style: requestBody.style || 0,
+            premium: requestBody.premium || false,
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error'
+          };
+
+          await supabase2.from('voice_logs').insert(logData);
+        }
+      }
+    } catch (logError) {
+      console.error('Error logging failed voice call:', logError);
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,

@@ -106,6 +106,7 @@ serve(async (req: Request) => {
 
     console.log('Authenticated user:', user.id);
 
+    const userId = user.id;
     const { to, from, language = "pt-BR", style = 2, premium = false, template, ncco }: IVRRequest = await req.json();
 
     // ✅ VALIDAÇÃO DE INPUTS
@@ -282,6 +283,31 @@ serve(async (req: Request) => {
     }
 
     console.log('IVR call initiated successfully:', responseData);
+
+    // Log successful IVR call
+    if (userId) {
+      const logData = {
+        user_id: userId,
+        to_number: to,
+        from_number: from,
+        template_used: template,
+        ncco: nccoWithWebhook,
+        language: language,
+        style: style,
+        premium: premium,
+        status: 'initiated',
+        call_uuid: responseData.uuid,
+        conversation_uuid: responseData.conversation_uuid
+      };
+
+      const { error: logError } = await supabase
+        .from('ivr_logs')
+        .insert(logData);
+
+      if (logError) {
+        console.error('Error logging IVR call:', logError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ 

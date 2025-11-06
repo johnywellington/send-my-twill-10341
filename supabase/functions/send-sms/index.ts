@@ -109,6 +109,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('✅ Validation passed - User:', user.id, 'Provider:', provider);
+    
+    const userId = user.id;
     let response;
     
     if (provider === "vonage") {
@@ -215,6 +217,27 @@ const handler = async (req: Request): Promise<Response> => {
       };
     }
 
+    // Log successful SMS
+    if (userId) {
+      const logData = {
+        user_id: userId,
+        to_number: to,
+        from_number: from,
+        message: body,
+        provider: provider,
+        status: 'sent',
+        external_id: response.messageSid
+      };
+
+      const { error: logError } = await supabase
+        .from('sms_logs')
+        .insert(logData);
+
+      if (logError) {
+        console.error('Error logging SMS:', logError);
+      }
+    }
+
     console.log('SMS sent successfully');
     console.log('=== SMS Send Request Completed ===');
 
@@ -227,6 +250,37 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error('Error in send-sms function:', error);
+    
+    // Try to log failed SMS if we have the necessary data
+    try {
+      const authHeader2 = req.headers.get('Authorization');
+      if (authHeader2) {
+        const supabaseUrl2 = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey2 = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const supabase2 = createClient(supabaseUrl2, supabaseKey2, {
+          global: { headers: { Authorization: authHeader2 } }
+        });
+        
+        const { data: { user } } = await supabase2.auth.getUser();
+        if (user) {
+          const requestBody = await req.clone().json();
+          const logData = {
+            user_id: user.id,
+            to_number: requestBody.to || '',
+            from_number: requestBody.from || '',
+            message: requestBody.body || '',
+            provider: requestBody.provider || 'twilio',
+            status: 'failed',
+            error_message: error.message
+          };
+
+          await supabase2.from('sms_logs').insert(logData);
+        }
+      }
+    } catch (logError) {
+      console.error('Error logging failed SMS:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false, 

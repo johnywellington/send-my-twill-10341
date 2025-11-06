@@ -8,7 +8,7 @@ import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3 } from "lucide-react";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2">("sms");
@@ -49,7 +49,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background p-4 sm:p-6 md:p-8">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+          <BarChart3 className="w-4 h-4" />
+          Dashboard
+        </Button>
         <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
           <LogOut className="w-4 h-4" />
           Sair

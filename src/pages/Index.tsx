@@ -90,7 +90,7 @@ const Index = () => {
         </div>
         
         <div className="flex justify-center">
-          <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full max-w-lg">
+          <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' ? 'max-w-4xl' : 'max-w-lg'}`}>
             <TabsList className="grid w-full grid-cols-5 mb-8 h-12 p-1.5 glass-effect">
               <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />

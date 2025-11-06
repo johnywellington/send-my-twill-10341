@@ -76,7 +76,10 @@ const ApiTest = () => {
 
         {/* Credential Validation */}
         <div className="mb-6">
-          <CredentialValidator key={refreshKey} />
+          <CredentialValidator 
+            key={refreshKey} 
+            onTestComplete={handleTestComplete}
+          />
         </div>
 
         {/* Rate Limit Monitor */}

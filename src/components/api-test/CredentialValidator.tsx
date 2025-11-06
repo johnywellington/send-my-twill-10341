@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { TestResult } from "@/pages/ApiTest";
 
 interface ValidationResult {
   vonage: "idle" | "loading" | "success" | "error";
@@ -12,7 +13,11 @@ interface ValidationResult {
   twilioMessage?: string;
 }
 
-export const CredentialValidator = () => {
+interface CredentialValidatorProps {
+  onTestComplete: (result: TestResult) => void;
+}
+
+export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps) => {
   const [validation, setValidation] = useState<ValidationResult>({
     vonage: "idle",
     twilio: "idle",
@@ -20,42 +25,93 @@ export const CredentialValidator = () => {
 
   const validateVonage = async () => {
     setValidation((prev) => ({ ...prev, vonage: "loading" }));
+    const startTime = Date.now();
+    
     try {
-      // Tenta fazer uma chamada simples para verificar as credenciais
       const { data, error } = await supabase.functions.invoke("send-voice-call", {
         body: {
-          to: "+15555555555", // Número de teste que não será chamado
+          to: "+15555555555",
           from: "+442033222305",
           text: "Test",
-          dryRun: true, // Flag para não enviar de verdade
+          dryRun: true,
         },
       });
 
-      // Se chegou aqui sem erro de autenticação, as credenciais estão válidas
-      if (error && error.message.includes("authentication")) {
-        setValidation((prev) => ({
-          ...prev,
-          vonage: "error",
-          vonageMessage: "Credenciais inválidas",
-        }));
-      } else {
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+      const success = !error || !error.message.includes("authentication");
+
+      // Salvar no histórico
+      onTestComplete({
+        id: `credential-vonage-${Date.now()}`,
+        timestamp: new Date(),
+        functionName: "Validação Vonage",
+        status: success ? "success" : "error",
+        request: {
+          provider: "vonage",
+          test_type: "credential_validation",
+          dryRun: true
+        },
+        response: error || data,
+        latency,
+      });
+
+      if (success) {
         setValidation((prev) => ({
           ...prev,
           vonage: "success",
           vonageMessage: "Credenciais válidas",
         }));
+        toast({
+          title: "✅ Vonage Validado",
+          description: "Credenciais estão corretas",
+        });
+      } else {
+        setValidation((prev) => ({
+          ...prev,
+          vonage: "error",
+          vonageMessage: "Credenciais inválidas",
+        }));
+        toast({
+          title: "❌ Erro Vonage",
+          description: "Verifique suas credenciais",
+          variant: "destructive",
+        });
       }
     } catch (err) {
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+
+      onTestComplete({
+        id: `credential-vonage-${Date.now()}`,
+        timestamp: new Date(),
+        functionName: "Validação Vonage",
+        status: "error",
+        request: {
+          provider: "vonage",
+          test_type: "credential_validation",
+        },
+        response: err instanceof Error ? err.message : "Erro desconhecido",
+        latency,
+      });
+
       setValidation((prev) => ({
         ...prev,
         vonage: "error",
         vonageMessage: "Erro ao validar",
       }));
+      toast({
+        title: "❌ Erro Vonage",
+        description: "Erro ao validar credenciais",
+        variant: "destructive",
+      });
     }
   };
 
   const validateTwilio = async () => {
     setValidation((prev) => ({ ...prev, twilio: "loading" }));
+    const startTime = Date.now();
+    
     try {
       const { data, error } = await supabase.functions.invoke("send-sms", {
         body: {
@@ -67,25 +123,74 @@ export const CredentialValidator = () => {
         },
       });
 
-      if (error && error.message.includes("authentication")) {
-        setValidation((prev) => ({
-          ...prev,
-          twilio: "error",
-          twilioMessage: "Credenciais inválidas",
-        }));
-      } else {
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+      const success = !error || !error.message.includes("authentication");
+
+      // Salvar no histórico
+      onTestComplete({
+        id: `credential-twilio-${Date.now()}`,
+        timestamp: new Date(),
+        functionName: "Validação Twilio",
+        status: success ? "success" : "error",
+        request: {
+          provider: "twilio",
+          test_type: "credential_validation",
+          dryRun: true
+        },
+        response: error || data,
+        latency,
+      });
+
+      if (success) {
         setValidation((prev) => ({
           ...prev,
           twilio: "success",
           twilioMessage: "Credenciais válidas",
         }));
+        toast({
+          title: "✅ Twilio Validado",
+          description: "Credenciais estão corretas",
+        });
+      } else {
+        setValidation((prev) => ({
+          ...prev,
+          twilio: "error",
+          twilioMessage: "Credenciais inválidas",
+        }));
+        toast({
+          title: "❌ Erro Twilio",
+          description: "Verifique suas credenciais",
+          variant: "destructive",
+        });
       }
     } catch (err) {
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+
+      onTestComplete({
+        id: `credential-twilio-${Date.now()}`,
+        timestamp: new Date(),
+        functionName: "Validação Twilio",
+        status: "error",
+        request: {
+          provider: "twilio",
+          test_type: "credential_validation",
+        },
+        response: err instanceof Error ? err.message : "Erro desconhecido",
+        latency,
+      });
+
       setValidation((prev) => ({
         ...prev,
         twilio: "error",
         twilioMessage: "Erro ao validar",
       }));
+      toast({
+        title: "❌ Erro Twilio",
+        description: "Erro ao validar credenciais",
+        variant: "destructive",
+      });
     }
   };
 

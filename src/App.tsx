@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Analytics from "./pages/Analytics";
 import Templates from "./pages/Templates";
+import ApiTest from "./pages/ApiTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Templates />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/api-test"
+            element={
+              <ProtectedRoute>
+                <ApiTest />
               </ProtectedRoute>
             }
           />

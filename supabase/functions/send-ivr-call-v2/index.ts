@@ -151,6 +151,17 @@ serve(async (req: Request) => {
 
     console.log('✅ Validation passed - User:', user.id, 'Template:', template);
 
+    // Função auxiliar para detectar erro de voz inválida
+    const isInvalidVoiceError = (responseData: any): boolean => {
+      const errorStr = JSON.stringify(responseData).toLowerCase();
+      return (
+        errorStr.includes('invalid voice') ||
+        errorStr.includes('voicename') ||
+        errorStr.includes('voice not found') ||
+        responseData.type?.includes('voice')
+      );
+    };
+
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
@@ -279,7 +290,71 @@ serve(async (req: Request) => {
       );
     }
 
-    const responseData = await vonageResponse.json();
+    let responseData = await vonageResponse.json();
+
+    // Sistema de fallback automático
+    let usedFallback = false;
+    let originalVoice: string | null = null;
+
+    if (!vonageResponse.ok && voiceName && isInvalidVoiceError(responseData)) {
+      console.warn(`⚠️ Voice '${voiceName}' failed in IVR, retrying with fallback...`);
+      originalVoice = voiceName;
+      
+      // Reprocessar NCCO com fallback
+      const fallbackNCCO = ncco.map(action => {
+        if (action.action === 'talk') {
+          return {
+            ...action,
+            language: action.language || language,
+            style: action.style !== undefined ? action.style : style,
+            premium: action.premium !== undefined ? action.premium : premium
+          };
+        }
+        return action;
+      });
+
+      // Reinjetar webhook
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const fallbackNCCOWithWebhook = fallbackNCCO.map(action => {
+        if (action.action === 'input' && supabaseUrl) {
+          const webhookUrl = new URL(`${supabaseUrl}/functions/v1/ivr-webhook-v2`);
+          webhookUrl.searchParams.set('assistant_number', assistantNumber);
+          webhookUrl.searchParams.set('transfer_timeout', transferTimeout.toString());
+          webhookUrl.searchParams.set('from_number', from);
+          
+          return {
+            ...action,
+            eventUrl: [webhookUrl.toString()],
+            eventMethod: 'POST'
+          };
+        }
+        return action;
+      });
+
+      const fallbackPayload = {
+        to: [{ type: 'phone', number: to.replace(/[^0-9]/g, '') }],
+        from: { type: 'phone', number: from.replace(/[^0-9]/g, '') },
+        ncco: fallbackNCCOWithWebhook
+      };
+
+      vonageResponse = await fetch('https://api.vonage.com/v1/calls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'LovableVoice-IVR-V2/1.0',
+          'Authorization': `Bearer ${jwt}`
+        },
+        body: JSON.stringify(fallbackPayload)
+      });
+
+      responseData = await vonageResponse.json();
+      usedFallback = vonageResponse.ok;
+
+      if (usedFallback) {
+        console.log(`✅ IVR Fallback successful: used ${language}+style:${style}`);
+      }
+    }
 
     if (!vonageResponse.ok) {
       console.error('Vonage API error (V2):', responseData);
@@ -305,6 +380,9 @@ serve(async (req: Request) => {
         language: language,
         style: style,
         premium: premium,
+        voice_name: voiceName,
+        used_fallback: usedFallback,
+        original_voice: originalVoice,
         status: 'initiated',
         call_uuid: responseData.uuid,
         conversation_uuid: responseData.conversation_uuid

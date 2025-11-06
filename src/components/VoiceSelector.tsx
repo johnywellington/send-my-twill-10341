@@ -1,10 +1,12 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Sparkles } from "lucide-react";
+import { Info, Sparkles, Play, Square, Loader2, Shield } from "lucide-react";
 import { getVoicesByLanguage, isPortugueseLanguage, VoiceOption } from "@/lib/voice-options";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useVoicePreview } from "@/hooks/use-voice-preview";
 
 interface VoiceSelectorProps {
   language: string;
@@ -16,6 +18,7 @@ interface VoiceSelectorProps {
 export function VoiceSelector({ language, value, onChange, onPremiumSuggestion }: VoiceSelectorProps) {
   const isPortuguese = isPortugueseLanguage(language);
   const availableVoices = getVoicesByLanguage(language);
+  const { isPlaying, isLoading, playPreview, stopPreview } = useVoicePreview();
 
   if (!isPortuguese || availableVoices.length === 0) {
     return null;
@@ -67,15 +70,43 @@ export function VoiceSelector({ language, value, onChange, onPremiumSuggestion }
           <SelectContent>
             {availableVoices.map((voice) => (
               <SelectItem key={voice.value} value={voice.value}>
-                <div className="flex items-center gap-2">
-                  <span>{voice.flag}</span>
-                  <span>{voice.label}</span>
-                  <Badge variant={voice.type === 'neural' ? 'default' : 'secondary'} className="text-xs">
-                    {voice.type === 'neural' ? '⭐ Neural' : 'Standard'}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {voice.gender === 'female' ? '♀️' : '♂️'}
-                  </span>
+                <div className="flex items-center justify-between w-full gap-3">
+                  <div className="flex items-center gap-2">
+                    <span>{voice.flag}</span>
+                    <span>{voice.label}</span>
+                    <Badge variant={voice.type === 'neural' ? 'default' : 'secondary'} className="text-xs">
+                      {voice.type === 'neural' ? '⭐ Neural' : 'Standard'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {voice.gender === 'female' ? '♀️' : '♂️'}
+                    </span>
+                  </div>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-primary/10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      
+                      if (isPlaying === voice.value) {
+                        stopPreview();
+                      } else {
+                        playPreview(voice.value, voice.language, true);
+                      }
+                    }}
+                    disabled={isLoading === voice.value}
+                  >
+                    {isLoading === voice.value ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : isPlaying === voice.value ? (
+                      <Square className="h-3 w-3 fill-current" />
+                    ) : (
+                      <Play className="h-3 w-3" />
+                    )}
+                  </Button>
                 </div>
               </SelectItem>
             ))}
@@ -83,9 +114,20 @@ export function VoiceSelector({ language, value, onChange, onPremiumSuggestion }
         </Select>
 
         {selectedVoice && (
-          <p className="text-xs text-muted-foreground">
-            {selectedVoice.description}
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {selectedVoice.description}
+            </p>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                <Shield className="h-3 w-3 mr-1" />
+                Fallback Automático
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                Se indisponível, usará voz alternativa automaticamente
+              </span>
+            </div>
+          </div>
         )}
       </div>
     </div>

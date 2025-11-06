@@ -161,17 +161,34 @@ serve(async (req: Request) => {
 
     const eventUrl = `${supabaseUrl}/functions/v1/vonage-voice-webhook`;
 
-    const vonagePayload = {
+    // Função auxiliar para detectar erro de voz inválida
+    const isInvalidVoiceError = (responseData: any): boolean => {
+      const errorStr = JSON.stringify(responseData).toLowerCase();
+      return (
+        errorStr.includes('invalid voice') ||
+        errorStr.includes('voicename') ||
+        errorStr.includes('voice not found') ||
+        responseData.type?.includes('voice')
+      );
+    };
+
+    // Função para criar payload Vonage (reutilizável)
+    const createVonagePayload = (useFallback = false) => ({
       to: [{ type: "phone", number: (to || '').replace(/[^0-9]/g, '') }],
       from: { type: "phone", number: (from || '').replace(/[^0-9]/g, '') },
       event_url: [eventUrl],
       ncco: [{
         action: "talk",
         text: text,
-        ...(voiceName ? { voiceName } : { language, style }),
-        premium: premium
+        ...(useFallback || !voiceName 
+          ? { language: language || 'pt-PT', style: style ?? 0 } 
+          : { voiceName: voiceName }
+        ),
+        premium: premium ?? false
       }]
-    };
+    });
+
+    let vonagePayload = createVonagePayload();
 
     let jwt: string;
     try {
@@ -245,7 +262,37 @@ serve(async (req: Request) => {
       );
     }
 
-    const responseData = await response.json();
+    let responseData = await response.json();
+
+    // Sistema de fallback automático
+    let usedFallback = false;
+    let originalVoice: string | null = null;
+
+    if (!response.ok && voiceName && isInvalidVoiceError(responseData)) {
+      console.warn(`⚠️ Voice '${voiceName}' failed, retrying with fallback (language+style)...`);
+      originalVoice = voiceName;
+      
+      // RETRY com fallback para language+style
+      vonagePayload = createVonagePayload(true);
+      
+      response = await fetch('https://api.vonage.com/v1/calls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'LovableVoice/1.0',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify(vonagePayload),
+      });
+      
+      responseData = await response.json();
+      usedFallback = response.ok;
+      
+      if (usedFallback) {
+        console.log(`✅ Fallback successful: used ${language}+style:${style} instead of ${voiceName}`);
+      }
+    }
 
     if (!response.ok) {
       console.error('Vonage API error:', responseData);
@@ -275,6 +322,9 @@ serve(async (req: Request) => {
         language: language,
         style: style,
         premium: premium,
+        voice_name: voiceName,
+        used_fallback: usedFallback,
+        original_voice: originalVoice,
         status: 'initiated',
         call_uuid: responseData.uuid
       };
@@ -293,6 +343,8 @@ serve(async (req: Request) => {
         success: true,
         uuid: responseData.uuid,
         status: responseData.status,
+        usedFallback: usedFallback,
+        originalVoice: originalVoice
       }),
       {
         status: 200,

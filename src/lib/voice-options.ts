@@ -6,6 +6,7 @@ export interface VoiceOption {
   type: 'neural' | 'standard';
   flag: string;
   description: string;
+  sampleText: string;
 }
 
 export const PORTUGUESE_VOICES: VoiceOption[] = [
@@ -17,7 +18,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'female',
     type: 'neural',
     flag: '🇧🇷',
-    description: 'Voz feminina neural brasileira - Natural e expressiva'
+    description: 'Voz feminina neural brasileira - Natural e expressiva',
+    sampleText: 'Olá! Sou a Camila, sua assistente virtual brasileira. Como posso ajudar você hoje?'
   },
   {
     value: 'Vitória',
@@ -26,7 +28,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'female',
     type: 'neural',
     flag: '🇧🇷',
-    description: 'Voz feminina neural brasileira - Profissional e clara'
+    description: 'Voz feminina neural brasileira - Profissional e clara',
+    sampleText: 'Olá! Sou a Vitória. Estou aqui para tornar sua comunicação mais profissional e eficiente.'
   },
   {
     value: 'Ricardo',
@@ -35,7 +38,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'male',
     type: 'neural',
     flag: '🇧🇷',
-    description: 'Voz masculina neural brasileira - Confiável e amigável'
+    description: 'Voz masculina neural brasileira - Confiável e amigável',
+    sampleText: 'Olá! Sou o Ricardo. Posso ajudar com suas chamadas e mensagens automáticas.'
   },
   {
     value: 'Thiago',
@@ -44,7 +48,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'male',
     type: 'neural',
     flag: '🇧🇷',
-    description: 'Voz masculina neural brasileira - Dinâmica e moderna'
+    description: 'Voz masculina neural brasileira - Dinâmica e moderna',
+    sampleText: 'Olá! Sou o Thiago, pronto para conectar você com seus clientes de forma dinâmica.'
   },
   
   // Portuguese Portugal - Neural Voices
@@ -55,7 +60,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'female',
     type: 'neural',
     flag: '🇵🇹',
-    description: 'Voz feminina neural portuguesa - Elegante e profissional'
+    description: 'Voz feminina neural portuguesa - Elegante e profissional',
+    sampleText: 'Olá! Sou a Inês. Vou tornar suas comunicações mais elegantes e eficazes.'
   },
   {
     value: 'Cristiano',
@@ -64,7 +70,8 @@ export const PORTUGUESE_VOICES: VoiceOption[] = [
     gender: 'male',
     type: 'neural',
     flag: '🇵🇹',
-    description: 'Voz masculina neural portuguesa - Autoridade e clareza'
+    description: 'Voz masculina neural portuguesa - Autoridade e clareza',
+    sampleText: 'Olá! Sou o Cristiano. Confie em mim para transmitir suas mensagens com clareza.'
   }
 ];
 

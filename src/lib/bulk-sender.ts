@@ -118,6 +118,7 @@ export async function sendBulkVoice(
 ): Promise<SendResult[]> {
   const results: SendResult[] = [];
   const startTime = Date.now();
+  let fallbackCount = 0;
   
   // Calcular delay baseado no throttle (Vonage Voice: 3 CPS padrão)
   const throttle = config.throttlePercentage || 1.0;
@@ -129,7 +130,7 @@ export async function sendBulkVoice(
     const personalizedMessage = replaceVariables(config.message, contact);
     
     try {
-      const { error } = await supabase.functions.invoke('send-voice-call', {
+      const { data, error } = await supabase.functions.invoke('send-voice-call', {
         body: {
           to: contact.phone_number,
           from: config.from,
@@ -142,6 +143,15 @@ export async function sendBulkVoice(
       });
       
       if (error) throw error;
+
+      // Contar fallbacks
+      if (data?.usedFallback) {
+        fallbackCount++;
+        console.warn(
+          `⚠️ Voice '${data.originalVoice}' não disponível para ${contact.phone_number}. ` +
+          `Usado fallback: ${config.language} (style ${config.style})`
+        );
+      }
       
       results.push({ contact, success: true });
     } catch (error) {
@@ -185,6 +195,17 @@ export async function sendBulkVoice(
     }
   } catch (error) {
     console.error('Error saving bulk send log:', error);
+  }
+
+  // Notificar sobre fallbacks se houver
+  if (fallbackCount > 0) {
+    const { toast } = await import('@/hooks/use-toast');
+    toast({
+      title: `⚠️ ${fallbackCount} chamadas usaram fallback automático`,
+      description: 'As vozes específicas não estavam disponíveis, mas as chamadas foram completadas com vozes alternativas.',
+      duration: 5000,
+      variant: 'default'
+    });
   }
   
   return results;

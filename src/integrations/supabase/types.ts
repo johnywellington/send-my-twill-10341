@@ -174,12 +174,14 @@ export type Database = {
           id: string
           language: string
           ncco: Json
+          original_voice: string | null
           premium: boolean
           status: string
           style: number
           template_used: string | null
           to_number: string
           updated_at: string
+          used_fallback: boolean | null
           user_id: string
         }
         Insert: {
@@ -194,12 +196,14 @@ export type Database = {
           id?: string
           language?: string
           ncco: Json
+          original_voice?: string | null
           premium?: boolean
           status?: string
           style?: number
           template_used?: string | null
           to_number: string
           updated_at?: string
+          used_fallback?: boolean | null
           user_id: string
         }
         Update: {
@@ -214,12 +218,14 @@ export type Database = {
           id?: string
           language?: string
           ncco?: Json
+          original_voice?: string | null
           premium?: boolean
           status?: string
           style?: number
           template_used?: string | null
           to_number?: string
           updated_at?: string
+          used_fallback?: boolean | null
           user_id?: string
         }
         Relationships: []
@@ -382,11 +388,13 @@ export type Database = {
           id: string
           language: string
           message: string
+          original_voice: string | null
           premium: boolean
           status: string
           style: number
           to_number: string
           updated_at: string
+          used_fallback: boolean | null
           user_id: string
         }
         Insert: {
@@ -399,11 +407,13 @@ export type Database = {
           id?: string
           language?: string
           message: string
+          original_voice?: string | null
           premium?: boolean
           status?: string
           style?: number
           to_number: string
           updated_at?: string
+          used_fallback?: boolean | null
           user_id: string
         }
         Update: {
@@ -416,11 +426,13 @@ export type Database = {
           id?: string
           language?: string
           message?: string
+          original_voice?: string | null
           premium?: boolean
           status?: string
           style?: number
           to_number?: string
           updated_at?: string
+          used_fallback?: boolean | null
           user_id?: string
         }
         Relationships: []

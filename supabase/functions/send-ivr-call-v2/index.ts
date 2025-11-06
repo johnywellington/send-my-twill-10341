@@ -17,6 +17,7 @@ interface IVRV2Request {
   premium?: boolean;
   template: string;
   ncco: any[];
+  voiceName?: string;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -118,7 +119,8 @@ serve(async (req: Request) => {
       style = 2, 
       premium = false, 
       template, 
-      ncco 
+      ncco,
+      voiceName
     }: IVRV2Request = await req.json();
 
     console.log('IVR V2 Call Request:', { to, from, assistantNumber, transferTimeout, template });
@@ -165,8 +167,13 @@ serve(async (req: Request) => {
       if (action.action === 'talk') {
         return {
           ...action,
-          language: action.language || language,
-          style: action.style !== undefined ? action.style : style,
+          ...(voiceName ? 
+            { voiceName: action.voiceName || voiceName } : 
+            { 
+              language: action.language || language,
+              style: action.style !== undefined ? action.style : style
+            }
+          ),
           premium: action.premium !== undefined ? action.premium : premium
         };
       }

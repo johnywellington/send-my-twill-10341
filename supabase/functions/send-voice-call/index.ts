@@ -14,6 +14,7 @@ interface VoiceCallRequest {
   language?: string;
   style?: number;
   premium?: boolean;
+  voiceName?: string;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -97,7 +98,7 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, text, language = "en-US", style = 0, premium = false }: VoiceCallRequest = await req.json();
+    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName }: VoiceCallRequest = await req.json();
 
     if (!to || !from || !text) {
       return new Response(
@@ -167,8 +168,7 @@ serve(async (req: Request) => {
       ncco: [{
         action: "talk",
         text: text,
-        language: language,
-        style: style,
+        ...(voiceName ? { voiceName } : { language, style }),
         premium: premium
       }]
     };

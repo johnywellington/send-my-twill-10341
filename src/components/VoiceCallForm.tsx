@@ -12,6 +12,8 @@ import { Loader2, Save } from "lucide-react";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/hooks/use-templates";
+import { VoiceSelector } from "@/components/VoiceSelector";
+import { isPortugueseLanguage } from "@/lib/voice-options";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -23,6 +25,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [message, setMessage] = useState("Hello from Voice API");
   const [language, setLanguage] = useState("en-US");
   const [style, setStyle] = useState("0");
+  const [voiceName, setVoiceName] = useState("");
   const [premium, setPremium] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -51,7 +54,8 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           text: message,
           language,
           style: parseInt(style),
-          premium
+          premium,
+          voiceName: voiceName || undefined
         }
       });
 
@@ -123,12 +127,18 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2.5">
                 <Label htmlFor="language" className="text-sm font-medium text-foreground">
                   Idioma
                 </Label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={language} onValueChange={(value) => {
+                  setLanguage(value);
+                  // Reset voice name when changing to non-Portuguese language
+                  if (!isPortugueseLanguage(value)) {
+                    setVoiceName("");
+                  }
+                }}>
                   <SelectTrigger id="language" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
                     <SelectValue />
                   </SelectTrigger>
@@ -146,22 +156,35 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2.5">
-                <Label htmlFor="style" className="text-sm font-medium text-foreground">
-                  Estilo de Voz
-                </Label>
-                <Select value={style} onValueChange={setStyle}>
-                  <SelectTrigger id="style" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="0">Estilo 0 (Padrão)</SelectItem>
-                    <SelectItem value="1">Estilo 1</SelectItem>
-                    <SelectItem value="2">Estilo 2</SelectItem>
-                    <SelectItem value="3">Estilo 3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Voice Selector for Portuguese languages */}
+              {isPortugueseLanguage(language) && (
+                <VoiceSelector
+                  language={language}
+                  value={voiceName}
+                  onChange={setVoiceName}
+                  onPremiumSuggestion={setPremium}
+                />
+              )}
+
+              {/* Style selector - only show when NOT using Portuguese specific voices */}
+              {!isPortugueseLanguage(language) && (
+                <div className="space-y-2.5">
+                  <Label htmlFor="style" className="text-sm font-medium text-foreground">
+                    Estilo de Voz
+                  </Label>
+                  <Select value={style} onValueChange={setStyle}>
+                    <SelectTrigger id="style" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="0">Estilo 0 (Padrão)</SelectItem>
+                      <SelectItem value="1">Estilo 1</SelectItem>
+                      <SelectItem value="2">Estilo 2</SelectItem>
+                      <SelectItem value="3">Estilo 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-3 p-4 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors">

@@ -16,6 +16,8 @@ import { Send, Users, MessageSquare, Phone, Clock } from "lucide-react";
 import { sendBulkSMS, sendBulkVoice, Contact, SMSConfig, VoiceConfig, replaceVariables } from "@/lib/bulk-sender";
 import { calculateEstimatedTime } from "@/lib/rate-limits";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
+import { VoiceSelector } from "@/components/VoiceSelector";
+import { isPortugueseLanguage } from "@/lib/voice-options";
 
 interface ContactGroup {
   id: string;
@@ -47,6 +49,7 @@ export const BulkSendForm = () => {
   const [voiceMessage, setVoiceMessage] = useState("");
   const [voiceLanguage, setVoiceLanguage] = useState("pt-PT");
   const [voiceStyle, setVoiceStyle] = useState(0);
+  const [voiceName, setVoiceName] = useState("");
   const [voicePremium, setVoicePremium] = useState(false);
   
   // Throttle Config
@@ -164,7 +167,8 @@ export const BulkSendForm = () => {
           language: voiceLanguage,
           style: voiceStyle,
           premium: voicePremium,
-          throttlePercentage: voiceThrottle
+          throttlePercentage: voiceThrottle,
+          voiceName: voiceName || undefined
         };
         
         results = await sendBulkVoice(selectedContacts, config, (current, total) => {
@@ -439,7 +443,12 @@ export const BulkSendForm = () => {
 
             <div className="space-y-2">
               <Label htmlFor="voice-language">Idioma</Label>
-              <Select value={voiceLanguage} onValueChange={setVoiceLanguage}>
+              <Select value={voiceLanguage} onValueChange={(value) => {
+                setVoiceLanguage(value);
+                if (!isPortugueseLanguage(value)) {
+                  setVoiceName("");
+                }
+              }}>
                 <SelectTrigger id="voice-language">
                   <SelectValue />
                 </SelectTrigger>
@@ -452,6 +461,16 @@ export const BulkSendForm = () => {
               </Select>
             </div>
 
+            {/* Voice Selector for Portuguese */}
+            {isPortugueseLanguage(voiceLanguage) && (
+              <VoiceSelector
+                language={voiceLanguage}
+                value={voiceName}
+                onChange={setVoiceName}
+                onPremiumSuggestion={setVoicePremium}
+              />
+            )}
+
             <RateLimitSelector
               provider="vonage"
               type="voice"
@@ -459,19 +478,22 @@ export const BulkSendForm = () => {
               onChange={setVoiceThrottle}
             />
 
-            <div className="space-y-2">
-              <Label htmlFor="voice-style">Estilo de Voz</Label>
-              <Select value={voiceStyle.toString()} onValueChange={(v) => setVoiceStyle(parseInt(v))}>
-                <SelectTrigger id="voice-style">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Padrão</SelectItem>
-                  <SelectItem value="1">Formal</SelectItem>
-                  <SelectItem value="2">Casual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Style selector - only show when NOT using Portuguese specific voices */}
+            {!isPortugueseLanguage(voiceLanguage) && (
+              <div className="space-y-2">
+                <Label htmlFor="voice-style">Estilo de Voz</Label>
+                <Select value={voiceStyle.toString()} onValueChange={(v) => setVoiceStyle(parseInt(v))}>
+                  <SelectTrigger id="voice-style">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Padrão</SelectItem>
+                    <SelectItem value="1">Formal</SelectItem>
+                    <SelectItem value="2">Casual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center space-x-2">
               <Checkbox

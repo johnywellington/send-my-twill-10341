@@ -20,6 +20,7 @@ export interface VoiceConfig {
   style: number;
   premium: boolean;
   throttlePercentage?: number;
+  voiceName?: string;
 }
 
 export interface SendResult {
@@ -135,7 +136,8 @@ export async function sendBulkVoice(
           text: personalizedMessage,
           language: config.language,
           style: config.style,
-          premium: config.premium
+          premium: config.premium,
+          voiceName: config.voiceName
         }
       });
       

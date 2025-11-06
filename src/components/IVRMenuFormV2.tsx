@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Info, PhoneForwarded } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { VoiceSelector } from "@/components/VoiceSelector";
+import { isPortugueseLanguage } from "@/lib/voice-options";
 
 const templates = {
   "bank-security-v2": {
@@ -48,6 +50,7 @@ export function IVRMenuFormV2() {
   const [transferTimeout, setTransferTimeout] = useState("30");
   const [language, setLanguage] = useState("pt-PT");
   const [style, setStyle] = useState("2");
+  const [voiceName, setVoiceName] = useState("");
   const [premium, setPremium] = useState(false);
   const [template, setTemplate] = useState<keyof typeof templates>("bank-security-v2");
   const [customNCCO, setCustomNCCO] = useState("");
@@ -113,7 +116,8 @@ export function IVRMenuFormV2() {
           style: parseInt(style),
           premium,
           template,
-          ncco: nccoToSend
+          ncco: nccoToSend,
+          voiceName: voiceName || undefined
         }
       });
 
@@ -299,10 +303,15 @@ export function IVRMenuFormV2() {
           {/* Configurações de Voz */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configurações de Voz</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="language">Idioma</Label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={language} onValueChange={(value) => {
+                  setLanguage(value);
+                  if (!isPortugueseLanguage(value)) {
+                    setVoiceName("");
+                  }
+                }}>
                   <SelectTrigger id="language">
                     <SelectValue />
                   </SelectTrigger>
@@ -316,22 +325,35 @@ export function IVRMenuFormV2() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="style">Estilo de Voz</Label>
-                <Select value={style} onValueChange={setStyle}>
-                  <SelectTrigger id="style">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Padrão</SelectItem>
-                    <SelectItem value="1">Casual</SelectItem>
-                    <SelectItem value="2">Profissional</SelectItem>
-                    <SelectItem value="3">Animado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Voice Selector for Portuguese */}
+              {isPortugueseLanguage(language) && (
+                <VoiceSelector
+                  language={language}
+                  value={voiceName}
+                  onChange={setVoiceName}
+                  onPremiumSuggestion={setPremium}
+                />
+              )}
 
-              <div className="flex items-center space-x-2 pt-8">
+              {/* Style selector - only show when NOT using Portuguese specific voices */}
+              {!isPortugueseLanguage(language) && (
+                <div className="space-y-2">
+                  <Label htmlFor="style">Estilo de Voz</Label>
+                  <Select value={style} onValueChange={setStyle}>
+                    <SelectTrigger id="style">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Padrão</SelectItem>
+                      <SelectItem value="1">Casual</SelectItem>
+                      <SelectItem value="2">Profissional</SelectItem>
+                      <SelectItem value="3">Animado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 pt-2">
                 <Checkbox 
                   id="premium" 
                   checked={premium}

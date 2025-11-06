@@ -66,7 +66,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Validar formato de telefone de destino (E.164: +[país][número])
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    // Exige mínimo de 10 dígitos totais para evitar números muito curtos
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
     
     // Validar Sender ID alfanumérico (3-11 caracteres, apenas letras e números)
     const senderIdRegex = /^[A-Za-z0-9]{3,11}$/;
@@ -74,13 +75,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Função para validar "from" (aceita número E.164 OU Sender ID alfanumérico)
     const isValidFrom = (from: string): boolean => {
       const cleanFrom = from.replace(/\s/g, '');
-      return phoneRegex.test(cleanFrom) || senderIdRegex.test(cleanFrom);
+      // Para números, usar regex mais permissivo (mínimo 7 dígitos para alguns países)
+      const fromPhoneRegex = /^\+?[1-9]\d{6,14}$/;
+      return fromPhoneRegex.test(cleanFrom) || senderIdRegex.test(cleanFrom);
     };
 
-    // Validar "to" (destino sempre deve ser número E.164)
-    if (!phoneRegex.test(to.replace(/\s/g, ''))) {
+    // Validar "to" (destino sempre deve ser número E.164 completo)
+    const cleanTo = to.replace(/\s/g, '');
+    if (!phoneRegex.test(cleanTo)) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Formato de número de destino inválido. Use formato internacional: +5511999999999' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Número de destino inválido. Use formato internacional completo com código do país (ex: +351911019866 para Portugal, +5511999999999 para Brasil). Mínimo 10 dígitos.' 
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }

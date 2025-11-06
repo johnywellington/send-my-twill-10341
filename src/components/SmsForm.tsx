@@ -191,12 +191,15 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             <Input
               id="to"
               type="tel"
-              placeholder="+1234567890"
+              placeholder="Ex: +351911019866 ou +5511999999999"
               value={to}
               onChange={(e) => setTo(e.target.value)}
               required
               className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
             />
+            <p className="text-xs text-muted-foreground">
+              Use formato internacional completo: +[código país][número] (mínimo 10 dígitos)
+            </p>
           </div>
 
           <div className="space-y-2.5">

@@ -1,7 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, Zap, Clock, Activity, CheckCircle, XCircle } from "lucide-react";
+import { TrendingUp, Zap, Clock, Activity, CheckCircle, XCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface BulkSendLog {
   id: string;
@@ -13,6 +15,7 @@ interface BulkSendLog {
   throttle_percentage: number;
   avg_delay_ms: number;
   total_duration_seconds: number;
+  retry_count?: number;
   created_at: string;
 }
 
@@ -31,6 +34,8 @@ export function BulkSendStats({ logs }: BulkSendStatsProps) {
   const avgSpeed = logs.length > 0 
     ? logs.reduce((sum, log) => sum + (log.total_contacts / log.total_duration_seconds), 0) / logs.length 
     : 0;
+  const totalRetries = logs.reduce((sum, log) => sum + (log.retry_count || 0), 0);
+  const avgRetriesPerSend = totalSends > 0 ? totalRetries / totalSends : 0;
 
   // Provider comparison
   const providerStats = logs.reduce((acc, log) => {
@@ -89,10 +94,43 @@ export function BulkSendStats({ logs }: BulkSendStatsProps) {
     value
   }));
 
+  // Success rate over time
+  const successRateOverTime = logs.map(log => {
+    const successRate = log.total_contacts > 0 ? (log.successful_sends / log.total_contacts) * 100 : 0;
+    const retryRate = log.total_contacts > 0 ? ((log.retry_count || 0) / log.total_contacts) * 100 : 0;
+    return {
+      date: new Date(log.created_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+      successRate: parseFloat(successRate.toFixed(1)),
+      retryRate: parseFloat(retryRate.toFixed(1))
+    };
+  }).reverse();
+
   return (
     <div className="space-y-6">
+      {/* Performance Alerts */}
+      {avgSuccessRate < 80 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Taxa de Sucesso Baixa</AlertTitle>
+          <AlertDescription>
+            Sua taxa de sucesso está em {avgSuccessRate.toFixed(1)}%. 
+            Considere reduzir o throttle ou verificar suas credenciais.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {avgRetriesPerSend > 0.5 && (
+        <Alert className="border-orange-500/50 text-orange-500 [&>svg]:text-orange-500">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Alto Número de Retries</AlertTitle>
+          <AlertDescription>
+            Média de {avgRetriesPerSend.toFixed(1)} retries por envio. Reduza a velocidade de envio para melhor performance.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="glass-effect">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -144,11 +182,51 @@ export function BulkSendStats({ logs }: BulkSendStatsProps) {
             <p className="text-xs text-muted-foreground mt-1">mensagens/seg</p>
           </CardContent>
         </Card>
+
+        <Card className="glass-effect">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-orange-500" />
+              Retries Automáticos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-orange-500">{totalRetries}</p>
+            <p className="text-xs text-muted-foreground mt-1">média {avgRetriesPerSend.toFixed(1)} por envio</p>
+          </CardContent>
+        </Card>
       </div>
 
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Success Rate Over Time */}
+        <Card className="glass-effect">
+          <CardHeader>
+            <CardTitle>Taxa de Sucesso ao Longo do Tempo</CardTitle>
+            <CardDescription>Evolução da performance dos envios</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={successRateOverTime}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="successRate" stroke="hsl(var(--primary))" name="Taxa de Sucesso (%)" strokeWidth={2} />
+                <Line type="monotone" dataKey="retryRate" stroke="#f97316" name="Taxa de Retry (%)" strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         {/* Volume Over Time */}
         <Card className="glass-effect">
           <CardHeader>

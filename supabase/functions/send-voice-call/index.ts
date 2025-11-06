@@ -277,16 +277,53 @@ serve(async (req: Request) => {
     let responseData = await response.json();
 
     if (!response.ok) {
-      console.error('Vonage API error:', responseData);
+      // Enhanced error logging with rate limit details
+      const rateLimitHeaders = {
+        limit: response.headers.get('X-RateLimit-Limit'),
+        remaining: response.headers.get('X-RateLimit-Remaining'),
+        reset: response.headers.get('X-RateLimit-Reset')
+      };
+      
+      console.error('Vonage API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: responseData,
+        rateLimitHeaders,
+        timestamp: new Date().toISOString(),
+        to,
+        from
+      });
+
+      // Log failed voice call
+      if (userId) {
+        await supabase.from('voice_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          message: text,
+          language: finalLanguage,
+          style: finalStyle,
+          premium: finalPremium,
+          status: 'failed',
+          error_message: responseData.title || responseData.detail || "Failed to make call",
+          voice_label: voiceName || undefined
+        });
+      }
+
+      const isRetryable = response.status === 429 || response.status === 403;
+      
       return new Response(
         JSON.stringify({
           success: false,
           provider: "vonage",
           error: responseData.title || responseData.detail || "Failed to make call",
           code: responseData.type,
+          status: response.status,
+          retryable: isRetryable,
+          rateLimitInfo: rateLimitHeaders
         }),
         {
-          status: 400,
+          status: response.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );

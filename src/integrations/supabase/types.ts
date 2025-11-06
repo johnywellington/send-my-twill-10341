@@ -22,6 +22,7 @@ export type Database = {
           failed_sends: number
           id: string
           provider: string
+          retry_count: number | null
           started_at: string
           successful_sends: number
           throttle_percentage: number
@@ -37,6 +38,7 @@ export type Database = {
           failed_sends?: number
           id?: string
           provider: string
+          retry_count?: number | null
           started_at?: string
           successful_sends?: number
           throttle_percentage?: number
@@ -52,6 +54,7 @@ export type Database = {
           failed_sends?: number
           id?: string
           provider?: string
+          retry_count?: number | null
           started_at?: string
           successful_sends?: number
           throttle_percentage?: number

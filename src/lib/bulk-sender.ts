@@ -119,6 +119,7 @@ export async function sendBulkVoice(
   const results: SendResult[] = [];
   const startTime = Date.now();
   let fallbackCount = 0;
+  let retryCount = 0;
   
   // Calcular delay baseado no throttle (Vonage Voice: 3 CPS padrão)
   const throttle = config.throttlePercentage || 1.0;
@@ -129,44 +130,69 @@ export async function sendBulkVoice(
     const contact = contacts[i];
     const personalizedMessage = replaceVariables(config.message, contact);
     
-    try {
-      // Se voiceName foi fornecido, o backend irá mapear automaticamente
-      const { data, error } = await supabase.functions.invoke('send-voice-call', {
-        body: {
-          to: contact.phone_number,
-          from: config.from,
-          text: personalizedMessage,
-          language: config.language,
-          style: config.style,
-          premium: config.premium,
-          voiceName: config.voiceName // Backend fará o mapeamento
+    let attempts = 0;
+    let success = false;
+    let lastError = null;
+    
+    // Retry até 3 vezes para rate limiting
+    while (attempts < 3 && !success) {
+      try {
+        const { data, error } = await supabase.functions.invoke('send-voice-call', {
+          body: {
+            to: contact.phone_number,
+            from: config.from,
+            text: personalizedMessage,
+            language: config.language,
+            style: config.style,
+            premium: config.premium,
+            voiceName: config.voiceName
+          }
+        });
+        
+        // Verificar se o erro é recuperável (rate limit)
+        if (error && data?.retryable && attempts < 2) {
+          attempts++;
+          retryCount++;
+          
+          // Backoff exponencial: 2s, 4s, 8s
+          const backoffDelay = Math.pow(2, attempts) * 1000;
+          console.log(`Rate limit detected for ${contact.phone_number}, retry ${attempts}/3 after ${backoffDelay}ms`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          continue;
         }
-      });
-      
-      if (error) throw error;
-
-      // Contar fallbacks
-      if (data?.usedFallback) {
-        fallbackCount++;
-        console.warn(
-          `⚠️ Voice '${data.originalVoice}' não disponível para ${contact.phone_number}. ` +
-          `Usado fallback: ${config.language} (style ${config.style})`
-        );
+        
+        if (error) throw error;
+        
+        // Sucesso
+        success = true;
+        if (data?.usedFallback) {
+          fallbackCount++;
+          console.warn(
+            `⚠️ Voice '${data.originalVoice}' não disponível para ${contact.phone_number}. ` +
+            `Usado fallback: ${config.language} (style ${config.style})`
+          );
+        }
+        results.push({ contact, success: true });
+        
+      } catch (error) {
+        lastError = error;
+        attempts++;
+        
+        // Se não for rate limit ou última tentativa, falhar
+        if (attempts >= 3) {
+          results.push({ 
+            contact, 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Erro desconhecido após 3 tentativas'
+          });
+        }
       }
-      
-      results.push({ contact, success: true });
-    } catch (error) {
-      results.push({ 
-        contact, 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
-      });
     }
     
     onProgress?.(i + 1, contacts.length);
     
-    // Throttle dinâmico
-    if (i < contacts.length - 1) {
+    // Throttle normal apenas se não houve retry (retry já tem delay)
+    if (i < contacts.length - 1 && attempts === 1) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -190,6 +216,7 @@ export async function sendBulkVoice(
         throttle_percentage: throttle,
         avg_delay_ms: Math.round(delay),
         total_duration_seconds: totalDuration,
+        retry_count: retryCount,
         started_at: new Date(startTime).toISOString(),
         completed_at: new Date(endTime).toISOString()
       });

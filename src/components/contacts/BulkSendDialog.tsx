@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import { sendBulkSMS, sendBulkVoice, Contact, SMSConfig, VoiceConfig, SendResult
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
+import { RateLimitSelector } from "@/components/RateLimitSelector";
+import { calculateEstimatedTime } from "@/lib/rate-limits";
+import { Clock } from "lucide-react";
 
 interface BulkSendDialogProps {
   open: boolean;
@@ -38,6 +41,9 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
     style: 0,
     premium: false
   });
+  
+  const [smsThrottle, setSmsThrottle] = useState<number>(1.00);
+  const [voiceThrottle, setVoiceThrottle] = useState<number>(1.00);
 
   const handleSend = async () => {
     setLoading(true);
@@ -48,11 +54,11 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
       let sendResults: SendResult[];
 
       if (type === "sms") {
-        sendResults = await sendBulkSMS(contacts, smsConfig, (current, total) => {
+        sendResults = await sendBulkSMS(contacts, { ...smsConfig, throttlePercentage: smsThrottle }, (current, total) => {
           setProgress((current / total) * 100);
         });
       } else {
-        sendResults = await sendBulkVoice(contacts, voiceConfig, (current, total) => {
+        sendResults = await sendBulkVoice(contacts, { ...voiceConfig, throttlePercentage: voiceThrottle }, (current, total) => {
           setProgress((current / total) * 100);
         });
       }
@@ -85,6 +91,8 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
     setResults([]);
     setSmsConfig({ from: "", message: "", provider: "twilio" });
     setVoiceConfig({ from: "", message: "", language: "pt-PT", style: 0, premium: false });
+    setSmsThrottle(1.00);
+    setVoiceThrottle(1.00);
   };
 
   const handleClose = () => {
@@ -99,6 +107,15 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
           <DialogTitle>
             Envio em Massa de {type === "sms" ? "SMS" : "Voz"} - {contacts.length} contatos
           </DialogTitle>
+          <DialogDescription className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            Tempo estimado: {calculateEstimatedTime(
+              contacts.length,
+              type === "sms" ? smsConfig.provider : 'vonage',
+              type,
+              type === 'sms' ? smsThrottle : voiceThrottle
+            )}
+          </DialogDescription>
         </DialogHeader>
 
         {currentStep === "config" && (
@@ -139,6 +156,13 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
                     </SelectContent>
                   </Select>
                 </div>
+
+                <RateLimitSelector
+                  provider={smsConfig.provider}
+                  type="sms"
+                  value={smsThrottle}
+                  onChange={setSmsThrottle}
+                />
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -186,6 +210,13 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
                     </SelectContent>
                   </Select>
                 </div>
+
+                <RateLimitSelector
+                  provider="vonage"
+                  type="voice"
+                  value={voiceThrottle}
+                  onChange={setVoiceThrottle}
+                />
 
                 <div>
                   <div className="flex items-center justify-between mb-2">

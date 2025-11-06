@@ -10,6 +10,7 @@ export interface SMSConfig {
   from: string;
   message: string;
   provider: 'twilio' | 'vonage';
+  throttlePercentage?: number;
 }
 
 export interface VoiceConfig {
@@ -18,6 +19,7 @@ export interface VoiceConfig {
   language: string;
   style: number;
   premium: boolean;
+  throttlePercentage?: number;
 }
 
 export interface SendResult {
@@ -38,6 +40,11 @@ export async function sendBulkSMS(
   onProgress?: (current: number, total: number) => void
 ): Promise<SendResult[]> {
   const results: SendResult[] = [];
+  
+  // Calcular delay baseado no throttle
+  const throttle = config.throttlePercentage || 1.0;
+  const baseDelay = 1000; // 1 segundo base
+  const delay = baseDelay / throttle;
   
   for (let i = 0; i < contacts.length; i++) {
     const contact = contacts[i];
@@ -66,9 +73,9 @@ export async function sendBulkSMS(
     
     onProgress?.(i + 1, contacts.length);
     
-    // Throttle: 1 SMS per second
+    // Throttle dinâmico
     if (i < contacts.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   
@@ -81,6 +88,11 @@ export async function sendBulkVoice(
   onProgress?: (current: number, total: number) => void
 ): Promise<SendResult[]> {
   const results: SendResult[] = [];
+  
+  // Calcular delay baseado no throttle (Vonage Voice: 3 CPS padrão)
+  const throttle = config.throttlePercentage || 1.0;
+  const baseDelay = 333; // ~3 chamadas por segundo
+  const delay = baseDelay / throttle;
   
   for (let i = 0; i < contacts.length; i++) {
     const contact = contacts[i];
@@ -111,9 +123,9 @@ export async function sendBulkVoice(
     
     onProgress?.(i + 1, contacts.length);
     
-    // Throttle: 1 call per second
+    // Throttle dinâmico
     if (i < contacts.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   

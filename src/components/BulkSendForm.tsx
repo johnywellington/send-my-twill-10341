@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Send, Users, MessageSquare, Phone } from "lucide-react";
+import { Send, Users, MessageSquare, Phone, Clock } from "lucide-react";
 import { sendBulkSMS, sendBulkVoice, Contact, SMSConfig, VoiceConfig, replaceVariables } from "@/lib/bulk-sender";
+import { calculateEstimatedTime } from "@/lib/rate-limits";
+import { RateLimitSelector } from "@/components/RateLimitSelector";
 
 interface ContactGroup {
   id: string;
@@ -46,6 +48,10 @@ export const BulkSendForm = () => {
   const [voiceLanguage, setVoiceLanguage] = useState("pt-PT");
   const [voiceStyle, setVoiceStyle] = useState(0);
   const [voicePremium, setVoicePremium] = useState(false);
+  
+  // Throttle Config
+  const [smsThrottle, setSmsThrottle] = useState<number>(1.00);
+  const [voiceThrottle, setVoiceThrottle] = useState<number>(1.00);
 
   useEffect(() => {
     fetchData();
@@ -144,7 +150,8 @@ export const BulkSendForm = () => {
         const config: SMSConfig = {
           from: smsFrom,
           message: smsMessage,
-          provider: smsProvider
+          provider: smsProvider,
+          throttlePercentage: smsThrottle
         };
         
         results = await sendBulkSMS(selectedContacts, config, (current, total) => {
@@ -156,7 +163,8 @@ export const BulkSendForm = () => {
           message: voiceMessage,
           language: voiceLanguage,
           style: voiceStyle,
-          premium: voicePremium
+          premium: voicePremium,
+          throttlePercentage: voiceThrottle
         };
         
         results = await sendBulkVoice(selectedContacts, config, (current, total) => {
@@ -326,10 +334,22 @@ export const BulkSendForm = () => {
           )}
 
           {selectedCount > 0 && (
-            <Badge variant="secondary" className="gap-2">
-              <Users className="w-4 h-4" />
-              {selectedCount} contato{selectedCount !== 1 ? 's' : ''} selecionado{selectedCount !== 1 ? 's' : ''}
-            </Badge>
+            <div className="space-y-2">
+              <Badge variant="secondary" className="gap-2">
+                <Users className="w-4 h-4" />
+                {selectedCount} contato{selectedCount !== 1 ? 's' : ''} selecionado{selectedCount !== 1 ? 's' : ''}
+              </Badge>
+              
+              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                Tempo estimado: {calculateEstimatedTime(
+                  selectedCount,
+                  sendType === 'sms' ? smsProvider : 'vonage',
+                  sendType,
+                  sendType === 'sms' ? smsThrottle : voiceThrottle
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -369,6 +389,13 @@ export const BulkSendForm = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <RateLimitSelector
+              provider={smsProvider}
+              type="sms"
+              value={smsThrottle}
+              onChange={setSmsThrottle}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="sms-from">Número de Origem</Label>
@@ -424,6 +451,13 @@ export const BulkSendForm = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <RateLimitSelector
+              provider="vonage"
+              type="voice"
+              value={voiceThrottle}
+              onChange={setVoiceThrottle}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="voice-style">Estilo de Voz</Label>

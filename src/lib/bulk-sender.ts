@@ -48,7 +48,7 @@ export async function sendBulkSMS(
         body: {
           to: contact.phone_number,
           from: config.from,
-          message: personalizedMessage,
+          body: personalizedMessage,
           provider: config.provider
         }
       });

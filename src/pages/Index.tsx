@@ -7,11 +7,12 @@ import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
+import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send } from "lucide-react";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk">("sms");
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -28,21 +29,24 @@ const Index = () => {
     sms: "SMS Sender",
     voice: "Voice Call",
     ivr: "Menu IVR",
-    ivr2: "IVR 2.0"
+    ivr2: "IVR 2.0",
+    bulk: "Envio em Massa"
   };
 
   const descriptions = {
     sms: "Envie mensagens SMS de forma simples e segura",
     voice: "Faça chamadas de voz usando a API do Vonage",
     ivr: "Crie menus interativos de atendimento com captura de DTMF",
-    ivr2: "Sistema IVR avançado com redirecionamento de chamadas"
+    ivr2: "Sistema IVR avançado com redirecionamento de chamadas",
+    bulk: "Envie SMS ou chamadas de voz para múltiplos contatos"
   };
 
   const icons = {
     sms: MessageSquare,
     voice: Phone,
     ivr: Menu,
-    ivr2: PhoneForwarded
+    ivr2: PhoneForwarded,
+    bulk: Send
   };
 
   const Icon = icons[activeTab];
@@ -79,7 +83,7 @@ const Index = () => {
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full max-w-lg">
-            <TabsList className="grid w-full grid-cols-4 mb-8 h-12 p-1.5 glass-effect">
+            <TabsList className="grid w-full grid-cols-5 mb-8 h-12 p-1.5 glass-effect">
               <TabsTrigger value="sms" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">SMS</span>
@@ -95,6 +99,10 @@ const Index = () => {
               <TabsTrigger value="ivr2" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
                 <PhoneForwarded className="w-4 h-4" />
                 <span className="hidden sm:inline">IVR 2.0</span>
+              </TabsTrigger>
+              <TabsTrigger value="bulk" className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Envio</span>
               </TabsTrigger>
             </TabsList>
             
@@ -112,6 +120,10 @@ const Index = () => {
             
             <TabsContent value="ivr2">
               <IVRMenuFormV2 />
+            </TabsContent>
+            
+            <TabsContent value="bulk">
+              <BulkSendForm />
             </TabsContent>
           </Tabs>
         </div>

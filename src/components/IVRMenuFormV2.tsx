@@ -46,7 +46,7 @@ const templates = {
 
 export function IVRMenuFormV2() {
   const [destinations, setDestinations] = useState<string[]>([""]);
-  const MAX_DESTINATIONS = 20;
+  const MAX_DESTINATIONS = 100;
   const [from, setFrom] = useState("447418373268");
   const [assistantNumber, setAssistantNumber] = useState("351967344048");
   const [transferTimeout, setTransferTimeout] = useState("30");

@@ -272,8 +272,12 @@ serve(async (req: Request) => {
     try {
       jwt = await generateJWT(applicationId, privateKey);
       console.log('JWT generated successfully for V2 call');
+      console.log('Using Application ID:', applicationId);
+      console.log('Private key length:', privateKey.length, 'chars');
     } catch (error) {
       console.error('Failed to generate JWT:', error);
+      console.error('Application ID:', applicationId);
+      console.error('Private key format check - starts with:', privateKey.substring(0, 30));
       return new Response(
         JSON.stringify({ 
           error: 'Failed to generate authentication token',
@@ -349,10 +353,20 @@ serve(async (req: Request) => {
 
     if (!vonageResponse.ok) {
       console.error('Vonage API error (V2):', responseData);
+      console.error('Status code:', vonageResponse.status);
+      console.error('Application ID used:', applicationId);
+      
+      // Mensagem de erro específica para 401/403
+      let errorHint = '';
+      if (vonageResponse.status === 401 || vonageResponse.status === 403) {
+        errorHint = ' Possible causes: 1) Invalid VONAGE_APPLICATION_ID, 2) Invalid VONAGE_PRIVATE_KEY, 3) Key does not match the application, 4) Application not configured for Voice API. Please verify your Vonage credentials in Secrets.';
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to make IVR V2 call', 
-          details: responseData 
+          error: 'Failed to make IVR V2 call' + errorHint, 
+          details: responseData,
+          status_code: vonageResponse.status
         }),
         { status: vonageResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

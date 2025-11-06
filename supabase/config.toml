@@ -40,3 +40,6 @@ verify_jwt = false
 
 [functions.vonage-call-inbound]
 verify_jwt = false
+
+[functions.test-webhook-health]
+verify_jwt = true

@@ -8,21 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Beaker } from "lucide-react";
+import { Loader2, Save, Beaker, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/hooks/use-templates";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNavigate } from "react-router-dom";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
 }
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
+  const navigate = useNavigate();
   const [to, setTo] = useState("351911019866");
-  const [from, setFrom] = useState("447418373592");
+  const [from, setFrom] = useState("");
   const [message, setMessage] = useState("Hello from Voice API");
   const [language, setLanguage] = useState("en-US");
   const [style, setStyle] = useState("0");
@@ -32,6 +37,20 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
+
+  // Query para buscar números ativos com suporte a voz
+  const { data: phoneNumbers } = useQuery({
+    queryKey: ['phone-numbers-active-voice'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('phone_numbers')
+        .select('*')
+        .eq('is_active', true)
+        .eq('supports_voice', true)
+        .order('phone_number');
+      return data || [];
+    }
+  });
   
   const maxLength = 5000; // Vonage Voice API limit
   const messageLength = message.length;
@@ -104,15 +123,48 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               <Label htmlFor="from" className="text-sm font-medium text-foreground">
                 Número de Origem
               </Label>
-              <Input
-                id="from"
-                type="tel"
-                placeholder="447418373592"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                required
-                className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
+              <Select value={from} onValueChange={setFrom}>
+                <SelectTrigger id="from" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
+                  <SelectValue placeholder="Escolha um número" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phoneNumbers?.map((phone) => (
+                    <SelectItem key={phone.id} value={phone.phone_number}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={phone.provider === 'vonage' ? 'default' : 'secondary'} className="text-xs">
+                          {phone.provider}
+                        </Badge>
+                        <span>{phone.phone_number}</span>
+                        {phone.friendly_name && (
+                          <span className="text-muted-foreground text-xs">
+                            ({phone.friendly_name})
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {phoneNumbers && phoneNumbers.length === 0 && (
+                <Alert className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Nenhum número configurado para chamadas.{' '}
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto"
+                      onClick={() => navigate('/numbers')}
+                    >
+                      Adicionar número
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              <p className="text-xs text-muted-foreground">
+                Escolha um número cadastrado ou adicione novos em "Números"
+              </p>
             </div>
 
             <div className="space-y-2.5">

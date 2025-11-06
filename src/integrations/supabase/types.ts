@@ -311,6 +311,60 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_numbers: {
+        Row: {
+          country_code: string
+          created_at: string | null
+          friendly_name: string | null
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          notes: string | null
+          phone_number: string
+          provider: string
+          supports_mms: boolean | null
+          supports_sms: boolean | null
+          supports_voice: boolean | null
+          updated_at: string | null
+          user_id: string
+          webhook_configured: boolean | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          notes?: string | null
+          phone_number: string
+          provider: string
+          supports_mms?: boolean | null
+          supports_sms?: boolean | null
+          supports_voice?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          webhook_configured?: boolean | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          notes?: string | null
+          phone_number?: string
+          provider?: string
+          supports_mms?: boolean | null
+          supports_sms?: boolean | null
+          supports_voice?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          webhook_configured?: boolean | null
+        }
+        Relationships: []
+      }
       received_calls: {
         Row: {
           call_uuid: string

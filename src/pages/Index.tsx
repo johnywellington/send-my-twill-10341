@@ -10,7 +10,7 @@ import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
+import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming, Monitor, Smartphone, Hash } from "lucide-react";
 import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
 import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 
@@ -116,6 +116,10 @@ const Index = () => {
             </div>
 
             <nav className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/numbers")} className="gap-2">
+                <Hash className="w-4 h-4" />
+                <span className="hidden lg:inline">Números</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => navigate("/contacts")} className="gap-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden lg:inline">Contatos</span>

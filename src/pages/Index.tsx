@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,35 @@ import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquare, Phone, Menu, PhoneForwarded, LogOut, BarChart3, Users, Send, TrendingUp, FileText, Beaker, Inbox, PhoneIncoming } from "lucide-react";
 import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
 import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk" | "receive-sms" | "receive-calls">("sms");
+  const [showLeftGradient, setShowLeftGradient] = useState(false);
+  const [showRightGradient, setShowRightGradient] = useState(true);
+  const tabsListRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const element = tabsListRef.current;
+      if (!element) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } = element;
+      setShowLeftGradient(scrollLeft > 10);
+      setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 10);
+    };
+
+    const element = tabsListRef.current;
+    if (element) {
+      handleScroll();
+      element.addEventListener('scroll', handleScroll);
+      return () => element.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -27,37 +49,60 @@ const Index = () => {
     }
   };
 
-  const titles = {
-    sms: "SMS Sender",
-    voice: "Voice Call",
-    ivr: "Menu IVR",
-    ivr2: "IVR 2.0",
-    bulk: "Envio em Massa",
-    "receive-sms": "Receber SMS",
-    "receive-calls": "Receber Chamadas"
+  const tabConfig = {
+    sms: {
+      title: "SMS Sender",
+      short: "SMS",
+      icon: MessageSquare,
+      description: "Envie mensagens SMS de forma simples e segura"
+    },
+    voice: {
+      title: "Voice Call",
+      short: "Voice",
+      icon: Phone,
+      description: "Faça chamadas de voz usando a API do Vonage"
+    },
+    ivr: {
+      title: "Menu IVR",
+      short: "IVR",
+      icon: Menu,
+      description: "Crie menus interativos de atendimento com captura de DTMF"
+    },
+    ivr2: {
+      title: "IVR 2.0",
+      short: "IVR 2.0",
+      icon: PhoneForwarded,
+      description: "Sistema IVR avançado com redirecionamento de chamadas"
+    },
+    bulk: {
+      title: "Envio em Massa",
+      short: "Envio",
+      icon: Send,
+      description: "Envie SMS ou chamadas de voz para múltiplos contatos"
+    },
+    "receive-sms": {
+      title: "Receber SMS",
+      short: "Rec. SMS",
+      icon: Inbox,
+      description: "Visualize e gerencie SMS recebidos em seus números"
+    },
+    "receive-calls": {
+      title: "Receber Chamadas",
+      short: "Rec. Calls",
+      icon: PhoneIncoming,
+      description: "Monitore e grave chamadas recebidas em tempo real"
+    }
   };
 
-  const descriptions = {
-    sms: "Envie mensagens SMS de forma simples e segura",
-    voice: "Faça chamadas de voz usando a API do Vonage",
-    ivr: "Crie menus interativos de atendimento com captura de DTMF",
-    ivr2: "Sistema IVR avançado com redirecionamento de chamadas",
-    bulk: "Envie SMS ou chamadas de voz para múltiplos contatos",
-    "receive-sms": "Visualize e gerencie SMS recebidos em seus números",
-    "receive-calls": "Monitore e grave chamadas recebidas em tempo real"
-  };
+  const titles = Object.fromEntries(
+    Object.entries(tabConfig).map(([key, config]) => [key, config.title])
+  ) as Record<string, string>;
 
-  const icons = {
-    sms: MessageSquare,
-    voice: Phone,
-    ivr: Menu,
-    ivr2: PhoneForwarded,
-    bulk: Send,
-    "receive-sms": Inbox,
-    "receive-calls": PhoneIncoming
-  };
+  const descriptions = Object.fromEntries(
+    Object.entries(tabConfig).map(([key, config]) => [key, config.description])
+  ) as Record<string, string>;
 
-  const Icon = icons[activeTab];
+  const Icon = tabConfig[activeTab].icon;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background p-4 sm:p-6 md:p-8">
@@ -103,36 +148,69 @@ const Index = () => {
         
         <div className="flex justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab as any} className={`w-full ${activeTab === 'bulk' || activeTab === 'receive-sms' || activeTab === 'receive-calls' ? 'max-w-4xl' : 'max-w-lg'}`}>
-            <TabsList className="flex w-full overflow-x-auto scrollbar-hide mb-8 h-12 p-1.5 glass-effect">
-              <TabsTrigger value="sms" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">SMS</span>
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <Phone className="w-4 h-4" />
-                <span className="hidden sm:inline">Voice</span>
-              </TabsTrigger>
-              <TabsTrigger value="ivr" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <Menu className="w-4 h-4" />
-                <span className="hidden sm:inline">IVR</span>
-              </TabsTrigger>
-              <TabsTrigger value="ivr2" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <PhoneForwarded className="w-4 h-4" />
-                <span className="hidden sm:inline">IVR 2.0</span>
-              </TabsTrigger>
-              <TabsTrigger value="bulk" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Envio</span>
-              </TabsTrigger>
-              <TabsTrigger value="receive-sms" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <Inbox className="w-4 h-4" />
-                <span className="hidden sm:inline">Receber SMS</span>
-              </TabsTrigger>
-              <TabsTrigger value="receive-calls" className="flex items-center gap-2 flex-shrink-0 min-w-fit px-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200">
-                <PhoneIncoming className="w-4 h-4" />
-                <span className="hidden sm:inline">Receber Chamadas</span>
-              </TabsTrigger>
-            </TabsList>
+            {/* Mobile Dropdown (<640px) */}
+            <div className="sm:hidden mb-8">
+              <Select value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+                <SelectTrigger className="w-full h-12 glass-effect">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const TabIcon = tabConfig[activeTab].icon;
+                        return <TabIcon className="w-4 h-4" />;
+                      })()}
+                      <span>{tabConfig[activeTab].title}</span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  {Object.entries(tabConfig).map(([key, config]) => {
+                    const TabIcon = config.icon;
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          <TabIcon className="w-4 h-4" />
+                          <span>{config.title}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Desktop/Tablet Tabs (>=640px) */}
+            <div className="hidden sm:block relative mb-8">
+              {/* Left Gradient Indicator */}
+              {showLeftGradient && (
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background/95 to-transparent z-10 pointer-events-none animate-fade-in" />
+              )}
+              
+              {/* Right Gradient Indicator */}
+              {showRightGradient && (
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background/95 to-transparent z-10 pointer-events-none animate-fade-in" />
+              )}
+
+              <TabsList 
+                ref={tabsListRef}
+                className="flex w-full overflow-x-auto scrollbar-hide h-12 p-1.5 glass-effect scroll-smooth gap-1"
+              >
+                {Object.entries(tabConfig).map(([key, config]) => {
+                  const TabIcon = config.icon;
+                  return (
+                    <TabsTrigger 
+                      key={key}
+                      value={key} 
+                      className="flex items-center gap-2 flex-shrink-0 min-w-fit px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground transition-all duration-200"
+                    >
+                      <TabIcon className="w-4 h-4" />
+                      {/* Mobile: icon only, Tablet: short text, Desktop: full text */}
+                      <span className="hidden sm:inline md:hidden">{config.short}</span>
+                      <span className="hidden md:inline">{config.title}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
             
             <TabsContent value="sms">
               <SmsForm />

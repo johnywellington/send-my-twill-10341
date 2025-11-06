@@ -158,9 +158,12 @@ serve(async (req: Request) => {
 
     console.log(`Making voice call from ${from} to ${to}`);
 
+    const eventUrl = `${supabaseUrl}/functions/v1/vonage-voice-webhook`;
+
     const vonagePayload = {
       to: [{ type: "phone", number: (to || '').replace(/[^0-9]/g, '') }],
       from: { type: "phone", number: (from || '').replace(/[^0-9]/g, '') },
+      event_url: [eventUrl],
       ncco: [{
         action: "talk",
         text: text,

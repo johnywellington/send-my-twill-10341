@@ -130,6 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send SMS via Vonage
       const vonageUrl = 'https://rest.nexmo.com/sms/json';
+      const webhookUrl = `${supabaseUrl}/functions/v1/vonage-sms-webhook`;
       
       const vonageResponse = await fetch(vonageUrl, {
         method: 'POST',
@@ -142,6 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
           to: to.replace('+', ''),
           from: from.replace('+', ''),
           text: body,
+          callback: webhookUrl,
         }),
       });
 
@@ -181,11 +183,13 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Create Twilio API request
       const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+      const webhookUrl = `${supabaseUrl}/functions/v1/twilio-sms-webhook`;
       
       const formData = new URLSearchParams();
       formData.append('To', to);
       formData.append('From', from);
       formData.append('Body', body);
+      formData.append('StatusCallback', webhookUrl);
 
       const twilioResponse = await fetch(twilioUrl, {
         method: 'POST',

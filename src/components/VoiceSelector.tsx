@@ -1,12 +1,14 @@
+import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Sparkles, Play, Square, Loader2, Shield } from "lucide-react";
+import { Info, Sparkles, Play, Square, Loader2, Shield, CheckCircle2 } from "lucide-react";
 import { getVoicesByLanguage, isPortugueseLanguage, VoiceOption } from "@/lib/voice-options";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useVoicePreview } from "@/hooks/use-voice-preview";
+import { Progress } from "@/components/ui/progress";
 
 interface VoiceSelectorProps {
   language: string;
@@ -18,7 +20,36 @@ interface VoiceSelectorProps {
 export function VoiceSelector({ language, value, onChange, onPremiumSuggestion }: VoiceSelectorProps) {
   const isPortuguese = isPortugueseLanguage(language);
   const availableVoices = getVoicesByLanguage(language);
-  const { isPlaying, isLoading, playPreview, stopPreview } = useVoicePreview();
+  const { isPlaying, isLoading, isPreloading, preloadProgress, playPreview, stopPreview, preloadAllSamples } = useVoicePreview();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasPreloadedRef = useRef<string | null>(null);
+
+  // Pré-carregar samples automaticamente com debounce
+  useEffect(() => {
+    if (!isPortuguese || availableVoices.length === 0) return;
+
+    // Evitar pré-carregamento duplicado para o mesmo idioma
+    const languageKey = availableVoices.map(v => v.value).join('-');
+    if (hasPreloadedRef.current === languageKey) return;
+
+    // Limpar timer anterior
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Debounce de 500ms
+    debounceTimerRef.current = setTimeout(() => {
+      console.log('🎯 Iniciando pré-carregamento automático...');
+      hasPreloadedRef.current = languageKey;
+      preloadAllSamples(availableVoices);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [availableVoices, isPortuguese, preloadAllSamples]);
 
   if (!isPortuguese || availableVoices.length === 0) {
     return null;
@@ -42,6 +73,35 @@ export function VoiceSelector({ language, value, onChange, onPremiumSuggestion }
           <strong>Vozes Específicas Disponíveis!</strong> Selecione uma voz natural em português abaixo.
         </AlertDescription>
       </Alert>
+
+      {/* Progress bar de pré-carregamento */}
+      {isPreloading && (
+        <div className="space-y-2 p-3 border rounded-lg bg-secondary/30">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Pré-carregando samples de áudio...
+            </span>
+            <span className="font-medium">
+              {preloadProgress.loaded}/{preloadProgress.total}
+            </span>
+          </div>
+          <Progress 
+            value={(preloadProgress.loaded / preloadProgress.total) * 100} 
+            className="h-1.5"
+          />
+        </div>
+      )}
+
+      {/* Badge de status após pré-carregamento */}
+      {!isPreloading && preloadProgress.loaded > 0 && (
+        <div className="flex items-center gap-2 p-2 border rounded-lg bg-success/10 border-success/20">
+          <CheckCircle2 className="h-4 w-4 text-success" />
+          <span className="text-xs text-success font-medium">
+            {preloadProgress.loaded} samples prontos para uso instantâneo
+          </span>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">

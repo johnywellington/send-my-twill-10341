@@ -19,6 +19,7 @@ import ApiTest from "./pages/ApiTest";
 import ApiDocs from "./pages/ApiDocs";
 import Numbers from "./pages/Numbers";
 import Monitoring from "./pages/Monitoring";
+import ActiveCalls from "./pages/ActiveCalls";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
@@ -100,6 +101,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <Monitoring />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/active-calls" element={
+            <UserRoute>
+              <UserLayout>
+                <ActiveCalls />
               </UserLayout>
             </UserRoute>
           } />

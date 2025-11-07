@@ -1,4 +1,4 @@
-import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity } from "lucide-react";
+import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -16,8 +16,9 @@ import {
 const userRoutes = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Central de Comunicação", url: "/", icon: Radio },
-  { title: "Monitoramento", url: "/monitoring", icon: Activity },
-  { title: "Números", url: "/numbers", icon: Phone },
+    { title: "Monitoramento", url: "/monitoring", icon: Activity },
+    { title: "Chamadas Ativas", url: "/active-calls", icon: PhoneCall },
+    { title: "Números", url: "/numbers", icon: Phone },
   { title: "Contatos", url: "/contacts", icon: Users },
   { title: "Templates", url: "/templates", icon: FileText },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },

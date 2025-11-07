@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
+import { IVRVoiceTestDialog } from "@/components/IVRVoiceTestDialog";
 
 const templates = {
   "bank-security-v2": {
@@ -257,6 +258,22 @@ export function IVRMenuFormV2() {
       setSendProgress(0);
       setCurrentSending(0);
       setTotalToSend(0);
+    }
+  };
+
+  // Extrair texto do NCCO para preview
+  const getCurrentNCCOText = () => {
+    try {
+      const ncco = template === 'custom' 
+        ? JSON.parse(customNCCO || '[]')
+        : editedNCCO
+          ? JSON.parse(editedNCCO)
+          : templates[template].ncco;
+      
+      const talkAction = ncco.find((action: any) => action.action === 'talk');
+      return talkAction?.text || '';
+    } catch {
+      return '';
     }
   };
 
@@ -531,12 +548,24 @@ export function IVRMenuFormV2() {
 
               {/* Voice Selector for Portuguese */}
               {isPortugueseLanguage(language) && (
-                <VoiceSelector
-                  language={language}
-                  value={voiceName}
-                  onChange={setVoiceName}
-                  onPremiumSuggestion={setPremium}
-                />
+                <div className="space-y-2">
+                  <Label>Seleção de Voz</Label>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <VoiceSelector
+                        language={language}
+                        value={voiceName}
+                        onChange={setVoiceName}
+                        onPremiumSuggestion={setPremium}
+                      />
+                    </div>
+                    <IVRVoiceTestDialog
+                      defaultText={getCurrentNCCOText()}
+                      language={language}
+                      voiceName={voiceName || 'Camila'}
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Style selector - only show when NOT using Portuguese specific voices */}

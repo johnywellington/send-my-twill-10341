@@ -28,6 +28,9 @@ verify_jwt = false
 [functions.generate-voice-sample]
 verify_jwt = false
 
+[functions.generate-ivr-preview]
+verify_jwt = false
+
 # Webhooks de entrada (inbound) também públicos
 [functions.twilio-sms-inbound]
 verify_jwt = false

@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, Users } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
+import { SIPUserDialog } from "./SIPUserDialog";
 
 export function UsersContent() {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { users, isLoading } = useSIPUsers();
 
   if (isLoading) {
@@ -27,11 +30,13 @@ export function UsersContent() {
           <Users className="h-6 w-6" />
           <h2 className="text-2xl font-bold">Usuários SIP</h2>
         </div>
-        <Button>
+        <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Criar Usuário SIP
         </Button>
       </div>
+
+      <SIPUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

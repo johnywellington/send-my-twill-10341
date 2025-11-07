@@ -25,12 +25,6 @@ import {
 const adminRoutes = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Usuários", url: "/admin/users", icon: Users },
-  { title: "Permissões", url: "/admin/roles", icon: Shield },
-  { title: "Números", url: "/admin/numbers", icon: Phone },
-  { title: "Monitoramento", url: "/admin/monitoring", icon: Activity },
-  { title: "Auditoria", url: "/admin/audit", icon: FileText },
-  { title: "Faturamento", url: "/admin/billing", icon: DollarSign },
-  { title: "Configurações", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {

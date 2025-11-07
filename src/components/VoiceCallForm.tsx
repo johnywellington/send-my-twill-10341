@@ -122,6 +122,14 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         });
       };
 
+      const isGeoPermissionError = (errorData: any) => {
+        if (!errorData) return false;
+        const details = errorData.details || '';
+        return details.includes('"code":21215') || details.includes('not authorized to call');
+      };
+
+      let usedFallback = false;
+
       // Enviar para cada destino COM ATUALIZAÇÕES DE STATUS
       for (let i = 0; i < validDestinations.length; i++) {
         if (cancelRequested) {
@@ -141,9 +149,21 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           console.log(`[Voice] Iniciando chamada para ${to} via ${provider}`);
           let { data, error } = await trySend(to, provider);
 
-          if (error && autoFallback) {
+          // Detectar erro de permissão geográfica do Twilio e forçar fallback
+          const needsFallback = (error || !data?.success) && 
+                                (autoFallback || isGeoPermissionError(data));
+
+          if (needsFallback) {
             const alternativeProvider = getAlternativeProvider();
-            console.log(`[Voice] Fallback para ${to}: tentando com ${alternativeProvider}`);
+            const isGeoError = isGeoPermissionError(data);
+            
+            if (isGeoError) {
+              console.log(`[Voice] Twilio sem permissões internacionais para ${to}, usando ${alternativeProvider}`);
+              usedFallback = true;
+            } else {
+              console.log(`[Voice] Fallback para ${to}: tentando com ${alternativeProvider}`);
+            }
+            
             const fallbackResult = await trySend(to, alternativeProvider);
             data = fallbackResult.data;
             error = fallbackResult.error;
@@ -195,6 +215,14 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         if (i < validDestinations.length - 1 && !cancelRequested) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
+      }
+
+      // Informar sobre uso de fallback por permissões
+      if (usedFallback) {
+        toast.info("Chamadas internacionais enviadas via Vonage", {
+          description: "Twilio não tem permissões internacionais habilitadas. Configure em: twilio.com/console/voice/calls/geo-permissions",
+          duration: 8000,
+        });
       }
 
       // Toast final

@@ -112,6 +112,9 @@ export const useUsers = () => {
 
   const activateUser = async (userId: string) => {
     try {
+      // Buscar dados do usuário antes de ativar
+      const userToActivate = users.find(u => u.user_id === userId);
+      
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -124,14 +127,39 @@ export const useUsers = () => {
       if (error) throw error;
 
       // Log activity
-      await logActivity(userId, 'activated', 'Conta reativada');
+      await logActivity(userId, 'activated', 'Conta aprovada e ativada pelo administrador');
+      
+      // Enviar email de notificação
+      if (userToActivate?.email) {
+        try {
+          console.log('Sending approval email to:', userToActivate.email);
+          const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+            body: {
+              email: userToActivate.email,
+              name: userToActivate.full_name || userToActivate.email.split('@')[0]
+            }
+          });
 
-      toast.success('Usuário reativado com sucesso');
+          if (emailError) {
+            console.error('Error sending approval email:', emailError);
+            toast.warning('Usuário ativado, mas houve erro ao enviar email de notificação');
+          } else {
+            console.log('Approval email sent successfully');
+            toast.success('Usuário ativado e notificado por email!');
+          }
+        } catch (emailError) {
+          console.error('Error calling send-approval-email function:', emailError);
+          toast.warning('Usuário ativado, mas houve erro ao enviar email de notificação');
+        }
+      } else {
+        toast.success('Usuário ativado com sucesso!');
+      }
+      
       await fetchUsers();
       return true;
     } catch (error) {
       console.error('Error activating user:', error);
-      toast.error('Erro ao reativar usuário');
+      toast.error('Erro ao ativar usuário');
       return false;
     }
   };

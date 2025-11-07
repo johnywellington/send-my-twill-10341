@@ -7,11 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle } from "lucide-react";
+import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye } from "lucide-react";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
+import { useNavigate } from "react-router-dom";
 
 export function ConfigContent() {
+  const navigate = useNavigate();
   const { 
     configs, 
     isLoading, 
@@ -145,7 +147,7 @@ export function ConfigContent() {
                   <TableHead>Domínio</TableHead>
                   <TableHead>SID</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,44 +167,54 @@ export function ConfigContent() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!domain.is_default && (
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/admin/sip/domain/${domain.domain_group_id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Detalhes
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!domain.is_default && (
+                              <DropdownMenuItem 
+                                onClick={() => setAsDefault({ 
+                                  provider: 'twilio', 
+                                  domainGroupId: domain.domain_group_id 
+                                })}
+                              >
+                                <Star className="h-4 w-4 mr-2" />
+                                Definir como Padrão
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem 
-                              onClick={() => setAsDefault({ 
-                                provider: 'twilio', 
-                                domainGroupId: domain.domain_group_id 
+                              onClick={() => toggleActive({ 
+                                domainGroupId: domain.domain_group_id,
+                                isActive: domain.is_active 
                               })}
                             >
-                              <Star className="h-4 w-4 mr-2" />
-                              Definir como Padrão
+                              {domain.is_active ? '🔴 Desativar' : '🟢 Ativar'}
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => toggleActive({ 
-                              domainGroupId: domain.domain_group_id,
-                              isActive: domain.is_active 
-                            })}
-                          >
-                            {domain.is_active ? '🔴 Desativar' : '🟢 Ativar'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja deletar este domínio?')) {
-                                deleteDomain(domain.domain_group_id);
-                              }
-                            }}
-                          >
-                            🗑️ Deletar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja deletar este domínio?')) {
+                                  deleteDomain(domain.domain_group_id);
+                                }
+                              }}
+                            >
+                              🗑️ Deletar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -253,7 +265,7 @@ export function ConfigContent() {
                   <TableHead>App ID</TableHead>
                   <TableHead>App Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -271,44 +283,54 @@ export function ConfigContent() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!app.is_default && (
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/admin/sip/domain/${app.domain_group_id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Detalhes
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!app.is_default && (
+                              <DropdownMenuItem 
+                                onClick={() => setAsDefault({ 
+                                  provider: 'vonage', 
+                                  domainGroupId: app.domain_group_id 
+                                })}
+                              >
+                                <Star className="h-4 w-4 mr-2" />
+                                Definir como Padrão
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem 
-                              onClick={() => setAsDefault({ 
-                                provider: 'vonage', 
-                                domainGroupId: app.domain_group_id 
+                              onClick={() => toggleActive({ 
+                                domainGroupId: app.domain_group_id,
+                                isActive: app.is_active 
                               })}
                             >
-                              <Star className="h-4 w-4 mr-2" />
-                              Definir como Padrão
+                              {app.is_active ? '🔴 Desativar' : '🟢 Ativar'}
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => toggleActive({ 
-                              domainGroupId: app.domain_group_id,
-                              isActive: app.is_active 
-                            })}
-                          >
-                            {app.is_active ? '🔴 Desativar' : '🟢 Ativar'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja deletar esta aplicação?')) {
-                                deleteDomain(app.domain_group_id);
-                              }
-                            }}
-                          >
-                            🗑️ Deletar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja deletar esta aplicação?')) {
+                                  deleteDomain(app.domain_group_id);
+                                }
+                              }}
+                            >
+                              🗑️ Deletar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -769,6 +769,7 @@ export type Database = {
       sip_routes: {
         Row: {
           created_at: string
+          domain_group_id: string | null
           forward_to: string
           from_pattern: string
           id: string
@@ -784,6 +785,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          domain_group_id?: string | null
           forward_to: string
           from_pattern: string
           id?: string
@@ -799,6 +801,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          domain_group_id?: string | null
           forward_to?: string
           from_pattern?: string
           id?: string
@@ -818,6 +821,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          domain_group_id: string | null
           extension: string
           id: string
           is_active: boolean
@@ -833,6 +837,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          domain_group_id?: string | null
           extension: string
           id?: string
           is_active?: boolean
@@ -848,6 +853,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          domain_group_id?: string | null
           extension?: string
           id?: string
           is_active?: boolean

@@ -96,6 +96,7 @@ serve(async (req) => {
         extension,
         display_name,
         vonage_endpoint_id: endpoint.id,
+        domain_group_id: domainGroupId || null,
       })
       .select()
       .single();

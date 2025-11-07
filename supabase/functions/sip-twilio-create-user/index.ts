@@ -24,7 +24,9 @@ serve(async (req) => {
     );
     if (authError || !user) throw new Error('Unauthorized');
 
-    const { username, password, extension, display_name, domain_group_id } = await req.json();
+  const { username, password, extension, display_name, domain_group_id } = await req.json();
+  
+  console.log('Creating Twilio SIP user with domain_group_id:', domain_group_id);
 
     // Get Twilio SIP Domain from config (use domain_group_id if provided, otherwise use default)
     let sipDomain: string;
@@ -111,6 +113,7 @@ serve(async (req) => {
         extension,
         display_name,
         twilio_credential_sid: credential.sid,
+        domain_group_id: domainGroupId || null,
       })
       .select()
       .single();

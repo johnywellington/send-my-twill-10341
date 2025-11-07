@@ -28,6 +28,7 @@ import ChamadasRecebidas from "./pages/ChamadasRecebidas";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminSIP from "./pages/admin/SIP";
+import SIPDomainDetails from "./pages/admin/SIPDomainDetails";
 import SIP from "./pages/SIP";
 import NotFound from "./pages/NotFound";
 
@@ -173,6 +174,13 @@ const App = () => (
             <AdminRoute>
               <AdminLayout>
                 <AdminSIP />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/sip/domain/:domainGroupId" element={
+            <AdminRoute>
+              <AdminLayout>
+                <SIPDomainDetails />
               </AdminLayout>
             </AdminRoute>
           } />

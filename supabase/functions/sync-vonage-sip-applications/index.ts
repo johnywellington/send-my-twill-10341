@@ -1,0 +1,224 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface VonageApplication {
+  id: string;
+  name: string;
+  capabilities?: {
+    voice?: any;
+  };
+}
+
+interface SyncResponse {
+  success: boolean;
+  applications: Array<{
+    domain_group_id: string;
+    app_id: string;
+    app_name: string;
+    friendly_name: string;
+  }>;
+  count: number;
+  updated?: number;
+  error?: string;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verificar autenticação
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      throw new Error('Unauthorized');
+    }
+
+    // Credenciais Vonage
+    const vonageKey = Deno.env.get('VONAGE_API_KEY');
+    const vonageSecret = Deno.env.get('VONAGE_API_SECRET');
+
+    if (!vonageKey || !vonageSecret) {
+      throw new Error('Credenciais Vonage não configuradas');
+    }
+
+    console.log('[Vonage SIP Sync] Fetching applications from Vonage API...');
+
+    // 1. Consultar API Vonage
+    const vonageResponse = await fetch(
+      'https://api.nexmo.com/v2/applications',
+      {
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${vonageKey}:${vonageSecret}`),
+        },
+      }
+    );
+
+    if (!vonageResponse.ok) {
+      const errorText = await vonageResponse.text();
+      throw new Error(`Vonage API error: ${errorText}`);
+    }
+
+    const vonageData = await vonageResponse.json();
+    const allApps: VonageApplication[] = vonageData._embedded?.applications || [];
+    
+    // Filtrar apenas apps com capability voice (SIP)
+    const voiceApps = allApps.filter(app => app.capabilities?.voice);
+
+    console.log(`[Vonage SIP Sync] Found ${voiceApps.length} voice applications in Vonage`);
+
+    if (voiceApps.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          applications: [], 
+          count: 0 
+        } as SyncResponse),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Buscar applications existentes no banco (por app_id)
+    const existingAppIds = voiceApps.map(app => app.id);
+    
+    const { data: existingConfigs, error: fetchError } = await supabase
+      .from('sip_provider_config')
+      .select('config_value, domain_group_id')
+      .eq('provider', 'vonage')
+      .eq('config_key', 'app_id')
+      .in('config_value', existingAppIds);
+
+    if (fetchError) {
+      console.error('[Vonage SIP Sync] Error fetching existing configs:', fetchError);
+      throw new Error('Erro ao buscar configurações existentes');
+    }
+
+    const existingAppIdMap = new Map(
+      existingConfigs?.map(c => [c.config_value, c.domain_group_id]) || []
+    );
+
+    console.log(`[Vonage SIP Sync] Found ${existingAppIdMap.size} existing apps in DB`);
+
+    // 3. Separar novos e existentes
+    const newApps = voiceApps.filter(app => !existingAppIdMap.has(app.id));
+    const existingApps = voiceApps.filter(app => existingAppIdMap.has(app.id));
+
+    console.log(`[Vonage SIP Sync] New: ${newApps.length}, Existing: ${existingApps.length}`);
+
+    const results = [];
+
+    // 4. Inserir novas applications
+    for (const app of newApps) {
+      const domainGroupId = crypto.randomUUID();
+      
+      const { error: insertError } = await supabase
+        .from('sip_provider_config')
+        .insert([
+          {
+            domain_group_id: domainGroupId,
+            provider: 'vonage',
+            config_key: 'app_id',
+            config_value: app.id,
+            friendly_name: app.name,
+            is_default: false,
+            is_active: true,
+            created_by: user.id,
+          },
+          {
+            domain_group_id: domainGroupId,
+            provider: 'vonage',
+            config_key: 'app_name',
+            config_value: app.name,
+            friendly_name: app.name,
+            is_default: false,
+            is_active: true,
+            created_by: user.id,
+          },
+          {
+            domain_group_id: domainGroupId,
+            provider: 'vonage',
+            config_key: 'sip_domain',
+            config_value: 'sip.nexmo.com',
+            friendly_name: app.name,
+            is_default: false,
+            is_active: true,
+            created_by: user.id,
+          },
+        ]);
+
+      if (insertError) {
+        console.error(`[Vonage SIP Sync] Error inserting app ${app.id}:`, insertError);
+      } else {
+        console.log(`[Vonage SIP Sync] ✓ Inserted app ${app.id}`);
+        results.push({
+          domain_group_id: domainGroupId,
+          app_id: app.id,
+          app_name: app.name,
+          friendly_name: app.name,
+        });
+      }
+    }
+
+    // 5. Atualizar applications existentes
+    for (const app of existingApps) {
+      const domainGroupId = existingAppIdMap.get(app.id)!;
+      
+      const { error: updateError } = await supabase
+        .from('sip_provider_config')
+        .update({
+          friendly_name: app.name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('domain_group_id', domainGroupId)
+        .eq('provider', 'vonage');
+
+      if (updateError) {
+        console.error(`[Vonage SIP Sync] Error updating app ${app.id}:`, updateError);
+      } else {
+        console.log(`[Vonage SIP Sync] ✓ Updated app ${app.id}`);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        applications: results, 
+        count: results.length,
+        updated: existingApps.length,
+      } as SyncResponse),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('[Vonage SIP Sync] Error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        applications: [],
+        count: 0,
+      } as SyncResponse),
+      { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});

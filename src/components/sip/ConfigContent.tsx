@@ -11,6 +11,8 @@ import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye } from "lucid
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
 import { useNavigate } from "react-router-dom";
+import { SyncTwilioDomainsButton } from "./SyncTwilioDomainsButton";
+import { SyncVonageApplicationsButton } from "./SyncVonageApplicationsButton";
 
 export function ConfigContent() {
   const navigate = useNavigate();
@@ -122,6 +124,7 @@ export function ConfigContent() {
               <CardDescription>Gerencie múltiplos domínios SIP Twilio</CardDescription>
             </div>
             <div className="flex gap-2">
+              <SyncTwilioDomainsButton />
               <Button 
                 onClick={handleGenerateRandomTwilio} 
                 size="sm" 
@@ -240,6 +243,7 @@ export function ConfigContent() {
               <CardDescription>Gerencie múltiplas aplicações SIP Vonage</CardDescription>
             </div>
             <div className="flex gap-2">
+              <SyncVonageApplicationsButton />
               <Button 
                 onClick={handleGenerateRandomVonage} 
                 size="sm" 

@@ -19,6 +19,7 @@ import ApiTest from "./pages/ApiTest";
 import ApiDocs from "./pages/ApiDocs";
 import Numbers from "./pages/Numbers";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +101,13 @@ const App = () => (
             <AdminRoute>
               <AdminLayout>
                 <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/users" element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminUsers />
               </AdminLayout>
             </AdminRoute>
           } />

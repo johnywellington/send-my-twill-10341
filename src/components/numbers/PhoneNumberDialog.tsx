@@ -15,9 +15,10 @@ interface PhoneNumberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingPhone?: PhoneNumber | null;
+  onSuccess?: (phone: PhoneNumber) => void;
 }
 
-export const PhoneNumberDialog = ({ open, onOpenChange, editingPhone }: PhoneNumberDialogProps) => {
+export const PhoneNumberDialog = ({ open, onOpenChange, editingPhone, onSuccess }: PhoneNumberDialogProps) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [friendlyName, setFriendlyName] = useState("");
   const [countryCode, setCountryCode] = useState("UK");
@@ -70,12 +71,18 @@ export const PhoneNumberDialog = ({ open, onOpenChange, editingPhone }: PhoneNum
     };
 
     if (editingPhone) {
-      await updateMutation.mutateAsync({
+      const updated = await updateMutation.mutateAsync({
         id: editingPhone.id,
         updates: phoneData,
       });
+      if (onSuccess && updated) {
+        onSuccess(updated as PhoneNumber);
+      }
     } else {
-      await createMutation.mutateAsync(phoneData);
+      const created = await createMutation.mutateAsync(phoneData);
+      if (onSuccess && created) {
+        onSuccess(created as PhoneNumber);
+      }
     }
 
     onOpenChange(false);

@@ -34,6 +34,7 @@ export function PhoneNumberSelector({
   const [editingPhone, setEditingPhone] = useState<PhoneNumber | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const deleteMutation = useDeletePhoneNumber();
 
   // Query para buscar números ativos
@@ -232,7 +233,7 @@ export function PhoneNumberSelector({
                     className="w-full justify-start"
                     onClick={() => {
                       setIsOpen(false);
-                      navigate('/numbers');
+                      setCreateDialogOpen(true);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -257,6 +258,17 @@ export function PhoneNumberSelector({
           if (!open) setEditingPhone(null);
         }}
         editingPhone={editingPhone}
+      />
+
+      {/* Create Dialog */}
+      <PhoneNumberDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        editingPhone={null}
+        onSuccess={(newPhone) => {
+          // Auto-selecionar o número recém-criado
+          onChange(newPhone.phone_number);
+        }}
       />
 
       {/* Delete Confirmation */}

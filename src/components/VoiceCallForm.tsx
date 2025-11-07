@@ -28,7 +28,7 @@ interface VoiceCallFormProps {
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const navigate = useNavigate();
-  const { provider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [to, setTo] = useState("351911019866");
   const [from, setFrom] = useState("");
@@ -80,8 +80,8 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
 
     setLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('send-voice-call', {
+    const trySend = async (providerToUse: 'twilio' | 'vonage') => {
+      return await supabase.functions.invoke('send-voice-call', {
         body: {
           to,
           from,
@@ -90,21 +90,57 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           style: parseInt(style),
           premium,
           voiceName: voiceName || undefined,
-          provider,
+          provider: providerToUse,
           dryRun
         }
       });
+    };
+
+    try {
+      console.log(`[Voice] Tentando via ${provider}`);
+      let { data, error } = await trySend(provider);
+
+      // Fallback
+      if (error && autoFallback) {
+        const alternativeProvider = getAlternativeProvider();
+        toast.info(`Tentando com ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}...`, {
+          description: `Fallback automático ativado`,
+          duration: 2000,
+        });
+        
+        console.log(`[Voice] Fallback: tentando com ${alternativeProvider}`);
+        const fallbackResult = await trySend(alternativeProvider);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+        
+        if (!error && data?.success) {
+          toast.success("Chamada iniciada via fallback!", {
+            description: `Enviado via ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}`,
+            duration: 4000,
+          });
+          setMessage("");
+          if (onCallMade) onCallMade();
+          return;
+        }
+      }
 
       if (error) {
-        toast.error("Error making call", {
-          description: error.message,
+        console.error('Error making call:', error);
+        const errorTitle = autoFallback 
+          ? "Falha em ambos providers" 
+          : "Erro ao iniciar chamada";
+        
+        toast.error(errorTitle, {
+          description: error.message || "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
+          duration: 6000,
         });
         return;
       }
 
       if (data?.success) {
+        const providerUsed = data.provider || provider;
         toast.success("Call initiated successfully!", {
-          description: `UUID: ${data.uuid}`
+          description: `Via ${providerUsed === 'twilio' ? 'Twilio' : 'Vonage'} • UUID: ${data.uuid}`
         });
         onCallMade?.();
       } else {

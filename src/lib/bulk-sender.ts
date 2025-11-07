@@ -10,6 +10,7 @@ export interface SMSConfig {
   from: string;
   message: string;
   provider: 'twilio' | 'vonage';
+  autoFallback?: boolean;
   throttlePercentage?: number;
   dryRun?: boolean;
 }
@@ -20,6 +21,8 @@ export interface VoiceConfig {
   language: string;
   style: number;
   premium: boolean;
+  provider: 'twilio' | 'vonage';
+  autoFallback?: boolean;
   throttlePercentage?: number;
   voiceName?: string;
   dryRun?: boolean;
@@ -28,6 +31,8 @@ export interface VoiceConfig {
 export interface SendResult {
   contact: Contact;
   success: boolean;
+  provider?: 'twilio' | 'vonage';
+  usedFallback?: boolean;
   error?: string;
 }
 
@@ -35,6 +40,10 @@ export function replaceVariables(template: string, contact: Contact): string {
   return template
     .replace(/\{\{nome\}\}/g, contact.name)
     .replace(/\{\{telefone\}\}/g, contact.phone_number);
+}
+
+function getAlternativeProvider(current: 'twilio' | 'vonage'): 'twilio' | 'vonage' {
+  return current === 'twilio' ? 'vonage' : 'twilio';
 }
 
 export async function sendBulkSMS(
@@ -54,8 +63,14 @@ export async function sendBulkSMS(
     const contact = contacts[i];
     const personalizedMessage = replaceVariables(config.message, contact);
     
+    let success = false;
+    let error: any = null;
+    let providerUsed = config.provider;
+    let usedFallback = false;
+
+    // TENTATIVA 1: Provider principal
     try {
-      const { error } = await supabase.functions.invoke('send-sms', {
+      const { error: primaryError } = await supabase.functions.invoke('send-sms', {
         body: {
           to: contact.phone_number,
           from: config.from,
@@ -65,13 +80,57 @@ export async function sendBulkSMS(
         }
       });
       
-      if (error) throw error;
+      if (!primaryError) {
+        success = true;
+      } else {
+        error = primaryError;
+      }
+    } catch (err) {
+      error = err;
+    }
+
+    // TENTATIVA 2: Fallback se falhou e está habilitado
+    if (!success && error && config.autoFallback) {
+      const alternativeProvider = getAlternativeProvider(config.provider);
+      console.log(`[Bulk SMS] Fallback para ${contact.name}: tentando ${alternativeProvider}`);
       
-      results.push({ contact, success: true });
-    } catch (error) {
+      try {
+        const { error: fallbackError } = await supabase.functions.invoke('send-sms', {
+          body: {
+            to: contact.phone_number,
+            from: config.from,
+            body: personalizedMessage,
+            provider: alternativeProvider,
+            dryRun: config.dryRun || false
+          }
+        });
+        
+        if (!fallbackError) {
+          success = true;
+          providerUsed = alternativeProvider;
+          usedFallback = true;
+          console.log(`[Bulk SMS] ✓ Fallback sucesso para ${contact.name} via ${alternativeProvider}`);
+        } else {
+          error = fallbackError;
+        }
+      } catch (err) {
+        error = err;
+      }
+    }
+
+    // Adicionar resultado
+    if (success) {
       results.push({ 
         contact, 
-        success: false, 
+        success: true, 
+        provider: providerUsed,
+        usedFallback 
+      });
+    } else {
+      results.push({ 
+        contact, 
+        success: false,
+        provider: providerUsed,
         error: error instanceof Error ? error.message : 'Erro desconhecido'
       });
     }
@@ -89,6 +148,15 @@ export async function sendBulkSMS(
   const totalDuration = Math.round((endTime - startTime) / 1000); // seconds
   const successCount = results.filter(r => r.success).length;
   const failCount = results.filter(r => !r.success).length;
+  const fallbackCount = results.filter(r => r.usedFallback).length;
+  const primarySuccessCount = results.filter(r => r.success && !r.usedFallback).length;
+  
+  console.log(`[Bulk SMS] Estatísticas:
+    - Total: ${contacts.length}
+    - Sucesso (${config.provider}): ${primarySuccessCount}
+    - Sucesso (fallback): ${fallbackCount}
+    - Falhas: ${failCount}
+  `);
   
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -104,7 +172,8 @@ export async function sendBulkSMS(
         avg_delay_ms: Math.round(delay),
         total_duration_seconds: totalDuration,
         started_at: new Date(startTime).toISOString(),
-        completed_at: new Date(endTime).toISOString()
+        completed_at: new Date(endTime).toISOString(),
+        retry_count: fallbackCount
       });
     }
   } catch (error) {

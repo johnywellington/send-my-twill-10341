@@ -169,6 +169,7 @@ export const BulkSendForm = () => {
           language: voiceLanguage,
           style: voiceStyle,
           premium: voicePremium,
+          provider: 'vonage',
           throttlePercentage: voiceThrottle,
           voiceName: voiceName || undefined
         };

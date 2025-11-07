@@ -5,6 +5,9 @@ type Provider = 'twilio' | 'vonage';
 interface ProviderContextType {
   provider: Provider;
   setProvider: (provider: Provider) => void;
+  autoFallback: boolean;
+  setAutoFallback: (enabled: boolean) => void;
+  getAlternativeProvider: () => Provider;
   isLoading: boolean;
 }
 
@@ -16,6 +19,12 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('selected-provider');
     return (saved === 'twilio' || saved === 'vonage') ? saved : 'twilio';
   });
+  
+  const [autoFallback, setAutoFallbackState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('auto-fallback');
+    return saved === 'true';
+  });
+  
   const [isLoading, setIsLoading] = useState(false);
 
   // Salvar no localStorage quando mudar
@@ -28,8 +37,24 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setIsLoading(false), 300);
   };
 
+  const setAutoFallback = (enabled: boolean) => {
+    localStorage.setItem('auto-fallback', enabled.toString());
+    setAutoFallbackState(enabled);
+  };
+
+  const getAlternativeProvider = (): Provider => {
+    return provider === 'twilio' ? 'vonage' : 'twilio';
+  };
+
   return (
-    <ProviderContext.Provider value={{ provider, setProvider, isLoading }}>
+    <ProviderContext.Provider value={{ 
+      provider, 
+      setProvider, 
+      autoFallback, 
+      setAutoFallback,
+      getAlternativeProvider,
+      isLoading 
+    }}>
       {children}
     </ProviderContext.Provider>
   );

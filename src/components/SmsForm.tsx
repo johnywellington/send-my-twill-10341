@@ -27,7 +27,7 @@ interface SmsFormProps {
 
 export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const navigate = useNavigate();
-  const { provider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
@@ -81,16 +81,47 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
     
     setLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('send-sms', {
+    const trySend = async (providerToUse: 'twilio' | 'vonage') => {
+      return await supabase.functions.invoke('send-sms', {
         body: {
           to,
-          from: senderId || from, // Usa Sender ID se fornecido, senão usa número
+          from: senderId || from,
           body: message,
-          provider,
+          provider: providerToUse,
           dryRun
         }
       });
+    };
+
+    try {
+      console.log(`[SMS] Tentando envio via ${provider}`);
+      let { data, error } = await trySend(provider);
+
+      // Fallback se falhou e está habilitado
+      if (error && autoFallback) {
+        const alternativeProvider = getAlternativeProvider();
+        
+        toast.info(`Tentando com ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}...`, {
+          description: `${provider === 'twilio' ? 'Twilio' : 'Vonage'} falhou, usando fallback`,
+          duration: 2000,
+        });
+        
+        console.log(`[SMS] Fallback: tentando com ${alternativeProvider}`);
+        const fallbackResult = await trySend(alternativeProvider);
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+        
+        if (!error && data?.success) {
+          toast.success("SMS enviado via fallback!", {
+            description: `Enviado com sucesso via ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}`,
+            duration: 4000,
+          });
+          setMessage("");
+          setTo("");
+          if (onSmsSent) onSmsSent();
+          return;
+        }
+      }
 
       if (error) {
         // Handle error with detailed messages
@@ -168,8 +199,9 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       }
 
       if (data?.success) {
+        const providerUsed = data.provider || provider;
         toast.success("SMS enviado com sucesso!", {
-          description: `Message SID: ${data.messageSid}`
+          description: `Via ${providerUsed === 'twilio' ? 'Twilio' : 'Vonage'} • Message SID: ${data.messageSid}`
         });
         setMessage("");
         setTo("");

@@ -21,7 +21,7 @@ import { ProviderFactory } from "@/services/providers";
 import { Badge } from "@/components/ui/badge";
 
 export function IVRMenuFormV2() {
-  const { provider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>([""]);
   const MAX_DESTINATIONS = 100;
@@ -183,8 +183,8 @@ export function IVRMenuFormV2() {
         
         toast.info(`Enviando ${i + 1}/${validDestinations.length}: ${destination}`);
         
-        try {
-          const { data, error } = await supabase.functions.invoke('send-ivr-call-v2', {
+        const trySend = async (providerToUse: 'twilio' | 'vonage') => {
+          return await supabase.functions.invoke('send-ivr-call-v2', {
             body: {
               to: destination,
               from,
@@ -195,9 +195,8 @@ export function IVRMenuFormV2() {
               premium,
               ncco: nccoToSend,
               voiceName: voiceName || undefined,
-              provider,
+              provider: providerToUse,
               dryRun,
-              // Metadados das ações configuradas
               actions: {
                 action1,
                 action1Message,
@@ -207,6 +206,19 @@ export function IVRMenuFormV2() {
               }
             }
           });
+        };
+        
+        try {
+          let { data, error } = await trySend(provider);
+
+          // Fallback
+          if (error && autoFallback) {
+            const alternativeProvider = getAlternativeProvider();
+            console.log(`[IVR] Fallback para ${destination}: tentando ${alternativeProvider}`);
+            const fallbackResult = await trySend(alternativeProvider);
+            data = fallbackResult.data;
+            error = fallbackResult.error;
+          }
 
           if (error) throw error;
           

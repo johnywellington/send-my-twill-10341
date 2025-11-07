@@ -14,6 +14,7 @@ import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateEstimatedTime } from "@/lib/rate-limits";
 import { Clock } from "lucide-react";
+import { useProvider } from "@/contexts/ProviderContext";
 
 interface BulkSendDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface BulkSendDialogProps {
 }
 
 export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendDialogProps) {
+  const { provider, autoFallback } = useProvider();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<"config" | "sending" | "results">("config");
@@ -39,7 +41,8 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
     message: "",
     language: "pt-PT",
     style: 0,
-    premium: false
+    premium: false,
+    provider: provider || "vonage"
   });
   
   const [smsThrottle, setSmsThrottle] = useState<number>(1.00);
@@ -54,11 +57,21 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
       let sendResults: SendResult[];
 
       if (type === "sms") {
-        sendResults = await sendBulkSMS(contacts, { ...smsConfig, throttlePercentage: smsThrottle }, (current, total) => {
+        sendResults = await sendBulkSMS(contacts, { 
+          ...smsConfig, 
+          provider,
+          autoFallback,
+          throttlePercentage: smsThrottle 
+        }, (current, total) => {
           setProgress((current / total) * 100);
         });
       } else {
-        sendResults = await sendBulkVoice(contacts, { ...voiceConfig, throttlePercentage: voiceThrottle }, (current, total) => {
+        sendResults = await sendBulkVoice(contacts, { 
+          ...voiceConfig, 
+          provider,
+          autoFallback,
+          throttlePercentage: voiceThrottle 
+        }, (current, total) => {
           setProgress((current / total) * 100);
         });
       }
@@ -68,10 +81,14 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
 
       const success = sendResults.filter(r => r.success).length;
       const failed = sendResults.filter(r => !r.success).length;
+      const fallbackCount = sendResults.filter(r => r.usedFallback).length;
+      const primaryCount = sendResults.filter(r => r.success && !r.usedFallback).length;
 
       toast({
         title: "Envio concluído",
-        description: `${success} enviados com sucesso, ${failed} falharam`
+        description: autoFallback && fallbackCount > 0
+          ? `${primaryCount} via ${provider}, ${fallbackCount} via fallback`
+          : `${success} enviados com sucesso, ${failed} falharam`
       });
     } catch (error: any) {
       toast({
@@ -90,7 +107,7 @@ export function BulkSendDialog({ open, onOpenChange, contacts, type }: BulkSendD
     setProgress(0);
     setResults([]);
     setSmsConfig({ from: "", message: "", provider: "twilio" });
-    setVoiceConfig({ from: "", message: "", language: "pt-PT", style: 0, premium: false });
+    setVoiceConfig({ from: "", message: "", language: "pt-PT", style: 0, premium: false, provider: provider || "vonage" });
     setSmsThrottle(1.00);
     setVoiceThrottle(1.00);
   };

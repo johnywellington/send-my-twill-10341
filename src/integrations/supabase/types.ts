@@ -587,6 +587,239 @@ export type Database = {
         }
         Relationships: []
       }
+      sip_call_logs: {
+        Row: {
+          answer_time: string | null
+          call_type: string
+          call_uuid: string
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string
+          duration: number | null
+          end_time: string | null
+          error_message: string | null
+          from_uri: string
+          hangup_cause: string | null
+          id: string
+          metadata: Json | null
+          provider: string
+          quality_score: number | null
+          route_id: string | null
+          sip_user_id: string | null
+          start_time: string | null
+          status: string
+          to_uri: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          answer_time?: string | null
+          call_type: string
+          call_uuid: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          error_message?: string | null
+          from_uri: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider: string
+          quality_score?: number | null
+          route_id?: string | null
+          sip_user_id?: string | null
+          start_time?: string | null
+          status?: string
+          to_uri: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          answer_time?: string | null
+          call_type?: string
+          call_uuid?: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          error_message?: string | null
+          from_uri?: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          quality_score?: number | null
+          route_id?: string | null
+          sip_user_id?: string | null
+          start_time?: string | null
+          status?: string
+          to_uri?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_call_logs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "sip_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sip_call_logs_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_endpoints: {
+        Row: {
+          expires_at: string | null
+          id: string
+          ip_address: string | null
+          last_seen: string | null
+          metadata: Json | null
+          provider: string
+          sip_user_id: string
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          last_seen?: string | null
+          metadata?: Json | null
+          provider: string
+          sip_user_id: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          last_seen?: string | null
+          metadata?: Json | null
+          provider?: string
+          sip_user_id?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_endpoints_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_routes: {
+        Row: {
+          created_at: string
+          forward_to: string
+          from_pattern: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          priority: number
+          provider: string
+          route_type: string
+          to_pattern: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          forward_to: string
+          from_pattern: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          priority?: number
+          provider: string
+          route_type: string
+          to_pattern: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          forward_to?: string
+          from_pattern?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          priority?: number
+          provider?: string
+          route_type?: string
+          to_pattern?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sip_users: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          extension: string
+          id: string
+          is_active: boolean
+          provider: string
+          sip_domain: string
+          sip_password: string
+          sip_username: string
+          twilio_credential_sid: string | null
+          updated_at: string
+          user_id: string
+          vonage_endpoint_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          extension: string
+          id?: string
+          is_active?: boolean
+          provider: string
+          sip_domain: string
+          sip_password: string
+          sip_username: string
+          twilio_credential_sid?: string | null
+          updated_at?: string
+          user_id: string
+          vonage_endpoint_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          extension?: string
+          id?: string
+          is_active?: boolean
+          provider?: string
+          sip_domain?: string
+          sip_password?: string
+          sip_username?: string
+          twilio_credential_sid?: string | null
+          updated_at?: string
+          user_id?: string
+          vonage_endpoint_id?: string | null
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           cost: number | null

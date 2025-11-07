@@ -134,14 +134,36 @@ const Login = () => {
       }
 
       if (data.session) {
-        toast.success(
-          "Conta criada com sucesso! Aguardando aprovação do administrador.",
-          {
-            description: "Você receberá uma notificação quando sua conta for aprovada.",
-            duration: 8000,
-          }
-        );
+        // Verificar status do perfil após cadastro
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        }
+
+        // Se perfil inativo, fazer logout imediato
+        if (profile && !profile.is_active) {
+          toast.warning(
+            "Conta criada! Aguardando aprovação do administrador.",
+            {
+              description: "Você será notificado por email quando sua conta for aprovada. Por favor, aguarde.",
+              duration: 10000,
+            }
+          );
+          
+          // Delay para garantir que toast apareça antes do logout
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await supabase.auth.signOut();
+        } else {
+          // Caso improvável: perfil já está ativo
+          toast.success("Conta criada com sucesso!");
+        }
       } else {
+        // Sem sessão = email precisa ser confirmado
         toast.success(
           "Conta criada! Aguardando aprovação do administrador.",
           {

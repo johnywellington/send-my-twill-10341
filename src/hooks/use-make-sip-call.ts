@@ -25,6 +25,12 @@ export function useMakeSIPCall() {
       });
 
       if (error) throw error;
+      
+      // Verificar se há erro na resposta da API
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -32,7 +38,32 @@ export function useMakeSIPCall() {
       toast.success('Chamada iniciada com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(`Erro ao fazer chamada: ${error.message}`);
+      console.error('Call error:', error);
+      
+      let userMessage = 'Erro ao fazer chamada';
+      
+      // Tratar erros específicos da API
+      const errorMsg = error.message.toLowerCase();
+      
+      if (errorMsg.includes('voice calling has been disabled')) {
+        userMessage = 'Chamadas de voz estão desabilitadas na sua conta do provedor. Entre em contato com o suporte.';
+      } else if (errorMsg.includes('insufficient funds') || errorMsg.includes('saldo insuficiente')) {
+        userMessage = 'Saldo insuficiente na conta do provedor para realizar a chamada.';
+      } else if (errorMsg.includes('invalid number') || errorMsg.includes('número inválido')) {
+        userMessage = 'Número de destino inválido. Verifique o formato (ex: +5511999999999).';
+      } else if (errorMsg.includes('authentication') || errorMsg.includes('credentials')) {
+        userMessage = 'Erro de autenticação com o provedor. Verifique suas credenciais SIP.';
+      } else if (errorMsg.includes('not found') || errorMsg.includes('ramal não encontrado')) {
+        userMessage = 'Ramal não encontrado ou não configurado.';
+      } else if (errorMsg.includes('timeout')) {
+        userMessage = 'Tempo de conexão esgotado. Tente novamente.';
+      } else {
+        userMessage = `Erro ao fazer chamada: ${error.message}`;
+      }
+      
+      toast.error(userMessage, {
+        duration: 5000,
+      });
     },
   });
 

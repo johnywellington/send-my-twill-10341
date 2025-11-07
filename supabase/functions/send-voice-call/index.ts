@@ -15,6 +15,7 @@ interface VoiceCallRequest {
   style?: number;
   premium?: boolean;
   voiceName?: string;
+  provider?: string;
   dryRun?: boolean;
 }
 
@@ -99,7 +100,9 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, dryRun = false }: VoiceCallRequest = await req.json();
+    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, provider = 'vonage', dryRun = false }: VoiceCallRequest = await req.json();
+    
+    console.log('Provider selected:', provider);
     
     // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
     let finalLanguage = language;
@@ -141,6 +144,132 @@ serve(async (req: Request) => {
       );
     }
 
+    // ============ TWILIO VOICE API BRANCH ============
+    if (provider === 'twilio') {
+      console.log('🟦 Using Twilio Voice API');
+      
+      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      
+      if (!accountSid || !authToken) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Twilio credentials not configured (ACCOUNT_SID/AUTH_TOKEN)',
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // Map voice to Twilio Polly voices
+      let twilioVoice = 'Polly.Joanna'; // default
+      if (language === 'pt-BR') {
+        if (voiceName === 'Camila') twilioVoice = 'Polly.Camila';
+        else if (voiceName === 'Vitória') twilioVoice = 'Polly.Vitoria';
+        else if (voiceName === 'Ricardo') twilioVoice = 'Polly.Ricardo';
+        else if (voiceName === 'Thiago') twilioVoice = 'Polly.Ricardo';
+        else twilioVoice = style === 1 ? 'Polly.Vitoria' : 'Polly.Camila';
+      } else if (language === 'pt-PT') {
+        if (voiceName === 'Cristiano') twilioVoice = 'Polly.Cristiano';
+        else if (voiceName === 'Inês') twilioVoice = 'Polly.Ines';
+        else twilioVoice = style === 1 ? 'Polly.Cristiano' : 'Polly.Ines';
+      } else if (language === 'en-GB') {
+        twilioVoice = 'Polly.Emma';
+      } else if (language === 'es-ES') {
+        twilioVoice = 'Polly.Lucia';
+      } else if (language === 'es-US') {
+        twilioVoice = 'Polly.Lupe';
+      } else if (language === 'fr-FR') {
+        twilioVoice = 'Polly.Celine';
+      }
+
+      console.log(`Mapped to Twilio voice: ${twilioVoice}`);
+
+      // Build webhook URLs
+      const twimlUrl = `${supabaseUrl}/functions/v1/generate-twiml?text=${encodeURIComponent(text)}&language=${encodeURIComponent(language)}&voice=${encodeURIComponent(twilioVoice)}`;
+      const statusUrl = `${supabaseUrl}/functions/v1/twilio-voice-status`;
+
+      console.log(`Making Twilio voice call from ${from} to ${to}`);
+
+      // Call Twilio Voice API
+      const twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`;
+      
+      const twilioResponse = await fetch(twilioApiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          To: to,
+          From: from,
+          Url: twimlUrl,
+          StatusCallback: statusUrl,
+          StatusCallbackEvent: 'initiated ringing answered completed',
+        }),
+      });
+
+      if (!twilioResponse.ok) {
+        const errorText = await twilioResponse.text();
+        console.error('Twilio API error:', errorText);
+        
+        // Log failed voice call
+        await supabase.from('voice_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          message: text,
+          language: finalLanguage,
+          status: 'failed',
+          error_message: `Twilio API error: ${errorText}`,
+          provider: 'twilio',
+          voice_label: voiceName || null,
+        });
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Twilio API error: ${twilioResponse.status}`,
+            details: errorText,
+            provider: 'twilio',
+          }),
+          { status: twilioResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const twilioData = await twilioResponse.json();
+      console.log('Twilio call initiated:', twilioData.sid);
+
+      // Log successful voice call
+      await supabase.from('voice_logs').insert({
+        user_id: userId,
+        to_number: to,
+        from_number: from,
+        message: text,
+        language: finalLanguage,
+        status: 'initiated',
+        call_uuid: twilioData.sid,
+        provider: 'twilio',
+        voice_label: voiceName || null,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          uuid: twilioData.sid,
+          status: twilioData.status,
+          provider: 'twilio',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============ VONAGE VOICE API BRANCH (EXISTING CODE) ============
+    console.log('🟪 Using Vonage Voice API');
+    
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
 
@@ -208,7 +337,8 @@ serve(async (req: Request) => {
           premium: finalPremium,
           voice_label: voiceName || null,
           status: 'dry-run',
-          call_uuid: mockUuid
+          call_uuid: mockUuid,
+          provider: provider || 'vonage'
         });
       }
       
@@ -344,7 +474,8 @@ serve(async (req: Request) => {
           premium: finalPremium,
           status: 'failed',
           error_message: responseData.title || responseData.detail || "Failed to make call",
-          voice_label: voiceName || undefined
+          voice_label: voiceName || undefined,
+          provider: 'vonage'
         });
       }
 
@@ -381,7 +512,8 @@ serve(async (req: Request) => {
         premium: finalPremium,
         voice_label: voiceName || null,
         status: 'initiated',
-        call_uuid: responseData.uuid
+        call_uuid: responseData.uuid,
+        provider: 'vonage'
       };
 
       const { error: logError } = await supabase
@@ -397,7 +529,8 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         uuid: responseData.uuid,
-        status: responseData.status
+        status: responseData.status,
+        provider: 'vonage'
       }),
       {
         status: 200,

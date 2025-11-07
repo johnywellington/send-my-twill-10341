@@ -178,6 +178,7 @@ export type Database = {
           language: string
           ncco: Json
           premium: boolean
+          provider: string | null
           status: string
           style: number
           template_used: string | null
@@ -199,6 +200,7 @@ export type Database = {
           language?: string
           ncco: Json
           premium?: boolean
+          provider?: string | null
           status?: string
           style?: number
           template_used?: string | null
@@ -220,6 +222,7 @@ export type Database = {
           language?: string
           ncco?: Json
           premium?: boolean
+          provider?: string | null
           status?: string
           style?: number
           template_used?: string | null
@@ -653,6 +656,7 @@ export type Database = {
           language: string
           message: string
           premium: boolean
+          provider: string | null
           status: string
           style: number
           to_number: string
@@ -671,6 +675,7 @@ export type Database = {
           language?: string
           message: string
           premium?: boolean
+          provider?: string | null
           status?: string
           style?: number
           to_number: string
@@ -689,6 +694,7 @@ export type Database = {
           language?: string
           message?: string
           premium?: boolean
+          provider?: string | null
           status?: string
           style?: number
           to_number?: string

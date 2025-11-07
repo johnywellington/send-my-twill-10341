@@ -4,6 +4,12 @@ project_id = "baowfhikujfppwmmhwcn"
 # send-sms, send-voice-call, send-ivr-call, send-ivr-call-v2 agora protegidos
 
 # Webhooks permanecem públicos (validados por assinatura Vonage/Twilio)
+[functions.generate-twiml]
+verify_jwt = false
+
+[functions.twilio-voice-status]
+verify_jwt = false
+
 [functions.ivr-webhook]
 verify_jwt = false
 

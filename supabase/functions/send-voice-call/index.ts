@@ -151,6 +151,8 @@ serve(async (req: Request) => {
       const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
       const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
       
+      console.log(`🔑 Twilio Account SID configurado: ${accountSid}`);
+      
       if (!accountSid || !authToken) {
         return new Response(
           JSON.stringify({
@@ -272,6 +274,8 @@ serve(async (req: Request) => {
     
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+    
+    console.log(`🔑 Vonage Application ID configurado: ${applicationId}`);
 
     if (!applicationId || !privateKey) {
       return new Response(

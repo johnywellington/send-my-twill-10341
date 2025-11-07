@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { SenderIdTooltip } from "./SenderIdTooltip";
+import { useProvider } from "@/contexts/ProviderContext";
+import { ProviderFactory } from "@/services/providers";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -25,11 +27,12 @@ interface SmsFormProps {
 
 export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const navigate = useNavigate();
+  const { provider } = useProvider();
+  const adapter = ProviderFactory.getAdapter(provider);
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
   const [senderId, setSenderId] = useState("");
   const [message, setMessage] = useState("");
-  const [provider, setProvider] = useState<"twilio" | "vonage">("twilio");
   const [loading, setLoading] = useState(false);
   const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -55,6 +58,27 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar número com adapter
+    const phoneValidation = adapter.validatePhoneNumber(to, 'sms');
+    if (!phoneValidation.valid) {
+      toast.error("Número inválido", {
+        description: phoneValidation.error,
+      });
+      return;
+    }
+    
+    // Validar Sender ID se fornecido
+    if (senderId) {
+      const senderValidation = adapter.validateSenderId(senderId);
+      if (!senderValidation.valid) {
+        toast.error("Sender ID inválido", {
+          description: senderValidation.error,
+        });
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {
@@ -176,33 +200,17 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           </div>
           <div>
             <CardTitle className="text-2xl font-semibold">Enviar SMS</CardTitle>
-            <CardDescription className="text-sm text-muted-foreground">
-              Envie mensagens usando Twilio ou Vonage
+            <CardDescription className="text-sm text-muted-foreground flex items-center gap-2">
+              Envie mensagens usando {adapter.displayName}
+              <Badge variant="outline" className="text-xs">
+                {adapter.displayName}
+              </Badge>
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5 px-6 pb-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2.5">
-            <Label htmlFor="provider" className="text-sm font-medium text-foreground">
-              Provedor SMS
-            </Label>
-            <Select value={provider} onValueChange={(value: "twilio" | "vonage") => setProvider(value)}>
-              <SelectTrigger id="provider" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
-                <SelectValue placeholder="Selecione o provedor" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="twilio" className="cursor-pointer">
-                  <span className="font-medium">Twilio</span>
-                </SelectItem>
-                <SelectItem value="vonage" className="cursor-pointer">
-                  <span className="font-medium">Vonage</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2.5">
             <Label htmlFor="from" className="text-sm font-medium text-foreground">
               Número de Origem

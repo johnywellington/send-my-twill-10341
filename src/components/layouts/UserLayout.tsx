@@ -3,6 +3,7 @@ import { UserSidebar } from "./UserSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { ProviderSelector } from "@/components/ProviderSelector";
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,8 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
             </div>
             
             <div className="flex items-center gap-4">
+              <ProviderSelector />
+              
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 <span>{user?.email}</span>

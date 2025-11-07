@@ -19,6 +19,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
+import { useProvider } from "@/contexts/ProviderContext";
+import { ProviderFactory } from "@/services/providers";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -26,6 +28,8 @@ interface VoiceCallFormProps {
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const navigate = useNavigate();
+  const { provider } = useProvider();
+  const adapter = ProviderFactory.getAdapter(provider);
   const [to, setTo] = useState("351911019866");
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("Hello from Voice API");
@@ -64,6 +68,15 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
       toast.error("Please fill all required fields");
       return;
     }
+    
+    // Validar número com adapter
+    const phoneValidation = adapter.validatePhoneNumber(to, 'voice');
+    if (!phoneValidation.valid) {
+      toast.error("Número inválido", {
+        description: phoneValidation.error,
+      });
+      return;
+    }
 
     setLoading(true);
 
@@ -77,6 +90,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           style: parseInt(style),
           premium,
           voiceName: voiceName || undefined,
+          provider,
           dryRun
         }
       });
@@ -113,8 +127,11 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
       <Card className="w-full glass-effect animate-slide-up shadow-[var(--shadow-elegant)] hover-lift">
         <CardHeader className="space-y-2 bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-xl pb-8 pt-6">
           <CardTitle className="text-3xl font-bold tracking-tight">Experimente</CardTitle>
-          <CardDescription className="text-primary-foreground/90 text-base">
+          <CardDescription className="text-primary-foreground/90 text-base flex items-center gap-2">
             Teste nossa API enviando uma chamada de voz para o seu telefone
+            <Badge variant="secondary" className="text-xs">
+              {adapter.displayName}
+            </Badge>
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-8 px-6 pb-6">

@@ -16,8 +16,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
 import { IVRVoiceTestDialog } from "@/components/IVRVoiceTestDialog";
+import { useProvider } from "@/contexts/ProviderContext";
+import { ProviderFactory } from "@/services/providers";
+import { Badge } from "@/components/ui/badge";
 
 export function IVRMenuFormV2() {
+  const { provider } = useProvider();
+  const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>([""]);
   const MAX_DESTINATIONS = 100;
   const [from, setFrom] = useState("447418373268");
@@ -136,20 +141,23 @@ export function IVRMenuFormV2() {
       return;
     }
 
-    // Validar formato de cada número
-    const phoneRegex = /^\d{10,15}$/;
-    const invalidNumbers = validDestinations.filter(
-      num => !phoneRegex.test(num.replace(/[^0-9]/g, ''))
-    );
-
-    if (invalidNumbers.length > 0) {
-      toast.error(`Números de destino inválidos: ${invalidNumbers.join(', ')}`);
-      return;
+    // Validar formato de cada número com adapter
+    for (const destination of validDestinations) {
+      const validation = adapter.validatePhoneNumber(destination, 'voice');
+      if (!validation.valid) {
+        toast.error(`Número inválido: ${destination}`, {
+          description: validation.error,
+        });
+        return;
+      }
     }
 
-    // Validar número do assistente
-    if (!phoneRegex.test(assistantNumber.replace(/[^0-9]/g, ''))) {
-      toast.error("Número do assistente inválido. Use formato E.164 (ex: 351912345678)");
+    // Validar número do assistente com adapter
+    const assistantValidation = adapter.validatePhoneNumber(assistantNumber, 'voice');
+    if (!assistantValidation.valid) {
+      toast.error("Número do assistente inválido", {
+        description: assistantValidation.error,
+      });
       return;
     }
 
@@ -187,6 +195,7 @@ export function IVRMenuFormV2() {
               premium,
               ncco: nccoToSend,
               voiceName: voiceName || undefined,
+              provider,
               dryRun,
               // Metadados das ações configuradas
               actions: {
@@ -262,8 +271,11 @@ export function IVRMenuFormV2() {
           <PhoneForwarded className="w-6 h-6 text-accent" />
           <CardTitle>IVR 2.0 - Com Redirecionamento</CardTitle>
         </div>
-        <CardDescription>
-          Sistema IVR avançado com transferência automática de chamadas para assistentes
+        <CardDescription className="flex items-center gap-2">
+          Sistema IVR avançado com transferência automática via {adapter.displayName}
+          <Badge variant="outline" className="text-xs">
+            {adapter.displayName}
+          </Badge>
         </CardDescription>
       </CardHeader>
       <CardContent>

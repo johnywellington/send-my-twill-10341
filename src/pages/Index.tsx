@@ -25,7 +25,7 @@ const Index = () => {
       toast.error("Erro ao fazer logout");
     } else {
       toast.success("Logout realizado!");
-      navigate("/auth");
+      navigate("/login");
     }
   };
 

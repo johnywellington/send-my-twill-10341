@@ -49,7 +49,7 @@ export default function Analytics() {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      navigate("/auth");
+      navigate("/login");
       return;
     }
     setLoading(false);

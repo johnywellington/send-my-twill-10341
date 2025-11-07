@@ -80,7 +80,7 @@ const Dashboard = () => {
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      navigate("/auth");
+      navigate("/login");
     }
   };
 
@@ -111,7 +111,7 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/auth");
+    navigate("/login");
   };
 
   const getStatusBadge = (status: string) => {

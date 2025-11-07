@@ -1,12 +1,12 @@
-import { useAuth } from "@/hooks/use-auth";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
-interface ProtectedRouteProps {
+interface UserRouteProps {
   children: React.ReactNode;
 }
 
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, session, loading, redirectToDashboard } = useAuth();
+export const UserRoute = ({ children }: UserRouteProps) => {
+  const { user, session, role, loading } = useAuth();
 
   if (loading) {
     return (
@@ -23,8 +23,14 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
+  // Not authenticated
   if (!session || !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Admin trying to access user routes - redirect to admin panel
+  if (role === 'admin') {
+    return <Navigate to="/admin" replace />;
   }
 
   return <>{children}</>;

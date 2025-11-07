@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useRealtimeMonitoring } from "@/hooks/use-realtime-monitoring";
-import { ActiveCallsCard } from "@/components/monitoring/ActiveCallsCard";
 import { LiveMetricsCard } from "@/components/monitoring/LiveMetricsCard";
 import { ProviderComparisonCard } from "@/components/monitoring/ProviderComparisonCard";
 import { RealtimeAlertsCard } from "@/components/monitoring/RealtimeAlertsCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { RefreshCw, ArrowRight } from "lucide-react";
 
 export default function Monitoring() {
   const [timeWindow, setTimeWindow] = useState<'5min' | '1hour' | '24hours'>('5min');
@@ -84,8 +85,26 @@ export default function Monitoring() {
         />
       )}
 
-      {/* Active Calls Table */}
-      <ActiveCallsCard calls={activeCalls} />
+      {/* Link para Página Dedicada */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+            <div>
+              <h3 className="text-xl font-semibold">Chamadas Ativas</h3>
+              <p className="text-sm text-muted-foreground">
+                {activeCalls.length} {activeCalls.length === 1 ? 'chamada' : 'chamadas'} em andamento
+              </p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link to="/active-calls">
+              Ver Todas
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Link>
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }

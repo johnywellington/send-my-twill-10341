@@ -4,6 +4,7 @@ import { Phone } from "lucide-react";
 import { MyExtensionContent } from "@/components/sip/MyExtensionContent";
 import { MakeCallContent } from "@/components/sip/MakeCallContent";
 import { CallsHistoryContent } from "@/components/sip/CallsHistoryContent";
+import { QRCodeContent } from "@/components/sip/QRCodeContent";
 
 export default function SIP() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,14 +22,19 @@ export default function SIP() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ramal">🔑 Meu Ramal</TabsTrigger>
+          <TabsTrigger value="qrcode">📱 QR Code</TabsTrigger>
           <TabsTrigger value="chamada">📞 Fazer Chamada</TabsTrigger>
           <TabsTrigger value="historico">📋 Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ramal" className="mt-6">
           <MyExtensionContent />
+        </TabsContent>
+
+        <TabsContent value="qrcode" className="mt-6">
+          <QRCodeContent />
         </TabsContent>
 
         <TabsContent value="chamada" className="mt-6">

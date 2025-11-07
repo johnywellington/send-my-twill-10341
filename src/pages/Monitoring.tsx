@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useRealtimeMonitoring } from "@/hooks/use-realtime-monitoring";
+import { SystemHealthCard } from "@/components/monitoring/SystemHealthCard";
 import { LiveMetricsCard } from "@/components/monitoring/LiveMetricsCard";
 import { ProviderComparisonCard } from "@/components/monitoring/ProviderComparisonCard";
 import { RealtimeAlertsCard } from "@/components/monitoring/RealtimeAlertsCard";
@@ -12,7 +13,7 @@ import { RefreshCw, ArrowRight } from "lucide-react";
 
 export default function Monitoring() {
   const [timeWindow, setTimeWindow] = useState<'5min' | '1hour' | '24hours'>('5min');
-  const { activeCalls, metrics, alerts, loading, refetch } = useRealtimeMonitoring(timeWindow);
+  const { activeCalls, metrics, alerts, systemHealth, loading, refetch } = useRealtimeMonitoring(timeWindow);
 
   if (loading) {
     return (
@@ -61,6 +62,11 @@ export default function Monitoring() {
           </Select>
         </div>
       </div>
+
+      {/* System Health */}
+      {systemHealth && (
+        <SystemHealthCard metrics={systemHealth} />
+      )}
 
       {/* KPIs Grid */}
       {metrics && (

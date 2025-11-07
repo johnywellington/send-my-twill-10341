@@ -40,10 +40,20 @@ interface Alert {
   timestamp: Date;
 }
 
+interface SystemHealthMetrics {
+  status: 'operational' | 'degraded' | 'critical';
+  avgLatency: number;
+  uptime: number;
+  errorRate: number;
+  webhookHealth: 'healthy' | 'degraded' | 'failing';
+  lastUpdated: Date;
+}
+
 export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') => {
   const [activeCalls, setActiveCalls] = useState<ActiveCall[]>([]);
   const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   const getStartTime = () => {
@@ -112,6 +122,48 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
       twilioStats,
       vonageStats,
       totalCalls
+    };
+  };
+
+  const calculateSystemHealth = (calls: any[]): SystemHealthMetrics => {
+    // Calcular latência média (tempo entre created_at e updated_at)
+    const completedCalls = calls.filter(c => c.status === 'completed' && c.created_at && c.updated_at);
+    const avgLatency = completedCalls.length > 0
+      ? completedCalls.reduce((sum, call) => {
+          const created = new Date(call.created_at).getTime();
+          const updated = new Date(call.updated_at).getTime();
+          return sum + (updated - created);
+        }, 0) / completedCalls.length
+      : 0;
+
+    // Calcular uptime (taxa de sucesso)
+    const totalCalls = calls.length;
+    const successfulCalls = calls.filter(c => c.status === 'completed').length;
+    const uptime = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 100;
+
+    // Calcular taxa de erros
+    const failedCalls = calls.filter(c => c.status === 'failed').length;
+    const errorRate = totalCalls > 0 ? (failedCalls / totalCalls) * 100 : 0;
+
+    // Determinar status geral do sistema
+    let status: 'operational' | 'degraded' | 'critical' = 'operational';
+    if (errorRate > 15 || uptime < 70) {
+      status = 'critical';
+    } else if (errorRate > 5 || uptime < 90 || avgLatency > 3000) {
+      status = 'degraded';
+    }
+
+    // Webhook health (baseado na taxa de erros)
+    const webhookHealth: 'healthy' | 'degraded' | 'failing' = 
+      errorRate < 5 ? 'healthy' : errorRate < 15 ? 'degraded' : 'failing';
+
+    return {
+      status,
+      avgLatency,
+      uptime,
+      errorRate,
+      webhookHealth,
+      lastUpdated: new Date()
     };
   };
 
@@ -203,6 +255,9 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
         const calculatedMetrics = calculateMetrics(allCalls);
         setMetrics(calculatedMetrics);
 
+        const health = calculateSystemHealth(allCalls);
+        setSystemHealth(health);
+
         const detectedAlerts = detectAlerts(calculatedMetrics, allCalls);
         setAlerts(detectedAlerts);
       } else {
@@ -290,6 +345,7 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
     activeCalls,
     metrics,
     alerts,
+    systemHealth,
     loading,
     refetch: fetchActiveCallsAndMetrics
   };

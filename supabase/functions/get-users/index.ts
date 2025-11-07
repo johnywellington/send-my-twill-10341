@@ -1,0 +1,142 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.77.0';
+import { corsHeaders } from '../_shared/cors.ts';
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with user's token
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Get current user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user is admin
+    const { data: roleData, error: roleError } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError || roleData?.role !== 'admin') {
+      console.log('User is not admin:', user.id, roleData);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create admin client to access auth.users
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Get query parameters for filtering
+    const url = new URL(req.url);
+    const search = url.searchParams.get('search')?.toLowerCase();
+    const roleFilter = url.searchParams.get('role');
+    const statusFilter = url.searchParams.get('status');
+
+    // Fetch all profiles with roles
+    let query = supabaseAdmin
+      .from('profiles')
+      .select('*, user_roles!inner(role)');
+
+    // Apply role filter
+    if (roleFilter && (roleFilter === 'admin' || roleFilter === 'user')) {
+      query = query.eq('user_roles.role', roleFilter);
+    }
+
+    // Apply status filter
+    if (statusFilter === 'active') {
+      query = query.eq('is_active', true);
+    } else if (statusFilter === 'suspended') {
+      query = query.eq('is_active', false);
+    }
+
+    const { data: profiles, error: profilesError } = await query.order('created_at', { ascending: false });
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch profiles' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch all auth users to get emails
+    const { data: { users: authUsers }, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+
+    if (authError) {
+      console.error('Error fetching auth users:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch user emails' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Combine profiles with emails
+    let users = profiles.map(profile => {
+      const authUser = authUsers.find(u => u.id === profile.user_id);
+      return {
+        id: profile.id,
+        user_id: profile.user_id,
+        email: authUser?.email || 'Unknown',
+        full_name: profile.full_name,
+        phone: profile.phone,
+        avatar_url: profile.avatar_url,
+        is_active: profile.is_active,
+        suspended_at: profile.suspended_at,
+        suspension_reason: profile.suspension_reason,
+        last_login_at: profile.last_login_at,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        role: profile.user_roles.role
+      };
+    });
+
+    // Apply search filter
+    if (search) {
+      users = users.filter(u => 
+        u.email.toLowerCase().includes(search) ||
+        u.full_name?.toLowerCase().includes(search) ||
+        u.phone?.includes(search)
+      );
+    }
+
+    console.log(`Returning ${users.length} users`);
+
+    return new Response(
+      JSON.stringify({ users }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error in get-users function:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

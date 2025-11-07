@@ -4,29 +4,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Loader2, Save, Beaker, AlertCircle } from "lucide-react";
+import { Send, Loader2, Save, Beaker, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/hooks/use-templates";
 import { extractVariables } from "@/lib/template-utils";
-import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useNavigate } from "react-router-dom";
 import { SenderIdTooltip } from "./SenderIdTooltip";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
+import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
 }
 
 export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
-  const navigate = useNavigate();
   const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [to, setTo] = useState("");
@@ -37,20 +32,6 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
-
-  // Query para buscar números ativos
-  const { data: phoneNumbers } = useQuery({
-    queryKey: ['phone-numbers-active-sms'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('phone_numbers')
-        .select('*')
-        .eq('is_active', true)
-        .eq('supports_sms', true)
-        .order('phone_number');
-      return data || [];
-    }
-  });
   
   const maxLength = 160;
   const messageLength = message.length;
@@ -232,64 +213,21 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           </div>
           <div>
             <CardTitle className="text-2xl font-semibold">Enviar SMS</CardTitle>
-            <CardDescription className="text-sm text-muted-foreground flex items-center gap-2">
+            <CardDescription className="text-sm text-muted-foreground">
               Envie mensagens usando {adapter.displayName}
-              <Badge variant="outline" className="text-xs">
-                {adapter.displayName}
-              </Badge>
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5 px-6 pb-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2.5">
-            <Label htmlFor="from" className="text-sm font-medium text-foreground">
-              Número de Origem
-            </Label>
-            <Select value={from} onValueChange={setFrom}>
-              <SelectTrigger id="from" className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20">
-                <SelectValue placeholder="Escolha um número" />
-              </SelectTrigger>
-              <SelectContent>
-                {phoneNumbers?.map((phone) => (
-                  <SelectItem key={phone.id} value={phone.phone_number}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={phone.provider === 'vonage' ? 'default' : 'secondary'} className="text-xs">
-                        {phone.provider}
-                      </Badge>
-                      <span>{phone.phone_number}</span>
-                      {phone.friendly_name && (
-                        <span className="text-muted-foreground text-xs">
-                          ({phone.friendly_name})
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {phoneNumbers && phoneNumbers.length === 0 && (
-              <Alert className="mt-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Nenhum número configurado para SMS.{' '}
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto"
-                    onClick={() => navigate('/numbers')}
-                  >
-                    Adicionar número
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            <p className="text-xs text-muted-foreground">
-              Escolha um número cadastrado ou adicione novos em "Números"
-            </p>
-          </div>
+          <PhoneNumberSelector
+            value={from}
+            onChange={setFrom}
+            filterType="sms"
+            label="Número de Origem"
+            description="Escolha um número cadastrado ou adicione novos em 'Números'"
+          />
 
           {/* Sender ID (Opcional) */}
           <div className="space-y-2.5">

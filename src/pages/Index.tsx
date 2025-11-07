@@ -2,7 +2,6 @@ import { useState } from "react";
 import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
-import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquare, Phone, PhoneForwarded, Send, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
@@ -11,7 +10,7 @@ import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "bulk" | "receive-sms" | "receive-calls">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "receive-sms" | "receive-calls">("sms");
   const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
 
   const tabConfig = {
@@ -32,12 +31,6 @@ const Index = () => {
       short: "IVR",
       icon: PhoneForwarded,
       description: "Sistema IVR com redirecionamento de chamadas e suporte multi-provider"
-    },
-    bulk: {
-      title: "Envio em Massa",
-      short: "Envio",
-      icon: Send,
-      description: "Envie SMS ou chamadas de voz para múltiplos contatos"
     },
     "receive-sms": {
       title: "Receber SMS",
@@ -165,10 +158,6 @@ const Index = () => {
           
           <TabsContent value="ivr">
             <IVRMenuFormV2 />
-          </TabsContent>
-          
-          <TabsContent value="bulk">
-            <BulkSendForm />
           </TabsContent>
           
           <TabsContent value="receive-sms">

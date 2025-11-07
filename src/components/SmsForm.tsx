@@ -18,6 +18,8 @@ import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
+import { RateLimitSelector } from "@/components/RateLimitSelector";
+import { calculateDelay } from "@/lib/rate-limits";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -40,6 +42,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [throttle, setThrottle] = useState(1.0); // 100% por padrão
   
   const maxLength = 160;
   const messageLength = message.length;
@@ -187,9 +190,10 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           ));
         }
 
-        // Delay para evitar rate limiting
+        // Delay dinâmico baseado no throttle configurado
         if (i < validDestinations.length - 1 && !cancelRequested) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          const delay = calculateDelay(provider, 'sms', throttle);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
 
@@ -325,6 +329,16 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               onCheckedChange={setDryRun}
             />
           </div>
+
+          {/* Controle de Velocidade de Envio - mostra apenas quando há múltiplos destinos */}
+          {destinations.filter(d => d.trim()).length > 1 && (
+            <RateLimitSelector
+              provider={provider}
+              type="sms"
+              value={throttle}
+              onChange={setThrottle}
+            />
+          )}
 
           <div className="flex gap-2">
             <Button

@@ -22,6 +22,9 @@ import Monitoring from "./pages/Monitoring";
 import ActiveCalls from "./pages/ActiveCalls";
 import ChamadasURA from "./pages/ChamadasURA";
 import HistoricoSMS from "./pages/HistoricoSMS";
+import ValidarNumeros from "./pages/ValidarNumeros";
+import RelatorioCustos from "./pages/RelatorioCustos";
+import ChamadasRecebidas from "./pages/ChamadasRecebidas";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
@@ -85,10 +88,10 @@ const App = () => (
             </UserLayout>
           </UserRoute>
         } />
-        <Route path="/analytics" element={
+        <Route path="/historico-sms" element={
           <UserRoute>
             <UserLayout>
-              <Analytics />
+              <HistoricoSMS />
             </UserLayout>
           </UserRoute>
         } />
@@ -110,6 +113,13 @@ const App = () => (
           <UserRoute>
             <UserLayout>
               <ChamadasRecebidas />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/chamadas-ura" element={
+          <UserRoute>
+            <UserLayout>
+              <ChamadasURA />
             </UserLayout>
           </UserRoute>
         } />
@@ -138,20 +148,6 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <ActiveCalls />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/chamadas-ura" element={
-            <UserRoute>
-              <UserLayout>
-                <ChamadasURA />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/historico-sms" element={
-            <UserRoute>
-              <UserLayout>
-                <HistoricoSMS />
               </UserLayout>
             </UserRoute>
           } />

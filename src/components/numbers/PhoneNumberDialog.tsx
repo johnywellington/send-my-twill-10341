@@ -56,8 +56,11 @@ export const PhoneNumberDialog = ({ open, onOpenChange, editingPhone, onSuccess 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Normalizar número para formato E.164 (adicionar + se não existir)
+    const normalizedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+
     const phoneData = {
-      phone_number: phoneNumber,
+      phone_number: normalizedPhone,
       friendly_name: friendlyName || null,
       country_code: countryCode,
       provider,
@@ -143,13 +146,13 @@ export const PhoneNumberDialog = ({ open, onOpenChange, editingPhone, onSuccess 
             <div>
               <Label>Número de Telefone</Label>
               <Input 
-                placeholder="447418373592"
+                placeholder="12173973329 ou +12173973329"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Formato: sem espaços ou caracteres especiais
+                O prefixo + será adicionado automaticamente se necessário
               </p>
             </div>
           </div>

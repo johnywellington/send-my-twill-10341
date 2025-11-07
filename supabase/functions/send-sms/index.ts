@@ -221,9 +221,13 @@ const handler = async (req: Request): Promise<Response> => {
       const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
       const webhookUrl = `${supabaseUrl}/functions/v1/twilio-sms-webhook`;
       
+      // Normalizar números para formato E.164 (Twilio exige + no início)
+      const normalizedTo = to.startsWith('+') ? to : `+${to}`;
+      const normalizedFrom = from.startsWith('+') ? from : `+${from}`;
+      
       const formData = new URLSearchParams();
-      formData.append('To', to);
-      formData.append('From', from);
+      formData.append('To', normalizedTo);
+      formData.append('From', normalizedFrom);
       formData.append('Body', body);
       formData.append('StatusCallback', webhookUrl);
 

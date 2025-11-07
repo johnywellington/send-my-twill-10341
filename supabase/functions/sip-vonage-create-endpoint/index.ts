@@ -103,6 +103,23 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
+    // Log event
+    await supabase.functions.invoke('log-sip-event', {
+      body: {
+        event_type: 'user_created',
+        event_category: 'user',
+        user_id: user.id,
+        domain_group_id: domainGroupId,
+        sip_user_id: sipUser.id,
+        provider: 'vonage',
+        event_data: {
+          username: username,
+          extension: extension,
+          display_name: display_name,
+        }
+      }
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 

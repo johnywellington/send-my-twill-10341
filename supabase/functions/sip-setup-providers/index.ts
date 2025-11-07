@@ -124,6 +124,22 @@ serve(async (req) => {
         },
       ]);
 
+      // Log event
+      await supabase.functions.invoke('log-sip-event', {
+        body: {
+          event_type: 'domain_created',
+          event_category: 'domain',
+          user_id: user.id,
+          domain_group_id: domainGroupId,
+          provider: 'twilio',
+          event_data: {
+            friendly_name: twilioConfig.displayName || twilioConfig.domainName,
+            domain_name: twilioData.domain_name,
+            sip_domain_sid: twilioData.sid,
+          }
+        }
+      });
+
       results.twilio = {
         domain_group_id: domainGroupId,
         domain_name: twilioData.domain_name,
@@ -216,6 +232,22 @@ serve(async (req) => {
           created_by: user.id 
         },
       ]);
+
+      // Log event
+      await supabase.functions.invoke('log-sip-event', {
+        body: {
+          event_type: 'domain_created',
+          event_category: 'domain',
+          user_id: user.id,
+          domain_group_id: domainGroupId,
+          provider: 'vonage',
+          event_data: {
+            friendly_name: vonageConfig.displayName || vonageConfig.name,
+            app_name: vonageData.name,
+            app_id: vonageData.id,
+          }
+        }
+      });
 
       results.vonage = {
         domain_group_id: domainGroupId,

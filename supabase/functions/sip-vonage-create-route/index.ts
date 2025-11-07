@@ -106,6 +106,24 @@ serve(async (req) => {
       throw insertError;
     }
 
+    // Log event
+    await supabase.functions.invoke('log-sip-event', {
+      body: {
+        event_type: 'route_created',
+        event_category: 'route',
+        user_id: user.id,
+        domain_group_id: domain_group_id,
+        route_id: route.id,
+        provider: 'vonage',
+        event_data: {
+          name: name,
+          route_type: route_type,
+          from_pattern: from_pattern,
+          to_pattern: to_pattern,
+        }
+      }
+    });
+
     console.log(`[Vonage Route] Route created successfully: ${route.id}`);
 
     return new Response(

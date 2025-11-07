@@ -101,12 +101,25 @@ serve(async (req) => {
 
     const callData = await vonageResponse.json();
 
+    // Buscar rota ativa
+    const { data: route } = await supabase
+      .from('sip_routes')
+      .select('id, domain_group_id')
+      .eq('provider', 'vonage')
+      .eq('route_type', 'sip_to_pstn')
+      .eq('is_active', true)
+      .order('priority', { ascending: false })
+      .limit(1)
+      .single();
+
     // Registrar chamada no log
     const { error: logError } = await supabase
       .from('sip_call_logs')
       .insert({
         user_id: user.id,
         sip_user_id: sipUser.id,
+        route_id: route?.id,
+        domain_group_id: sipUser.domain_group_id,
         provider: 'vonage',
         call_type: 'external',
         from_uri: fromNumber,

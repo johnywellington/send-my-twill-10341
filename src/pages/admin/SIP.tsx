@@ -5,7 +5,8 @@ import { ConfigContent } from "@/components/sip/ConfigContent";
 import { UsersContent } from "@/components/sip/UsersContent";
 import { RoutesContent } from "@/components/sip/RoutesContent";
 import { MonitorContent } from "@/components/sip/MonitorContent";
-import { AnalyticsContent } from "@/components/sip/AnalyticsContent";
+import { EventsContent } from "@/components/sip/EventsContent";
+import { WebhooksContent } from "@/components/sip/WebhooksContent";
 
 export default function AdminSIP() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -23,12 +24,13 @@ export default function AdminSIP() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="config">⚙️ Config</TabsTrigger>
           <TabsTrigger value="usuarios">👥 Usuários</TabsTrigger>
           <TabsTrigger value="rotas">🛣️ Rotas</TabsTrigger>
           <TabsTrigger value="monitor">📊 Monitor</TabsTrigger>
-          <TabsTrigger value="analytics">📈 Analytics</TabsTrigger>
+          <TabsTrigger value="eventos">📋 Eventos</TabsTrigger>
+          <TabsTrigger value="webhooks">🔗 Webhooks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="config" className="mt-6">
@@ -47,8 +49,12 @@ export default function AdminSIP() {
           <MonitorContent />
         </TabsContent>
 
-        <TabsContent value="analytics" className="mt-6">
-          <AnalyticsContent />
+        <TabsContent value="eventos" className="mt-6">
+          <EventsContent />
+        </TabsContent>
+
+        <TabsContent value="webhooks" className="mt-6">
+          <WebhooksContent />
         </TabsContent>
       </Tabs>
     </div>

@@ -724,6 +724,72 @@ export type Database = {
           },
         ]
       }
+      sip_events: {
+        Row: {
+          created_at: string | null
+          domain_group_id: string | null
+          event_category: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          provider: string
+          route_id: string | null
+          sip_user_id: string | null
+          triggered_by: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          domain_group_id?: string | null
+          event_category: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider: string
+          route_id?: string | null
+          sip_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          domain_group_id?: string | null
+          event_category?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider?: string
+          route_id?: string | null
+          sip_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_events_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "sip_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sip_events_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sip_provider_config: {
         Row: {
           config_key: string

@@ -78,13 +78,41 @@ const App = () => (
               </UserLayout>
             </UserRoute>
           } />
-          <Route path="/numbers" element={
-            <UserRoute>
-              <UserLayout>
-                <Numbers />
-              </UserLayout>
-            </UserRoute>
-          } />
+        <Route path="/numbers" element={
+          <UserRoute>
+            <UserLayout>
+              <Numbers />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/analytics" element={
+          <UserRoute>
+            <UserLayout>
+              <Analytics />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/validar-numeros" element={
+          <UserRoute>
+            <UserLayout>
+              <ValidarNumeros />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/relatorio-custos" element={
+          <UserRoute>
+            <UserLayout>
+              <RelatorioCustos />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/chamadas-recebidas" element={
+          <UserRoute>
+            <UserLayout>
+              <ChamadasRecebidas />
+            </UserLayout>
+          </UserRoute>
+        } />
           <Route path="/api-test" element={
             <UserRoute>
               <UserLayout>

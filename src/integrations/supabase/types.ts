@@ -130,37 +130,58 @@ export type Database = {
       }
       contacts: {
         Row: {
+          carrier_name: string | null
+          country_code_detected: string | null
           created_at: string
           email: string | null
           id: string
+          is_valid: boolean | null
+          line_type: string | null
           name: string
           notes: string | null
           phone_number: string
           tags: string[] | null
           updated_at: string
           user_id: string
+          validated_at: string | null
+          validation_reason: string | null
+          validation_status: string | null
         }
         Insert: {
+          carrier_name?: string | null
+          country_code_detected?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          is_valid?: boolean | null
+          line_type?: string | null
           name: string
           notes?: string | null
           phone_number: string
           tags?: string[] | null
           updated_at?: string
           user_id: string
+          validated_at?: string | null
+          validation_reason?: string | null
+          validation_status?: string | null
         }
         Update: {
+          carrier_name?: string | null
+          country_code_detected?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          is_valid?: boolean | null
+          line_type?: string | null
           name?: string
           notes?: string | null
           phone_number?: string
           tags?: string[] | null
           updated_at?: string
           user_id?: string
+          validated_at?: string | null
+          validation_reason?: string | null
+          validation_status?: string | null
         }
         Relationships: []
       }
@@ -454,13 +475,17 @@ export type Database = {
       }
       received_calls: {
         Row: {
+          answer_time: string | null
+          answered: boolean | null
           call_uuid: string
+          caller_name: string | null
           conversation_uuid: string | null
           cost: number | null
           created_at: string | null
           duration: number | null
           ended_at: string | null
           from_number: string
+          hangup_cause: string | null
           id: string
           metadata: Json | null
           provider: string
@@ -468,17 +493,23 @@ export type Database = {
           started_at: string | null
           status: string
           to_number: string
+          transcription_available: boolean | null
+          transcription_text: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          answer_time?: string | null
+          answered?: boolean | null
           call_uuid: string
+          caller_name?: string | null
           conversation_uuid?: string | null
           cost?: number | null
           created_at?: string | null
           duration?: number | null
           ended_at?: string | null
           from_number: string
+          hangup_cause?: string | null
           id?: string
           metadata?: Json | null
           provider: string
@@ -486,17 +517,23 @@ export type Database = {
           started_at?: string | null
           status?: string
           to_number: string
+          transcription_available?: boolean | null
+          transcription_text?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          answer_time?: string | null
+          answered?: boolean | null
           call_uuid?: string
+          caller_name?: string | null
           conversation_uuid?: string | null
           cost?: number | null
           created_at?: string | null
           duration?: number | null
           ended_at?: string | null
           from_number?: string
+          hangup_cause?: string | null
           id?: string
           metadata?: Json | null
           provider?: string
@@ -504,6 +541,8 @@ export type Database = {
           started_at?: string | null
           status?: string
           to_number?: string
+          transcription_available?: boolean | null
+          transcription_text?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -590,6 +629,69 @@ export type Database = {
           to_number?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      usage_analytics: {
+        Row: {
+          created_at: string
+          id: string
+          ivr_calls: number | null
+          ivr_cost: number | null
+          ivr_minutes: number | null
+          provider: string
+          raw_data: Json | null
+          report_date: string
+          sms_cost: number | null
+          sms_delivered: number | null
+          sms_failed: number | null
+          sms_sent: number | null
+          synced_at: string | null
+          total_cost: number | null
+          user_id: string
+          voice_calls: number | null
+          voice_cost: number | null
+          voice_minutes: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ivr_calls?: number | null
+          ivr_cost?: number | null
+          ivr_minutes?: number | null
+          provider?: string
+          raw_data?: Json | null
+          report_date: string
+          sms_cost?: number | null
+          sms_delivered?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          user_id: string
+          voice_calls?: number | null
+          voice_cost?: number | null
+          voice_minutes?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ivr_calls?: number | null
+          ivr_cost?: number | null
+          ivr_minutes?: number | null
+          provider?: string
+          raw_data?: Json | null
+          report_date?: string
+          sms_cost?: number | null
+          sms_delivered?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          user_id?: string
+          voice_calls?: number | null
+          voice_cost?: number | null
+          voice_minutes?: number | null
         }
         Relationships: []
       }

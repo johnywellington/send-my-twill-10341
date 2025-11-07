@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
-import { IVRMenuForm } from "@/components/IVRMenuForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
 import { BulkSendForm } from "@/components/BulkSendForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Phone, Menu, PhoneForwarded, Send, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
+import { MessageSquare, Phone, PhoneForwarded, Send, Inbox, PhoneIncoming, Monitor, Smartphone } from "lucide-react";
 import { ReceivedSmsViewer } from "@/components/ReceivedSmsViewer";
 import { ReceivedCallsViewer } from "@/components/ReceivedCallsViewer";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "ivr2" | "bulk" | "receive-sms" | "receive-calls">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "voice" | "ivr" | "bulk" | "receive-sms" | "receive-calls">("sms");
   const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
 
   const tabConfig = {
@@ -31,14 +30,8 @@ const Index = () => {
     ivr: {
       title: "Menu IVR",
       short: "IVR",
-      icon: Menu,
-      description: "Crie menus interativos de atendimento com captura de DTMF"
-    },
-    ivr2: {
-      title: "IVR 2.0",
-      short: "IVR 2.0",
       icon: PhoneForwarded,
-      description: "Sistema IVR avançado com redirecionamento de chamadas"
+      description: "Sistema IVR com redirecionamento de chamadas e suporte multi-provider"
     },
     bulk: {
       title: "Envio em Massa",
@@ -171,10 +164,6 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="ivr">
-            <IVRMenuForm />
-          </TabsContent>
-          
-          <TabsContent value="ivr2">
             <IVRMenuFormV2 />
           </TabsContent>
           

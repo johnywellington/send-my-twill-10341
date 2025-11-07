@@ -20,6 +20,8 @@ import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { Badge } from "@/components/ui/badge";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
+import { RateLimitSelector } from "@/components/RateLimitSelector";
+import { calculateDelay, calculateEstimatedTime } from "@/lib/rate-limits";
 
 export function IVRMenuFormV2() {
   const { provider, autoFallback, getAlternativeProvider } = useProvider();
@@ -38,6 +40,7 @@ export function IVRMenuFormV2() {
   const [currentSending, setCurrentSending] = useState(0);
   const [totalToSend, setTotalToSend] = useState(0);
   const [dryRun, setDryRun] = useState(false);
+  const [throttle, setThrottle] = useState(1.0); // 100% por padrão
 
   // Estados do formulário simplificado
   const [messageText, setMessageText] = useState("Está a falar com o serviço de segurança do seu banco. Contactamos para confirmar uma possível tentativa de fraude no seu cartão. Esta chamada está a ser gravada. Se reconhece a operação, prima 1. Se não reconhece, prima 2, e será encaminhado para um assistente.");
@@ -232,9 +235,10 @@ export function IVRMenuFormV2() {
           console.error(`❌ Erro ao enviar para ${destination}:`, error);
         }
         
-        // Pequeno delay entre chamadas (evitar throttling)
+        // Delay dinâmico baseado no throttle configurado
         if (i < validDestinations.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          const delay = calculateDelay(provider, 'voice', throttle);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
@@ -789,6 +793,39 @@ export function IVRMenuFormV2() {
               onCheckedChange={setDryRun}
             />
           </div>
+
+          {/* Controle de Velocidade de Envio - mostra apenas quando há múltiplos destinos */}
+          {destinations.filter(d => d.trim()).length > 1 && (
+            <RateLimitSelector
+              provider={provider}
+              type="voice"
+              value={throttle}
+              onChange={setThrottle}
+            />
+          )}
+
+          {/* Estimativa de Tempo - mostra apenas quando há múltiplos destinos */}
+          {destinations.filter(d => d.trim()).length > 1 && (
+            <Alert className="border-blue-500/20 bg-blue-50 dark:bg-blue-950">
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Tempo estimado de envio:</span>
+                  <Badge variant="outline" className="text-sm font-mono">
+                    {calculateEstimatedTime(
+                      destinations.filter(d => d.trim()).length,
+                      provider,
+                      'voice',
+                      throttle
+                    )}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Para {destinations.filter(d => d.trim()).length} chamadas com velocidade {(throttle * 100).toFixed(0)}%
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
 
         </form>
       </CardContent>

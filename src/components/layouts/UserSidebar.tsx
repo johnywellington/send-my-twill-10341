@@ -1,4 +1,4 @@
-import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall, PhoneForwarded } from "lucide-react";
+import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall, PhoneForwarded, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -20,6 +20,7 @@ const userRoutes = [
   { title: "Chamadas Ativas", url: "/active-calls", icon: PhoneCall },
   { title: "Chamadas URA", url: "/chamadas-ura", icon: PhoneForwarded },
   { title: "Números", url: "/numbers", icon: Phone },
+  { title: "Histórico SMS", url: "/historico-sms", icon: History },
   { title: "Contatos", url: "/contacts", icon: Users },
   { title: "Templates", url: "/templates", icon: FileText },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },

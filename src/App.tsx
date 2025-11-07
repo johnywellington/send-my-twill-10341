@@ -21,6 +21,7 @@ import Numbers from "./pages/Numbers";
 import Monitoring from "./pages/Monitoring";
 import ActiveCalls from "./pages/ActiveCalls";
 import ChamadasURA from "./pages/ChamadasURA";
+import HistoricoSMS from "./pages/HistoricoSMS";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
@@ -116,6 +117,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <ChamadasURA />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/historico-sms" element={
+            <UserRoute>
+              <UserLayout>
+                <HistoricoSMS />
               </UserLayout>
             </UserRoute>
           } />

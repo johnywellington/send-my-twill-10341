@@ -66,9 +66,18 @@ serve(async (req) => {
       throw new Error(`Erro ao gerar áudio: ${response.status} - ${errorText}`);
     }
 
-    // Converter áudio para base64
+    // Converter áudio para base64 em chunks (evita stack overflow)
     const arrayBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const chunkSize = 0x8000; // 32KB chunks
+    let binaryString = '';
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      binaryString += String.fromCharCode(...chunk);
+    }
+    
+    const base64Audio = btoa(binaryString);
 
     console.log(`✅ Áudio gerado com sucesso (${arrayBuffer.byteLength} bytes)`);
 

@@ -261,10 +261,40 @@ const handler = async (req: Request): Promise<Response> => {
       const twilioData = await twilioResponse.json();
 
     if (!twilioResponse.ok) {
-      console.error('Twilio API error:', twilioData);
-      const status = typeof twilioData.status === 'number' ? twilioData.status : 400;
+      const errorData = twilioData;
+      console.error('Twilio API error:', errorData);
+      
+      // Tratamento específico para erro 21267 (Sender ID em trial)
+      if (errorData.code === 21267) {
+        console.error('[Twilio SMS] Sender ID not allowed in trial account');
+        return new Response(
+          JSON.stringify({
+            success: false,
+            provider: 'twilio',
+            code: 21267,
+            error: 'Sender IDs alfanuméricos não são permitidos em contas trial Twilio',
+            suggestion: 'Use um número real como remetente ou faça upgrade da sua conta',
+            alternativeProvider: 'vonage',
+            upgradeUrl: 'https://console.twilio.com/us1/billing/upgrade',
+            details: errorData.message,
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          }
+        );
+      }
+      
+      // Tratamento genérico para outros erros
+      const status = typeof errorData.status === 'number' ? errorData.status : 400;
       return new Response(
-        JSON.stringify({ success: false, provider: 'twilio', code: twilioData.code, error: twilioData.message || 'Failed to send SMS via Twilio' }),
+        JSON.stringify({ 
+          success: false, 
+          provider: 'twilio', 
+          code: errorData.code, 
+          error: errorData.message || 'Failed to send SMS via Twilio',
+          details: JSON.stringify(errorData)
+        }),
         { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }

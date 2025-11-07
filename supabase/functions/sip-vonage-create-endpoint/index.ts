@@ -26,6 +26,40 @@ serve(async (req) => {
 
     const { username, password, extension, display_name, domain_group_id } = await req.json();
 
+    console.log('Creating Vonage SIP endpoint:', {
+      username,
+      extension,
+      display_name,
+      domain_group_id,
+      user_id: user.id
+    });
+
+    // ✅ VALIDAÇÃO PREVENTIVA: Verificar se extensão já existe
+    const { data: existingExtension } = await supabase
+      .from('sip_users')
+      .select('id, extension, sip_username, display_name')
+      .eq('extension', extension)
+      .eq('provider', 'vonage')
+      .maybeSingle();
+
+    if (existingExtension) {
+      throw new Error(`Extensão ${extension} já está em uso por "${existingExtension.display_name || existingExtension.sip_username}"`);
+    }
+
+    // ✅ VALIDAÇÃO PREVENTIVA: Verificar se username já existe
+    const { data: existingUsername } = await supabase
+      .from('sip_users')
+      .select('id, extension, sip_username, display_name')
+      .eq('sip_username', username)
+      .eq('provider', 'vonage')
+      .maybeSingle();
+
+    if (existingUsername) {
+      throw new Error(`Nome de usuário SIP "${username}" já está em uso (extensão ${existingUsername.extension})`);
+    }
+
+    console.log('✓ Extension and username available');
+
     // Get Vonage config (use domain_group_id if provided, otherwise use default)
     let configMap: Record<string, string>;
     let domainGroupId: string;
@@ -129,10 +163,43 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating Vonage SIP endpoint:', error);
+    
+    // Extrair mensagem de erro (suporte para Error objects e objetos Supabase)
+    let errorMessage = 'Unknown error';
+    let errorCode = null;
+    let errorDetails = null;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object') {
+      // Erro do Supabase: { code, message, details }
+      if (error.code === '23505') {
+        // Constraint unique violation
+        if (error.details?.includes('extension')) {
+          errorMessage = 'Esta extensão já está em uso. Escolha outro número de ramal.';
+        } else if (error.details?.includes('sip_username')) {
+          errorMessage = 'Este nome de usuário SIP já está em uso. Escolha outro.';
+        } else {
+          errorMessage = 'Já existe um registro com estes dados.';
+        }
+      } else if (error.code === '23503') {
+        // Foreign key violation
+        errorMessage = 'Referência inválida. Verifique se o domain_group_id está correto.';
+      } else {
+        errorMessage = error.message || error.details || JSON.stringify(error);
+      }
+      errorCode = error.code;
+      errorDetails = error.details;
+    }
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: errorMessage,
+        code: errorCode,
+        details: errorDetails 
+      }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

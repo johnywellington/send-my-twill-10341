@@ -27,14 +27,8 @@ import RelatorioCustos from "./pages/RelatorioCustos";
 import ChamadasRecebidas from "./pages/ChamadasRecebidas";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
-import SIPConfig from "./pages/admin/SIPConfig";
-import SIPUsers from "./pages/admin/SIPUsers";
-import SIPRoutes from "./pages/admin/SIPRoutes";
-import SIPMonitor from "./pages/admin/SIPMonitor";
-import SIPAnalytics from "./pages/admin/SIPAnalytics";
-import SIPMyExtension from "./pages/SIPMyExtension";
-import SIPMakeCall from "./pages/SIPMakeCall";
-import SIPCalls from "./pages/SIPCalls";
+import AdminSIP from "./pages/admin/SIP";
+import SIP from "./pages/SIP";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -175,61 +169,19 @@ const App = () => (
               </AdminLayout>
             </AdminRoute>
           } />
-          <Route path="/admin/sip/config" element={
+          <Route path="/admin/sip" element={
             <AdminRoute>
               <AdminLayout>
-                <SIPConfig />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip/users" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SIPUsers />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip/routes" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SIPRoutes />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip/monitor" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SIPMonitor />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip/analytics" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SIPAnalytics />
+                <AdminSIP />
               </AdminLayout>
             </AdminRoute>
           } />
 
-          {/* User SIP Routes */}
-          <Route path="/sip/my-extension" element={
+          {/* User SIP Route */}
+          <Route path="/sip" element={
             <UserRoute>
               <UserLayout>
-                <SIPMyExtension />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/sip/call" element={
-            <UserRoute>
-              <UserLayout>
-                <SIPMakeCall />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/sip/calls" element={
-            <UserRoute>
-              <UserLayout>
-                <SIPCalls />
+                <SIP />
               </UserLayout>
             </UserRoute>
           } />

@@ -27,9 +27,7 @@ const userRoutes = [
   { title: "Validar Números", url: "/validar-numeros", icon: CheckCircle },
   { title: "Relatório Custos", url: "/relatorio-custos", icon: DollarSign },
   { title: "Chamadas Recebidas", url: "/chamadas-recebidas", icon: PhoneIncoming },
-  { title: "Meu Ramal SIP", url: "/sip/my-extension", icon: Phone },
-  { title: "Fazer Chamada", url: "/sip/call", icon: PhoneCall },
-  { title: "Histórico SIP", url: "/sip/calls", icon: History },
+  { title: "Módulo SIP", url: "/sip", icon: Phone },
   { title: "API Test", url: "/api-test", icon: FlaskConical },
   { title: "Documentação", url: "/docs", icon: BookOpen },
 ];

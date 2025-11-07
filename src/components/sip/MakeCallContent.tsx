@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
 
-export default function SIPMakeCall() {
+export function MakeCallContent() {
   const [callType, setCallType] = useState<'internal' | 'external'>('internal');
   const [destination, setDestination] = useState('');
 
@@ -20,12 +20,7 @@ export default function SIPMakeCall() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl space-y-6">
-      <div className="flex items-center gap-2">
-        <Phone className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Fazer Chamada SIP</h1>
-      </div>
-
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Nova Chamada</CardTitle>

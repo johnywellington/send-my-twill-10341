@@ -1,15 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Network, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
-export default function SIPRoutes() {
+export function RoutesContent() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Network className="h-8 w-8" />
-          <h1 className="text-3xl font-bold">Rotas SIP</h1>
-        </div>
+        <h2 className="text-2xl font-bold">Rotas SIP</h2>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
           Criar Rota

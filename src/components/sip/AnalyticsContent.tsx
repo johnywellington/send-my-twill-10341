@@ -1,13 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
 
-export default function SIPAnalytics() {
+export function AnalyticsContent() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Analytics SIP</h1>
-      </div>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Analytics SIP</h2>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>

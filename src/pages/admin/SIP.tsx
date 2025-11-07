@@ -1,0 +1,56 @@
+import { useSearchParams } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings } from "lucide-react";
+import { ConfigContent } from "@/components/sip/ConfigContent";
+import { UsersContent } from "@/components/sip/UsersContent";
+import { RoutesContent } from "@/components/sip/RoutesContent";
+import { MonitorContent } from "@/components/sip/MonitorContent";
+import { AnalyticsContent } from "@/components/sip/AnalyticsContent";
+
+export default function AdminSIP() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'config';
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <Settings className="h-8 w-8 text-primary" />
+        <h1 className="text-3xl font-bold">Administração SIP</h1>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="config">⚙️ Config</TabsTrigger>
+          <TabsTrigger value="usuarios">👥 Usuários</TabsTrigger>
+          <TabsTrigger value="rotas">🛣️ Rotas</TabsTrigger>
+          <TabsTrigger value="monitor">📊 Monitor</TabsTrigger>
+          <TabsTrigger value="analytics">📈 Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="config" className="mt-6">
+          <ConfigContent />
+        </TabsContent>
+
+        <TabsContent value="usuarios" className="mt-6">
+          <UsersContent />
+        </TabsContent>
+
+        <TabsContent value="rotas" className="mt-6">
+          <RoutesContent />
+        </TabsContent>
+
+        <TabsContent value="monitor" className="mt-6">
+          <MonitorContent />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-6">
+          <AnalyticsContent />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

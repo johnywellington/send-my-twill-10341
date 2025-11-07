@@ -1,13 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity } from "lucide-react";
 
-export default function SIPMonitor() {
+export function MonitorContent() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Activity className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Monitor SIP</h1>
-      </div>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Monitor SIP</h2>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

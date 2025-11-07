@@ -110,6 +110,31 @@ export function DiagnosticContent() {
         </CardContent>
       </Card>
 
+      {/* Problemas Conhecidos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-yellow-500" />
+            ⚠️ Problemas Conhecidos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="p-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
+            <h4 className="font-semibold mb-2 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              API Temporariamente Indisponível
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Se você vê "API não acessível" mas seu ramal está registrado,
+              o sistema continuará funcionando normalmente. Este é um problema
+              temporário de verificação e não afeta chamadas reais. O sistema
+              automaticamente permite chamadas quando o endpoint está registrado,
+              mesmo que a verificação da API falhe.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Guia de Solução de Problemas */}
       <Card>
         <CardHeader>

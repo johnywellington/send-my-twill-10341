@@ -103,15 +103,17 @@ serve(async (req) => {
     }
 
     // TESTE 3: Verificar número ativo
-    const { data: phoneNumber } = await supabase
+    const { data: phoneNumbers, error: phoneError } = await supabase
       .from('phone_numbers')
       .select('*')
       .eq('user_id', user.id)
       .eq('provider', provider)
       .eq('is_active', true)
-      .maybeSingle();
+      .limit(1);
 
-    if (!phoneNumber) {
+    console.log('[SIP Connectivity Test] Phone numbers found:', phoneNumbers?.length);
+
+    if (!phoneNumbers || phoneNumbers.length === 0) {
       result.status = 'failed';
       result.error_message = 'Nenhum número ativo encontrado';
       result.error_code = 'NO_ACTIVE_NUMBER';
@@ -119,7 +121,8 @@ serve(async (req) => {
       return respondWithTest(supabase, user.id, sipUser.id, provider, test_type, result, startTime);
     }
 
-    console.log('[SIP Connectivity Test] Active phone number found');
+    const phoneNumber = phoneNumbers[0];
+    console.log('[SIP Connectivity Test] Active phone number found:', phoneNumber.phone_number);
 
     // TESTE 4: Testar API do provider
     try {
@@ -147,12 +150,26 @@ serve(async (req) => {
           result.recommendations.push('⚠️ Saldo baixo na conta Vonage (< €1)');
           result.recommendations.push('Considere adicionar créditos para evitar interrupções');
         }
+        
+        // Mesmo se a API falhar, não bloquear completamente se o endpoint estiver registrado
+        if (!result.api_reachable && result.endpoint_registered) {
+          result.status = result.status === 'failed' ? 'warning' : result.status;
+          result.recommendations.push('⚠️ Não foi possível verificar o status da API do provedor');
+          result.recommendations.push('Mas o ramal está registrado e pode funcionar normalmente');
+        }
       }
     } catch (error) {
       console.error('[SIP Connectivity Test] API test error:', error);
       result.api_reachable = false;
-      result.status = 'warning';
-      result.recommendations.push('Não foi possível verificar o status da API do provedor');
+      
+      // Se o endpoint estiver registrado, apenas avisar ao invés de falhar
+      if (result.endpoint_registered) {
+        result.status = 'warning';
+        result.recommendations.push('⚠️ Erro ao verificar API do provedor, mas ramal está ativo');
+      } else {
+        result.status = 'failed';
+        result.recommendations.push('Não foi possível verificar o status da API do provedor');
+      }
     }
 
     // Calcular latência
@@ -179,9 +196,11 @@ async function testTwilioAPI(): Promise<boolean> {
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     
     if (!accountSid || !authToken) {
-      console.log('[Twilio Test] Missing credentials');
+      console.log('[Twilio Test] Missing credentials - SID:', !!accountSid, 'Token:', !!authToken);
       return false;
     }
+
+    console.log('[Twilio Test] Testing API with SID:', accountSid.substring(0, 8) + '...');
 
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`,
@@ -191,6 +210,13 @@ async function testTwilioAPI(): Promise<boolean> {
         },
       }
     );
+    
+    console.log('[Twilio Test] API response status:', response.status);
+    
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('[Twilio Test] API error:', errorBody);
+    }
     
     return response.ok;
   } catch (error) {
@@ -238,13 +264,22 @@ async function testVonageAPI(): Promise<boolean> {
     const apiSecret = Deno.env.get('VONAGE_API_SECRET');
     
     if (!apiKey || !apiSecret) {
-      console.log('[Vonage Test] Missing credentials');
+      console.log('[Vonage Test] Missing credentials - API Key:', !!apiKey, 'API Secret:', !!apiSecret);
       return false;
     }
+
+    console.log('[Vonage Test] Testing API with key:', apiKey.substring(0, 8) + '...');
 
     const response = await fetch(
       `https://api.nexmo.com/account/get-balance?api_key=${apiKey}&api_secret=${apiSecret}`
     );
+    
+    console.log('[Vonage Test] API response status:', response.status);
+    
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('[Vonage Test] API error:', errorBody);
+    }
     
     return response.ok;
   } catch (error) {

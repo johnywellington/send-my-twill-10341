@@ -155,14 +155,18 @@ export function ConnectivityStatus({ provider, autoTest = true }: ConnectivitySt
           </Alert>
         )}
 
-        {/* Último Teste */}
+        {/* Informações de Debug */}
         {lastTest && (
-          <p className="text-xs text-muted-foreground text-center">
-            Último teste: {formatDistanceToNow(new Date(lastTest.created_at), { 
+          <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+            <p className="text-center font-medium">Informações de Debug</p>
+            <p>• Ramal SIP: {lastTest.sip_user_id ? '✓ Configurado' : '✗ Não configurado'}</p>
+            <p>• Provider: {lastTest.provider}</p>
+            <p>• Tipo de teste: {lastTest.test_type}</p>
+            <p>• Último teste: {formatDistanceToNow(new Date(lastTest.created_at), { 
               addSuffix: true, 
               locale: ptBR 
-            })}
-          </p>
+            })}</p>
+          </div>
         )}
       </CardContent>
     </Card>

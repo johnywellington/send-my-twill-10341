@@ -58,31 +58,39 @@ Deno.serve(async (req) => {
     const roleFilter = url.searchParams.get('role');
     const statusFilter = url.searchParams.get('status');
 
-    // Fetch all profiles with roles
-    let query = supabaseAdmin
+    // Fetch all profiles
+    let profileQuery = supabaseAdmin
       .from('profiles')
-      .select('*, user_roles!inner(role)');
-
-    // Apply role filter
-    if (roleFilter && (roleFilter === 'admin' || roleFilter === 'user')) {
-      query = query.eq('user_roles.role', roleFilter);
-    }
+      .select('*');
 
     // Apply status filter
     if (statusFilter === 'active') {
-      query = query.eq('is_active', true).is('suspended_at', null);
+      profileQuery = profileQuery.eq('is_active', true).is('suspended_at', null);
     } else if (statusFilter === 'suspended') {
-      query = query.not('suspended_at', 'is', null);
+      profileQuery = profileQuery.not('suspended_at', 'is', null);
     } else if (statusFilter === 'pending') {
-      query = query.eq('is_active', false).is('suspended_at', null);
+      profileQuery = profileQuery.eq('is_active', false).is('suspended_at', null);
     }
 
-    const { data: profiles, error: profilesError } = await query.order('created_at', { ascending: false });
+    const { data: profiles, error: profilesError } = await profileQuery.order('created_at', { ascending: false });
 
     if (profilesError) {
       console.error('Error fetching profiles:', profilesError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch profiles' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch all user roles
+    const { data: userRoles, error: rolesError } = await supabaseAdmin
+      .from('user_roles')
+      .select('user_id, role');
+
+    if (rolesError) {
+      console.error('Error fetching user roles:', rolesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch user roles' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -98,9 +106,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Combine profiles with emails
+    // Combine profiles with emails and roles
     let users = profiles.map(profile => {
       const authUser = authUsers.find(u => u.id === profile.user_id);
+      const userRole = userRoles?.find(r => r.user_id === profile.user_id);
       return {
         id: profile.id,
         user_id: profile.user_id,
@@ -114,9 +123,14 @@ Deno.serve(async (req) => {
         last_login_at: profile.last_login_at,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
-        role: profile.user_roles.role
+        role: userRole?.role || 'user'
       };
     });
+
+    // Apply role filter if specified
+    if (roleFilter && (roleFilter === 'admin' || roleFilter === 'user')) {
+      users = users.filter(u => u.role === roleFilter);
+    }
 
     // Apply search filter
     if (search) {

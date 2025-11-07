@@ -28,10 +28,5 @@ export const UserRoute = ({ children }: UserRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Admin trying to access user routes - redirect to admin panel
-  if (role === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
-
   return <>{children}</>;
 };

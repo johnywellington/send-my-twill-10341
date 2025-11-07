@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Info, PhoneForwarded, Beaker, Plus, X, Upload } from "lucide-react";
+import { Loader2, Info, PhoneForwarded, Beaker, Plus, X, MessageSquare, Phone, Hash, Clock, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
 import { Switch } from "@/components/ui/switch";
@@ -16,36 +16,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
 import { IVRVoiceTestDialog } from "@/components/IVRVoiceTestDialog";
-
-const templates = {
-  "bank-security-v2": {
-    name: "Segurança Bancária - Com Redirecionamento",
-    description: "Alerta de fraude com transferência automática para assistente",
-    ncco: [
-      {
-        action: "talk",
-        text: "Está a falar com o serviço de segurança do seu banco. Contactamos para confirmar uma possível tentativa de fraude no seu cartão. Esta chamada está a ser gravada. Se reconhece a operação, prima 1. Se não reconhece, prima 2, e será encaminhado para um assistente.",
-        language: "pt-PT",
-        style: 2,
-        bargeIn: true
-      },
-      {
-        action: "input",
-        type: ["dtmf"],
-        dtmf: {
-          maxDigits: 1,
-          timeOut: 10,
-          submitOnHash: false
-        }
-      }
-    ]
-  },
-  "custom": {
-    name: "NCCO Customizado",
-    description: "Crie seu próprio fluxo IVR",
-    ncco: []
-  }
-};
 
 export function IVRMenuFormV2() {
   const [destinations, setDestinations] = useState<string[]>([""]);
@@ -57,14 +27,23 @@ export function IVRMenuFormV2() {
   const [style, setStyle] = useState("2");
   const [voiceName, setVoiceName] = useState("");
   const [premium, setPremium] = useState(false);
-  const [template, setTemplate] = useState<keyof typeof templates>("bank-security-v2");
-  const [customNCCO, setCustomNCCO] = useState("");
-  const [editedNCCO, setEditedNCCO] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [sendProgress, setSendProgress] = useState(0);
   const [currentSending, setCurrentSending] = useState(0);
   const [totalToSend, setTotalToSend] = useState(0);
   const [dryRun, setDryRun] = useState(false);
+
+  // Estados do formulário simplificado
+  const [messageText, setMessageText] = useState("Está a falar com o serviço de segurança do seu banco. Contactamos para confirmar uma possível tentativa de fraude no seu cartão. Esta chamada está a ser gravada. Se reconhece a operação, prima 1. Se não reconhece, prima 2, e será encaminhado para um assistente.");
+  const [captureInput, setCaptureInput] = useState(true);
+  const [maxDigits, setMaxDigits] = useState("1");
+  const [inputTimeout, setInputTimeout] = useState("10");
+  const [submitOnHash, setSubmitOnHash] = useState(false);
+  const [action1, setAction1] = useState<'hangup' | 'talk' | 'transfer'>('hangup');
+  const [action1Message, setAction1Message] = useState("");
+  const [action2, setAction2] = useState<'hangup' | 'talk' | 'transfer'>('transfer');
+  const [action2Message, setAction2Message] = useState("");
+  const [actionTimeout, setActionTimeout] = useState<'repeat' | 'hangup' | 'transfer'>('repeat');
 
   const addDestination = () => {
     if (destinations.length < MAX_DESTINATIONS) {
@@ -106,6 +85,36 @@ export function IVRMenuFormV2() {
     }
   };
 
+  // Função para construir NCCO a partir dos campos do formulário
+  const buildNCCO = () => {
+    const ncco: any[] = [];
+
+    // 1. Adicionar mensagem de voz
+    ncco.push({
+      action: "talk",
+      text: messageText,
+      language: language,
+      style: parseInt(style),
+      bargeIn: true
+    });
+
+    // 2. Adicionar captura de input (se habilitada)
+    if (captureInput) {
+      ncco.push({
+        action: "input",
+        type: ["dtmf"],
+        dtmf: {
+          maxDigits: parseInt(maxDigits),
+          timeOut: parseInt(inputTimeout),
+          submitOnHash: submitOnHash
+        },
+        eventUrl: [`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ivr-webhook-v2-events`]
+      });
+    }
+
+    return ncco;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -119,6 +128,11 @@ export function IVRMenuFormV2() {
 
     if (!from || !assistantNumber) {
       toast.error("Por favor, preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!messageText.trim()) {
+      toast.error("Por favor, escreva a mensagem de voz");
       return;
     }
 
@@ -139,36 +153,8 @@ export function IVRMenuFormV2() {
       return;
     }
 
-    // Validar NCCO customizado se selecionado
-    let nccoToSend;
-    if (template === "custom") {
-      try {
-        nccoToSend = JSON.parse(customNCCO);
-        if (!Array.isArray(nccoToSend)) {
-          toast.error("NCCO deve ser um array");
-          return;
-        }
-      } catch (error) {
-        toast.error("NCCO inválido. Verifique o formato JSON.");
-        return;
-      }
-    } else {
-      // Se há NCCO editado, usar ele
-      if (editedNCCO) {
-        try {
-          nccoToSend = JSON.parse(editedNCCO);
-          if (!Array.isArray(nccoToSend)) {
-            toast.error("NCCO editado deve ser um array");
-            return;
-          }
-        } catch (error) {
-          toast.error("NCCO editado inválido. Verifique o formato JSON.");
-          return;
-        }
-      } else {
-        nccoToSend = templates[template].ncco;
-      }
-    }
+    // Construir NCCO a partir dos campos
+    const nccoToSend = buildNCCO();
 
     setLoading(true);
     setTotalToSend(validDestinations.length);
@@ -199,10 +185,17 @@ export function IVRMenuFormV2() {
               language,
               style: parseInt(style),
               premium,
-              template,
               ncco: nccoToSend,
               voiceName: voiceName || undefined,
-              dryRun
+              dryRun,
+              // Metadados das ações configuradas
+              actions: {
+                action1,
+                action1Message,
+                action2,
+                action2Message,
+                actionTimeout
+              }
             }
           });
 
@@ -261,23 +254,6 @@ export function IVRMenuFormV2() {
     }
   };
 
-  // Extrair texto do NCCO para preview
-  const getCurrentNCCOText = () => {
-    try {
-      const ncco = template === 'custom' 
-        ? JSON.parse(customNCCO || '[]')
-        : editedNCCO
-          ? JSON.parse(editedNCCO)
-          : templates[template].ncco;
-      
-      const talkAction = ncco.find((action: any) => action.action === 'talk');
-      return talkAction?.text || '';
-    } catch {
-      return '';
-    }
-  };
-
-  const currentTemplate = template !== "custom" ? templates[template] : null;
 
   return (
     <Card className="w-full border-accent/20">
@@ -467,59 +443,248 @@ export function IVRMenuFormV2() {
             </div>
           </div>
 
-          {/* Template Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="template">Template IVR</Label>
-            <Select value={template} onValueChange={(value: any) => setTemplate(value)}>
-              <SelectTrigger id="template">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(templates).map(([key, tmpl]) => (
-                  <SelectItem key={key} value={key}>
-                    {tmpl.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {currentTemplate && (
-              <p className="text-xs text-muted-foreground">{currentTemplate.description}</p>
+          {/* Mensagem de Voz */}
+          <div className="space-y-4 p-4 rounded-lg border border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground/80">Mensagem de Voz</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="messageText">Texto da Mensagem *</Label>
+                <span className="text-xs text-muted-foreground">{messageText.length} caracteres</span>
+              </div>
+              <Textarea
+                id="messageText"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Digite a mensagem que será lida para o destinatário..."
+                className="min-h-[120px]"
+                required
+              />
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  Esta mensagem será convertida em voz e reproduzida na chamada
+                </p>
+                <IVRVoiceTestDialog
+                  defaultText={messageText}
+                  language={language}
+                  voiceName={voiceName || 'Camila'}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Captura de Resposta */}
+          <div className="space-y-4 p-4 rounded-lg border border-accent/20 bg-accent/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-accent" />
+                <h3 className="text-sm font-semibold text-foreground/80">Captura de Resposta do Usuário</h3>
+              </div>
+              <Switch
+                checked={captureInput}
+                onCheckedChange={setCaptureInput}
+              />
+            </div>
+            
+            {captureInput && (
+              <div className="space-y-4 pl-6 border-l-2 border-accent/20">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="maxDigits">Máximo de Dígitos</Label>
+                    <Select value={maxDigits} onValueChange={setMaxDigits}>
+                      <SelectTrigger id="maxDigits">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                          <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="inputTimeout">Timeout (segundos)</Label>
+                    <Input
+                      id="inputTimeout"
+                      type="number"
+                      min="5"
+                      max="30"
+                      value={inputTimeout}
+                      onChange={(e) => setInputTimeout(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2 pt-7">
+                    <Checkbox
+                      id="submitOnHash"
+                      checked={submitOnHash}
+                      onCheckedChange={(checked) => setSubmitOnHash(checked as boolean)}
+                    />
+                    <Label htmlFor="submitOnHash" className="cursor-pointer text-sm">
+                      Enviar com #
+                    </Label>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* NCCO Preview */}
-          {currentTemplate && currentTemplate.ncco.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="editableNCCO">Preview do Fluxo (Editável):</Label>
-              <Textarea
-                id="editableNCCO"
-                value={editedNCCO || JSON.stringify(currentTemplate.ncco, null, 2)}
-                onChange={(e) => setEditedNCCO(e.target.value)}
-                className="font-mono text-xs min-h-[300px] bg-muted/50"
-                placeholder="Edite as perguntas e textos do IVR aqui"
-              />
-              <p className="text-xs text-muted-foreground">
-                💡 Edite os textos das perguntas diretamente no JSON acima
-              </p>
+          {/* Ações Baseadas na Resposta */}
+          {captureInput && (
+            <div className="space-y-4 p-4 rounded-lg border border-secondary/20 bg-secondary/5">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-secondary" />
+                <h3 className="text-sm font-semibold text-foreground/80">Ações Baseadas na Resposta</h3>
+              </div>
+
+              <div className="space-y-4">
+                {/* Ação 1 */}
+                <div className="space-y-2">
+                  <Label htmlFor="action1">Quando pressionar 1</Label>
+                  <Select value={action1} onValueChange={(value: any) => setAction1(value)}>
+                    <SelectTrigger id="action1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hangup">Desligar chamada</SelectItem>
+                      <SelectItem value="talk">Reproduzir mensagem</SelectItem>
+                      <SelectItem value="transfer">Transferir para assistente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {action1 === 'talk' && (
+                    <Textarea
+                      placeholder="Digite a mensagem a ser reproduzida..."
+                      value={action1Message}
+                      onChange={(e) => setAction1Message(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  )}
+                </div>
+
+                {/* Ação 2 */}
+                <div className="space-y-2">
+                  <Label htmlFor="action2">Quando pressionar 2</Label>
+                  <Select value={action2} onValueChange={(value: any) => setAction2(value)}>
+                    <SelectTrigger id="action2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hangup">Desligar chamada</SelectItem>
+                      <SelectItem value="talk">Reproduzir mensagem</SelectItem>
+                      <SelectItem value="transfer">Transferir para assistente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {action2 === 'talk' && (
+                    <Textarea
+                      placeholder="Digite a mensagem a ser reproduzida..."
+                      value={action2Message}
+                      onChange={(e) => setAction2Message(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  )}
+                </div>
+
+                {/* Ação Timeout */}
+                <div className="space-y-2">
+                  <Label htmlFor="actionTimeout">Quando não responder (timeout)</Label>
+                  <Select value={actionTimeout} onValueChange={(value: any) => setActionTimeout(value)}>
+                    <SelectTrigger id="actionTimeout">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="repeat">Repetir mensagem</SelectItem>
+                      <SelectItem value="hangup">Desligar chamada</SelectItem>
+                      <SelectItem value="transfer">Transferir para assistente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Custom NCCO */}
-          {template === "custom" && (
-            <div className="space-y-2">
-              <Label htmlFor="customNCCO">NCCO Customizado (JSON)</Label>
-              <Textarea
-                id="customNCCO"
-                placeholder='[{"action":"talk","text":"Seu texto aqui","language":"pt-PT"}]'
-                value={customNCCO}
-                onChange={(e) => setCustomNCCO(e.target.value)}
-                className="font-mono text-sm min-h-[200px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Cole seu NCCO customizado em formato JSON
-              </p>
-            </div>
-          )}
+          {/* Preview Visual do Fluxo */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ArrowRight className="w-4 h-4" />
+                Preview do Fluxo IVR
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
+                  1
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium">Reproduzir mensagem de voz</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{messageText}</p>
+                </div>
+              </div>
+
+              {captureInput && (
+                <>
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-accent text-accent-foreground text-xs font-bold shrink-0">
+                      2
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium">Aguardar resposta do usuário</p>
+                      <p className="text-xs text-muted-foreground">
+                        Máx {maxDigits} dígito(s), timeout {inputTimeout}s
+                        {submitOnHash && " • Envio com #"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pl-9 border-l-2 border-dashed border-muted-foreground/20">
+                    <div className="flex-1 space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">→ Se pressionar 1:</p>
+                        <p className="text-xs">
+                          {action1 === 'hangup' && '🔚 Desligar'}
+                          {action1 === 'talk' && `💬 ${action1Message || 'Reproduzir mensagem'}`}
+                          {action1 === 'transfer' && '📞 Transferir para assistente'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">→ Se pressionar 2:</p>
+                        <p className="text-xs">
+                          {action2 === 'hangup' && '🔚 Desligar'}
+                          {action2 === 'talk' && `💬 ${action2Message || 'Reproduzir mensagem'}`}
+                          {action2 === 'transfer' && '📞 Transferir para assistente'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">→ Se timeout:</p>
+                        <p className="text-xs">
+                          {actionTimeout === 'repeat' && '🔄 Repetir mensagem'}
+                          {actionTimeout === 'hangup' && '🔚 Desligar'}
+                          {actionTimeout === 'transfer' && '📞 Transferir para assistente'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {(action1 === 'transfer' || action2 === 'transfer' || actionTimeout === 'transfer') && (
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground text-xs font-bold shrink-0">
+                    <PhoneForwarded className="w-3 h-3" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium">Transferir para assistente</p>
+                    <p className="text-xs text-muted-foreground">
+                      Número: {assistantNumber} • Timeout: {transferTimeout}s
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Configurações de Voz */}
           <div className="space-y-4">
@@ -550,21 +715,12 @@ export function IVRMenuFormV2() {
               {isPortugueseLanguage(language) && (
                 <div className="space-y-2">
                   <Label>Seleção de Voz</Label>
-                  <div className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <VoiceSelector
-                        language={language}
-                        value={voiceName}
-                        onChange={setVoiceName}
-                        onPremiumSuggestion={setPremium}
-                      />
-                    </div>
-                    <IVRVoiceTestDialog
-                      defaultText={getCurrentNCCOText()}
-                      language={language}
-                      voiceName={voiceName || 'Camila'}
-                    />
-                  </div>
+                  <VoiceSelector
+                    language={language}
+                    value={voiceName}
+                    onChange={setVoiceName}
+                    onPremiumSuggestion={setPremium}
+                  />
                 </div>
               )}
 

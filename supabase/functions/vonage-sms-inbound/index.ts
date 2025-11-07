@@ -33,6 +33,18 @@ const handler = async (req: Request): Promise<Response> => {
       keyword: url.searchParams.get('keyword') || undefined,
     };
 
+    // Detect if this is a test webhook
+    const isTest = req.headers.get('X-Test-Webhook') === 'true' ||
+      inboundData.text?.includes('WEBHOOK_TEST_IGNORE');
+    
+    if (isTest) {
+      console.log('🧪 Test webhook detected - skipping database insert');
+      return new Response('OK', {
+        status: 200,
+        headers: corsHeaders
+      });
+    }
+
     console.log('Vonage Inbound SMS received:', inboundData);
 
     const supabase = createClient(

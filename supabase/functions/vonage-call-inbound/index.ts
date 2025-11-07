@@ -44,6 +44,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     const callData: VonageInboundCall = await req.json();
 
+    // Detect if this is a test webhook
+    const isTest = req.headers.get('X-Test-Webhook') === 'true' ||
+      callData.uuid?.startsWith('TEST_');
+    
+    if (isTest) {
+      logWithTimestamp('info', '🧪 Test webhook detected - returning test NCCO');
+      const testNcco = [
+        {
+          action: 'talk',
+          text: 'Test webhook response'
+        }
+      ];
+      return new Response(JSON.stringify(testNcco), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     logWithTimestamp('info', '📞 Dados da chamada:', {
       uuid: callData.uuid,
       conversation_uuid: callData.conversation_uuid,

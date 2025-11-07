@@ -35,6 +35,18 @@ const handler = async (req: Request): Promise<Response> => {
       FromZip: formData.get('FromZip') as string || undefined,
     };
 
+    // Detect if this is a test webhook
+    const isTest = req.headers.get('X-Test-Webhook') === 'true' ||
+      inboundData.Body?.includes('WEBHOOK_TEST_IGNORE');
+    
+    if (isTest) {
+      console.log('🧪 Test webhook detected - skipping database insert');
+      return new Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'text/xml' }
+      });
+    }
+
     console.log('Twilio Inbound SMS received:', inboundData);
 
     const supabase = createClient(

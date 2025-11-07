@@ -698,6 +698,71 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_health_checks: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          phone_number: string
+          phone_number_id: string
+          provider: string
+          response_body: Json | null
+          response_time_ms: number | null
+          status_code: number | null
+          success: boolean
+          test_mode: string | null
+          test_type: string
+          tested_at: string
+          user_id: string
+          valid_format: boolean | null
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          phone_number: string
+          phone_number_id: string
+          provider: string
+          response_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          success: boolean
+          test_mode?: string | null
+          test_type: string
+          tested_at?: string
+          user_id: string
+          valid_format?: boolean | null
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          phone_number?: string
+          phone_number_id?: string
+          provider?: string
+          response_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          success?: boolean
+          test_mode?: string | null
+          test_type?: string
+          tested_at?: string
+          user_id?: string
+          valid_format?: boolean | null
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_health_checks_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

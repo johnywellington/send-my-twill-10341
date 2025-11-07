@@ -29,6 +29,22 @@ const handler = async (req: Request): Promise<Response> => {
       Direction: formData.get('Direction') as string,
     };
 
+    // Detect if this is a test webhook
+    const isTest = req.headers.get('X-Test-Webhook') === 'true' ||
+      callData.CallSid?.startsWith('TEST_');
+    
+    if (isTest) {
+      console.log('🧪 Test webhook detected - returning test TwiML');
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Test webhook response</Say>
+</Response>`;
+      return new Response(twiml, {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'text/xml' }
+      });
+    }
+
     console.log('Twilio Inbound Call received:', callData);
 
     const supabase = createClient(

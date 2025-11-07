@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2 } from "lucide-react";
+import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity } from "lucide-react";
 import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, useTestWebhook, type PhoneNumber } from "@/hooks/use-phone-numbers";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
+import { WebhookHealthDialog } from "./WebhookHealthDialog";
 
 export const PhoneNumberList = () => {
   const { data: phoneNumbers, isLoading } = usePhoneNumbers();
@@ -23,6 +24,7 @@ export const PhoneNumberList = () => {
   const [editingPhone, setEditingPhone] = useState<PhoneNumber | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [validationDialogPhone, setValidationDialogPhone] = useState<PhoneNumber | null>(null);
 
   const handleCopyAll = (phone: PhoneNumber) => {
     copyAllWebhooksToClipboard(phone.phone_number, phone.provider);
@@ -249,6 +251,14 @@ export const PhoneNumberList = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      onClick={() => setValidationDialogPhone(phone)}
+                    >
+                      <Activity className="h-4 w-4 mr-2" />
+                      Validar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                       onClick={() => handleEdit(phone)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -289,6 +299,14 @@ export const PhoneNumberList = () => {
         }}
         editingPhone={editingPhone}
       />
+
+      {validationDialogPhone && (
+        <WebhookHealthDialog
+          phoneNumber={validationDialogPhone}
+          open={!!validationDialogPhone}
+          onOpenChange={(open) => !open && setValidationDialogPhone(null)}
+        />
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>

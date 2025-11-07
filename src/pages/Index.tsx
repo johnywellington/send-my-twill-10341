@@ -27,10 +27,10 @@ const Index = () => {
       description: "Faça chamadas de voz usando a API do Vonage"
     },
     ivr: {
-      title: "Menu IVR",
-      short: "IVR",
+      title: "Menu URA",
+      short: "URA",
       icon: PhoneForwarded,
-      description: "Sistema IVR com redirecionamento de chamadas e suporte multi-provider"
+      description: "Sistema URA com redirecionamento de chamadas e suporte multi-provider"
     },
     "receive-sms": {
       title: "Receber SMS",

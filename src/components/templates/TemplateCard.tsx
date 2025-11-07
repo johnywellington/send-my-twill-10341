@@ -24,13 +24,13 @@ export const TemplateCard = ({
   const typeColors = {
     sms: 'bg-blue-500',
     voice: 'bg-green-500',
-    ivr: 'bg-purple-500'
+    ura: 'bg-purple-500'
   };
 
   const typeLabels = {
     sms: 'SMS',
     voice: 'Voice',
-    ivr: 'IVR'
+    ura: 'URA'
   };
 
   return (

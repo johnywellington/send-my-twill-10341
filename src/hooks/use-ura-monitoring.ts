@@ -1,0 +1,454 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ActiveCall {
+  id: string;
+  call_uuid: string;
+  from_number: string;
+  to_number: string;
+  status: 'initiated' | 'ringing' | 'answered' | 'in-progress' | 'completed' | 'failed';
+  provider: 'twilio' | 'vonage';
+  created_at: string;
+  duration: number | null;
+  cost: number | null;
+  message?: string;
+}
+
+interface ProviderStats {
+  totalCalls: number;
+  successRate: number;
+  avgCost: number;
+  avgDuration: number;
+  activeCalls: number;
+  failedCalls: number;
+}
+
+interface URAMetrics {
+  activeCalls: number;
+  avgDuration: number;
+  totalCostPeriod: number;
+  successRate: number;
+  twilioStats: ProviderStats;
+  vonageStats: ProviderStats;
+  totalCalls: number;
+  dtmfResponseRate: number;
+  timeoutRate: number;
+  transferRate: number;
+  avgTransferDuration: number;
+  mostChosenOption: string;
+  dtmfDistribution: Record<string, number>;
+}
+
+interface Alert {
+  level: 'critical' | 'warning' | 'info';
+  message: string;
+  details: string;
+  timestamp: Date;
+}
+
+interface SystemHealthMetrics {
+  status: 'operational' | 'degraded' | 'critical';
+  avgLatency: number;
+  uptime: number;
+  errorRate: number;
+  webhookHealth: 'healthy' | 'degraded' | 'failing';
+  lastUpdated: Date;
+}
+
+export const useURAMonitoring = (timeWindow: '5min' | '1hour' | '24hours') => {
+  const [activeCalls, setActiveCalls] = useState<ActiveCall[]>([]);
+  const [metrics, setMetrics] = useState<URAMetrics | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const getStartTime = () => {
+    const now = new Date();
+    switch(timeWindow) {
+      case '5min': return new Date(now.getTime() - 5 * 60 * 1000);
+      case '1hour': return new Date(now.getTime() - 60 * 60 * 1000);
+      case '24hours': return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    }
+  };
+
+  const ACTIVE_CALL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
+
+  const calculateDTMFMetrics = (responses: any[]) => {
+    const totalResponses = responses.length;
+    if (totalResponses === 0) {
+      return {
+        dtmfResponseRate: 0,
+        timeoutRate: 0,
+        dtmfDistribution: {},
+        mostChosenOption: 'N/A'
+      };
+    }
+
+    const dtmfResponses = responses.filter(r => r.dtmf_digits);
+    const timeouts = responses.filter(r => r.event_type === 'timeout');
+    
+    const dtmfResponseRate = (dtmfResponses.length / totalResponses) * 100;
+    const timeoutRate = (timeouts.length / totalResponses) * 100;
+    
+    // Distribuição de opções escolhidas
+    const distribution: Record<string, number> = {};
+    dtmfResponses.forEach(r => {
+      const digit = r.dtmf_digits;
+      distribution[digit] = (distribution[digit] || 0) + 1;
+    });
+    
+    // Opção mais escolhida
+    const mostChosen = Object.entries(distribution)
+      .sort(([,a], [,b]) => b - a)[0]?.[0] || 'N/A';
+    
+    return {
+      dtmfResponseRate,
+      timeoutRate,
+      dtmfDistribution: distribution,
+      mostChosenOption: mostChosen
+    };
+  };
+
+  const calculateTransferMetrics = (responses: any[]) => {
+    const transferEvents = responses.filter(r => 
+      r.event_data?.transfer_events || r.event_type === 'transfer'
+    );
+    
+    if (transferEvents.length === 0) {
+      return { transferRate: 0, avgTransferDuration: 0 };
+    }
+
+    const completedTransfers = transferEvents.filter(r => {
+      if (r.event_data?.transfer_events) {
+        return r.event_data.transfer_events.some((e: any) => e.status === 'completed');
+      }
+      return r.event_type === 'transfer';
+    });
+    
+    const transferRate = (completedTransfers.length / transferEvents.length) * 100;
+    
+    const avgTransferDuration = completedTransfers.length > 0
+      ? completedTransfers.reduce((sum, r) => {
+          if (r.event_data?.transfer_events) {
+            const duration = r.event_data.transfer_events
+              .find((e: any) => e.status === 'completed')?.duration || 0;
+            return sum + duration;
+          }
+          return sum;
+        }, 0) / completedTransfers.length
+      : 0;
+    
+    return { transferRate, avgTransferDuration };
+  };
+
+  const calculateProviderStats = (calls: any[], provider: 'twilio' | 'vonage'): ProviderStats => {
+    const now = Date.now();
+    const providerCalls = calls.filter(c => c.provider === provider);
+    const completedCalls = providerCalls.filter(c => c.status === 'completed');
+    const failedCalls = providerCalls.filter(c => c.status === 'failed');
+    
+    const activeCalls = providerCalls.filter(c => {
+      const isActiveStatus = 
+        c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress';
+      
+      if (!isActiveStatus) return false;
+      
+      const callAge = now - new Date(c.created_at).getTime();
+      return callAge < ACTIVE_CALL_TIMEOUT_MS;
+    });
+
+    const totalCalls = providerCalls.length;
+    const successRate = totalCalls > 0 ? (completedCalls.length / totalCalls) * 100 : 0;
+    
+    const avgCost = providerCalls.length > 0
+      ? providerCalls.reduce((sum, c) => sum + (parseFloat(c.cost) || 0), 0) / providerCalls.length
+      : 0;
+
+    const callsWithDuration = providerCalls.filter(c => c.duration);
+    const avgDuration = callsWithDuration.length > 0
+      ? callsWithDuration.reduce((sum, c) => sum + c.duration, 0) / callsWithDuration.length
+      : 0;
+
+    return {
+      totalCalls,
+      successRate,
+      avgCost,
+      avgDuration,
+      activeCalls: activeCalls.length,
+      failedCalls: failedCalls.length
+    };
+  };
+
+  const calculateMetrics = (calls: any[], responses: any[]): URAMetrics => {
+    const now = Date.now();
+    const twilioStats = calculateProviderStats(calls, 'twilio');
+    const vonageStats = calculateProviderStats(calls, 'vonage');
+
+    const activeCalls = calls.filter(c => {
+      const isActiveStatus = 
+        c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress';
+      
+      if (!isActiveStatus) return false;
+      
+      const callAge = now - new Date(c.created_at).getTime();
+      return callAge < ACTIVE_CALL_TIMEOUT_MS;
+    });
+
+    const completedCalls = calls.filter(c => c.status === 'completed');
+    const totalCalls = calls.length;
+    const successRate = totalCalls > 0 ? (completedCalls.length / totalCalls) * 100 : 0;
+
+    const callsWithDuration = calls.filter(c => c.duration);
+    const avgDuration = callsWithDuration.length > 0
+      ? callsWithDuration.reduce((sum, c) => sum + c.duration, 0) / callsWithDuration.length
+      : 0;
+
+    const totalCostPeriod = calls.reduce((sum, c) => sum + (parseFloat(c.cost) || 0), 0);
+
+    const dtmfMetrics = calculateDTMFMetrics(responses);
+    const transferMetrics = calculateTransferMetrics(responses);
+
+    return {
+      activeCalls: activeCalls.length,
+      avgDuration,
+      totalCostPeriod,
+      successRate,
+      twilioStats,
+      vonageStats,
+      totalCalls,
+      ...dtmfMetrics,
+      ...transferMetrics
+    };
+  };
+
+  const calculateSystemHealth = (calls: any[]): SystemHealthMetrics => {
+    const completedCalls = calls.filter(c => c.status === 'completed' && c.created_at && c.updated_at);
+    const avgLatency = completedCalls.length > 0
+      ? completedCalls.reduce((sum, call) => {
+          const created = new Date(call.created_at).getTime();
+          const updated = new Date(call.updated_at).getTime();
+          return sum + (updated - created);
+        }, 0) / completedCalls.length
+      : 0;
+
+    const totalCalls = calls.length;
+    const successfulCalls = calls.filter(c => c.status === 'completed').length;
+    const uptime = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 100;
+
+    const failedCalls = calls.filter(c => c.status === 'failed').length;
+    const errorRate = totalCalls > 0 ? (failedCalls / totalCalls) * 100 : 0;
+
+    let status: 'operational' | 'degraded' | 'critical' = 'operational';
+    if (errorRate > 15 || uptime < 70) {
+      status = 'critical';
+    } else if (errorRate > 5 || uptime < 90 || avgLatency > 3000) {
+      status = 'degraded';
+    }
+
+    const webhookHealth: 'healthy' | 'degraded' | 'failing' = 
+      errorRate < 5 ? 'healthy' : errorRate < 15 ? 'degraded' : 'failing';
+
+    return {
+      status,
+      avgLatency,
+      uptime,
+      errorRate,
+      webhookHealth,
+      lastUpdated: new Date()
+    };
+  };
+
+  const detectAlerts = (metrics: URAMetrics, calls: any[]): Alert[] => {
+    const alerts: Alert[] = [];
+    const now = new Date();
+
+    // Critical: Overall failure rate > 20%
+    if (metrics.successRate < 80 && metrics.totalCalls >= 5) {
+      alerts.push({
+        level: 'critical',
+        message: `Taxa de falha crítica: ${(100 - metrics.successRate).toFixed(1)}%`,
+        details: `${calls.filter(c => c.status === 'failed').length} de ${calls.length} chamadas falharam`,
+        timestamp: now
+      });
+    }
+
+    // Warning: High timeout rate
+    if (metrics.timeoutRate > 30 && metrics.totalCalls >= 5) {
+      alerts.push({
+        level: 'warning',
+        message: `Taxa de timeout elevada: ${metrics.timeoutRate.toFixed(1)}%`,
+        details: `Muitos usuários não respondem ao menu. Considere simplificar as opções.`,
+        timestamp: now
+      });
+    }
+
+    // Warning: Low DTMF response rate
+    if (metrics.dtmfResponseRate < 50 && metrics.totalCalls >= 5) {
+      alerts.push({
+        level: 'warning',
+        message: `Baixa taxa de resposta DTMF: ${metrics.dtmfResponseRate.toFixed(1)}%`,
+        details: `Menos da metade dos usuários interage com o menu. Revise a mensagem inicial.`,
+        timestamp: now
+      });
+    }
+
+    // Info: High cost alert
+    if (metrics.totalCostPeriod > 50) {
+      alerts.push({
+        level: 'info',
+        message: `Custos elevados detectados`,
+        details: `Total de $${metrics.totalCostPeriod.toFixed(2)} no período selecionado`,
+        timestamp: now
+      });
+    }
+
+    return alerts;
+  };
+
+  const fetchActiveCallsAndMetrics = async () => {
+    try {
+      const startTime = getStartTime();
+
+      // Fetch APENAS IVR logs (não voice_logs)
+      const { data: ivrLogs } = await supabase
+        .from('ivr_logs')
+        .select('*')
+        .gte('created_at', startTime.toISOString())
+        .neq('status', 'dry-run')
+        .order('created_at', { ascending: false });
+
+      // Fetch IVR responses para métricas DTMF
+      const { data: ivrResponses } = await supabase
+        .from('ivr_responses')
+        .select('*')
+        .gte('created_at', startTime.toISOString());
+
+      const allCalls = ivrLogs || [];
+      const allResponses = ivrResponses || [];
+
+      // Filter active calls
+      const now = Date.now();
+      const active = allCalls.filter(call => {
+        const isActiveStatus = 
+          call.status === 'initiated' || 
+          call.status === 'ringing' || 
+          call.status === 'answered' ||
+          call.status === 'in-progress';
+        
+        if (!isActiveStatus) return false;
+        
+        const callAge = now - new Date(call.created_at).getTime();
+        return callAge < ACTIVE_CALL_TIMEOUT_MS;
+      }).map(call => ({
+        ...call,
+        status: call.status as ActiveCall['status'],
+        provider: call.provider as ActiveCall['provider']
+      }));
+
+      setActiveCalls(active);
+
+      if (allCalls.length > 0) {
+        const calculatedMetrics = calculateMetrics(allCalls, allResponses);
+        setMetrics(calculatedMetrics);
+
+        const health = calculateSystemHealth(allCalls);
+        setSystemHealth(health);
+
+        const detectedAlerts = detectAlerts(calculatedMetrics, allCalls);
+        setAlerts(detectedAlerts);
+      } else {
+        setMetrics({
+          activeCalls: 0,
+          avgDuration: 0,
+          totalCostPeriod: 0,
+          successRate: 0,
+          twilioStats: { totalCalls: 0, successRate: 0, avgCost: 0, avgDuration: 0, activeCalls: 0, failedCalls: 0 },
+          vonageStats: { totalCalls: 0, successRate: 0, avgCost: 0, avgDuration: 0, activeCalls: 0, failedCalls: 0 },
+          totalCalls: 0,
+          dtmfResponseRate: 0,
+          timeoutRate: 0,
+          transferRate: 0,
+          avgTransferDuration: 0,
+          mostChosenOption: 'N/A',
+          dtmfDistribution: {}
+        });
+        setAlerts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching URA monitoring data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchActiveCallsAndMetrics();
+  }, [timeWindow]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const ivrChannel = supabase
+      .channel('ura-monitoring')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ivr_logs'
+        },
+        () => {
+          console.log('URA log updated - refreshing data');
+          fetchActiveCallsAndMetrics();
+        }
+      )
+      .subscribe();
+
+    const responsesChannel = supabase
+      .channel('ura-responses-monitoring')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ivr_responses'
+        },
+        () => {
+          console.log('URA responses updated - refreshing data');
+          fetchActiveCallsAndMetrics();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ivrChannel);
+      supabase.removeChannel(responsesChannel);
+    };
+  }, [timeWindow]);
+
+  // Timer to update duration of active calls every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveCalls(prev => prev.map(call => {
+        if (call.status === 'answered' || call.status === 'ringing' || call.status === 'in-progress') {
+          const elapsedSeconds = Math.floor(
+            (Date.now() - new Date(call.created_at).getTime()) / 1000
+          );
+          return { ...call, duration: elapsedSeconds };
+        }
+        return call;
+      }));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return {
+    activeCalls,
+    metrics,
+    alerts,
+    systemHealth,
+    loading,
+    refetch: fetchActiveCallsAndMetrics
+  };
+};

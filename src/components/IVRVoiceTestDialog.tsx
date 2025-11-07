@@ -156,7 +156,7 @@ export function IVRVoiceTestDialog({ defaultText = "", language, voiceName }: IV
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Testar Voz IVR</DialogTitle>
+          <DialogTitle>Testar Voz URA</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 pt-4">
@@ -252,7 +252,7 @@ export function IVRVoiceTestDialog({ defaultText = "", language, voiceName }: IV
           {/* Informação */}
           {!audioData && (
             <div className="text-center text-sm text-muted-foreground p-8 border border-dashed rounded-lg">
-              Clique em "Gerar Áudio" para ouvir como sua mensagem IVR vai soar
+              Clique em "Gerar Áudio" para ouvir como sua mensagem URA vai soar
             </div>
           )}
         </div>

@@ -20,6 +20,7 @@ import ApiDocs from "./pages/ApiDocs";
 import Numbers from "./pages/Numbers";
 import Monitoring from "./pages/Monitoring";
 import ActiveCalls from "./pages/ActiveCalls";
+import ChamadasURA from "./pages/ChamadasURA";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
@@ -108,6 +109,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <ActiveCalls />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/chamadas-ura" element={
+            <UserRoute>
+              <UserLayout>
+                <ChamadasURA />
               </UserLayout>
             </UserRoute>
           } />

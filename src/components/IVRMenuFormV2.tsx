@@ -270,8 +270,8 @@ export function IVRMenuFormV2() {
       }
       
     } catch (error: any) {
-      console.error('Error making IVR calls:', error);
-      toast.error(error.message || "Erro ao iniciar chamadas IVR 2.0");
+      console.error('Error making URA calls:', error);
+      toast.error(error.message || "Erro ao iniciar chamadas URA 2.0");
     } finally {
       setLoading(false);
       setSendProgress(0);
@@ -286,10 +286,10 @@ export function IVRMenuFormV2() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <PhoneForwarded className="w-6 h-6 text-accent" />
-          <CardTitle>IVR 2.0 - Com Redirecionamento</CardTitle>
+          <CardTitle>URA 2.0 - Com Redirecionamento</CardTitle>
         </div>
         <CardDescription className="flex items-center gap-2">
-          Sistema IVR avançado com transferência automática via {adapter.displayName}
+          Sistema URA avançado com transferência automática via {adapter.displayName}
           <Badge variant="outline" className="text-xs">
             {adapter.displayName}
           </Badge>
@@ -310,7 +310,7 @@ export function IVRMenuFormV2() {
               <Loader2 className="h-4 w-4 animate-spin" />
               <AlertDescription className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Enviando chamadas IVR...</span>
+                  <span>Enviando chamadas URA...</span>
                   <span className="font-semibold">{currentSending}/{totalToSend}</span>
                 </div>
                 <Progress value={sendProgress} className="h-2" />
@@ -326,12 +326,12 @@ export function IVRMenuFormV2() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando Chamadas IVR 2.0...
+                  Enviando Chamadas URA 2.0...
                 </>
               ) : (
                 <>
                   <PhoneForwarded className="mr-2 h-4 w-4" />
-                  Iniciar {destinations.filter(d => d.trim()).length} Chamada(s) IVR 2.0
+                  Iniciar {destinations.filter(d => d.trim()).length} Chamada(s) URA 2.0
                 </>
               )}
             </Button>
@@ -635,7 +635,7 @@ export function IVRMenuFormV2() {
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
                 <ArrowRight className="w-4 h-4" />
-                Preview do Fluxo IVR
+                Preview do Fluxo URA
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -785,7 +785,7 @@ export function IVRMenuFormV2() {
             <Beaker className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <div className="flex-1">
               <Label htmlFor="dryRun" className="font-medium cursor-pointer">Modo Teste</Label>
-              <p className="text-xs text-muted-foreground">Teste sem fazer chamada IVR real</p>
+              <p className="text-xs text-muted-foreground">Teste sem fazer chamada URA real</p>
             </div>
             <Switch
               id="dryRun"

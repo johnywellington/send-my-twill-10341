@@ -22,7 +22,7 @@ interface AnalyticsData {
   avgDeliveryTime: number;
   totalCost: number;
   providerStats: { provider: string; total: number; success: number; failed: number }[];
-  volumeByDate: { date: string; sms: number; voice: number; ivr: number }[];
+  volumeByDate: { date: string; sms: number; voice: number; ura: number }[];
   statusDistribution: { name: string; value: number }[];
   commonErrors: { error: string; count: number; type: string }[];
 }
@@ -34,7 +34,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [dateRange, setDateRange] = useState<"7" | "30" | "90">("7");
-  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ivr" | "bulk" | "received">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "sms" | "voice" | "ura" | "bulk" | "received">("overview");
   const [bulkSendLogs, setBulkSendLogs] = useState<any[]>([]);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function Analytics() {
       const allLogs = [
         ...(smsLogs || []).map(l => ({ ...l, type: 'sms' })),
         ...(voiceLogs || []).map(l => ({ ...l, type: 'voice' })),
-        ...(ivrLogs || []).map(l => ({ ...l, type: 'ivr' }))
+        ...(ivrLogs || []).map(l => ({ ...l, type: 'ura' }))
       ];
 
       // Filter by active tab
@@ -143,16 +143,16 @@ export default function Analytics() {
       }));
 
       // Volume by date
-      const dateMap = new Map<string, { sms: number; voice: number; ivr: number }>();
+      const dateMap = new Map<string, { sms: number; voice: number; ura: number }>();
       filteredLogs.forEach(log => {
         const date = new Date(log.created_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
         if (!dateMap.has(date)) {
-          dateMap.set(date, { sms: 0, voice: 0, ivr: 0 });
+          dateMap.set(date, { sms: 0, voice: 0, ura: 0 });
         }
         const stats = dateMap.get(date)!;
         if (log.type === 'sms') stats.sms++;
         if (log.type === 'voice') stats.voice++;
-        if (log.type === 'ivr') stats.ivr++;
+        if (log.type === 'ura') stats.ura++;
       });
 
       const volumeByDate = Array.from(dateMap.entries()).map(([date, stats]) => ({
@@ -268,7 +268,7 @@ export default function Analytics() {
             <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="voice">Voice</TabsTrigger>
-            <TabsTrigger value="ivr">IVR</TabsTrigger>
+            <TabsTrigger value="ura">URA</TabsTrigger>
             <TabsTrigger value="bulk">Envio em Massa</TabsTrigger>
             <TabsTrigger value="received">
               <Inbox className="w-4 h-4 sm:mr-2" />
@@ -284,11 +284,11 @@ export default function Analytics() {
             <ReceivedAnalytics dateRange={parseInt(dateRange)} />
           </TabsContent>
 
-          <TabsContent value="ivr" className="space-y-6 mt-6">
+          <TabsContent value="ura" className="space-y-6 mt-6">
             <IVRAnalytics dateRange={parseInt(dateRange)} />
           </TabsContent>
 
-          {activeTab !== 'bulk' && activeTab !== 'received' && activeTab !== 'ivr' && (
+          {activeTab !== 'bulk' && activeTab !== 'received' && activeTab !== 'ura' && (
             <TabsContent value={activeTab} className="space-y-6 mt-6">
             {/* Empty State */}
             {analytics.totalSent === 0 && (
@@ -386,7 +386,7 @@ export default function Analytics() {
                         <>
                           <Line type="monotone" dataKey="sms" stroke="hsl(var(--primary))" name="SMS" />
                           <Line type="monotone" dataKey="voice" stroke="hsl(var(--destructive))" name="Voice" />
-                          <Line type="monotone" dataKey="ivr" stroke="hsl(var(--warning))" name="IVR" />
+                          <Line type="monotone" dataKey="ura" stroke="hsl(var(--warning))" name="URA" />
                         </>
                       )}
                       {activeTab === "sms" && <Line type="monotone" dataKey="sms" stroke="hsl(var(--primary))" name="SMS" />}

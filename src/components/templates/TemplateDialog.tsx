@@ -19,7 +19,7 @@ interface TemplateDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (template: any) => void;
   template?: MessageTemplate | null;
-  defaultType?: 'sms' | 'voice' | 'ivr';
+  defaultType?: 'sms' | 'voice' | 'ura';
   defaultContent?: string;
 }
 
@@ -32,7 +32,7 @@ export const TemplateDialog = ({
   defaultContent = ''
 }: TemplateDialogProps) => {
   const [name, setName] = useState('');
-  const [type, setType] = useState<'sms' | 'voice' | 'ivr'>(defaultType);
+  const [type, setType] = useState<'sms' | 'voice' | 'ura'>(defaultType);
   const [content, setContent] = useState(defaultContent);
   const [category, setCategory] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
@@ -47,7 +47,8 @@ export const TemplateDialog = ({
   useEffect(() => {
     if (template) {
       setName(template.name);
-      setType(template.type);
+      // Convert legacy 'ivr' to 'ura'
+      setType(template.type === 'ivr' ? 'ura' : template.type as 'sms' | 'voice' | 'ura');
       setContent(template.content);
       setCategory(template.category || '');
       setIsFavorite(template.is_favorite);
@@ -137,8 +138,8 @@ export const TemplateDialog = ({
                 <Label htmlFor="voice" className="cursor-pointer">Voice</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ivr" id="ivr" />
-                <Label htmlFor="ivr" className="cursor-pointer">IVR</Label>
+                <RadioGroupItem value="ura" id="ura" />
+                <Label htmlFor="ura" className="cursor-pointer">URA</Label>
               </div>
             </RadioGroup>
           </div>

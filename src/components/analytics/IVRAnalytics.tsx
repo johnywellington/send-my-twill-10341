@@ -291,7 +291,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Sem dados</AlertTitle>
         <AlertDescription>
-          Nenhuma chamada IVR encontrada nos últimos {dateRange} dias. As chamadas em modo teste não são incluídas nas
+          Nenhuma chamada URA encontrada nos últimos {dateRange} dias. As chamadas em modo teste não são incluídas nas
           estatísticas.
         </AlertDescription>
       </Alert>
@@ -306,7 +306,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Taxa de Sucesso Baixa</AlertTitle>
           <AlertDescription>
-            Apenas {successRate.toFixed(1)}% das chamadas IVR foram completadas. Verifique configurações de webhooks e
+            Apenas {successRate.toFixed(1)}% das chamadas URA foram completadas. Verifique configurações de webhooks e
             templates.
           </AlertDescription>
         </Alert>
@@ -317,7 +317,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertTitle className="text-orange-600">Alta Taxa de Timeout</AlertTitle>
           <AlertDescription className="text-orange-600">
-            {timeoutRate.toFixed(1)}% dos usuários não respondem ao IVR. Considere simplificar o menu ou reduzir o
+            {timeoutRate.toFixed(1)}% dos usuários não respondem à URA. Considere simplificar o menu ou reduzir o
             tempo de espera.
           </AlertDescription>
         </Alert>
@@ -426,7 +426,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle>Opções Escolhidas pelos Usuários</CardTitle>
-            <CardDescription>Distribuição de teclas pressionadas no IVR</CardDescription>
+            <CardDescription>Distribuição de teclas pressionadas na URA</CardDescription>
           </CardHeader>
           <CardContent>
             {dtmfChartData.length > 0 ? (
@@ -464,7 +464,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         {/* Success Rate Over Time */}
         <Card>
           <CardHeader>
-            <CardTitle>Performance de Chamadas IVR</CardTitle>
+            <CardTitle>Performance de Chamadas URA</CardTitle>
             <CardDescription>Evolução da taxa de sucesso por dia</CardDescription>
           </CardHeader>
           <CardContent>
@@ -524,7 +524,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         {/* Hourly Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Horário de Pico do IVR</CardTitle>
+            <CardTitle>Horário de Pico da URA</CardTitle>
             <CardDescription>Volume de chamadas por hora</CardDescription>
           </CardHeader>
           <CardContent>
@@ -547,7 +547,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle>Performance por Template</CardTitle>
-            <CardDescription>Comparação de performance entre templates IVR</CardDescription>
+            <CardDescription>Comparação de performance entre templates URA</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -595,7 +595,7 @@ export function IVRAnalytics({ dateRange }: IVRAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle>Análise de Transferências</CardTitle>
-            <CardDescription>Detalhes sobre transferências para assistentes (IVR v2)</CardDescription>
+            <CardDescription>Detalhes sobre transferências para assistentes (URA v2)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">

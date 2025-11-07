@@ -17,6 +17,7 @@ import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
+import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -34,6 +35,12 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
   
+  // Estados para progresso de envio em lote
+  const [showProgress, setShowProgress] = useState(false);
+  const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  
   const maxLength = 160;
   const messageLength = message.length;
   const isNearLimit = messageLength > maxLength * 0.8;
@@ -41,7 +48,6 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Filtrar números válidos
     const validDestinations = destinations.filter(d => d.trim() !== "");
     
     if (validDestinations.length === 0) {
@@ -50,6 +56,16 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
     }
 
     setLoading(true);
+    setCancelRequested(false);
+
+    // Inicializar status de todos os números como 'pending'
+    const initialStatuses: PhoneStatus[] = validDestinations.map(number => ({
+      number,
+      status: 'pending' as const,
+    }));
+    setPhoneStatuses(initialStatuses);
+    setCurrentIndex(0);
+    setShowProgress(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -68,17 +84,16 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         }
       }
 
-      // Se há erros de validação, mostrar e parar
       if (errors.length > 0) {
         toast.error("Números inválidos encontrados", {
           description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
           duration: 6000,
         });
         setLoading(false);
+        setShowProgress(false);
         return;
       }
 
-      // Validar Sender ID se fornecido
       if (senderId) {
         const senderValidation = adapter.validateSenderId(senderId);
         if (!senderValidation.valid) {
@@ -86,6 +101,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             description: senderValidation.error,
           });
           setLoading(false);
+          setShowProgress(false);
           return;
         }
       }
@@ -102,60 +118,96 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         });
       };
 
-      // Enviar para cada destino
-      for (const to of validDestinations) {
+      // Enviar para cada destino COM ATUALIZAÇÕES DE STATUS
+      for (let i = 0; i < validDestinations.length; i++) {
+        if (cancelRequested) {
+          toast.info("Envio cancelado pelo usuário");
+          break;
+        }
+
+        const to = validDestinations[i];
+        
+        // Atualizar status para 'sending'
+        setPhoneStatuses(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'sending', timestamp: new Date() } : p
+        ));
+        setCurrentIndex(i + 1);
+
         try {
           console.log(`[SMS] Enviando para ${to} via ${provider}`);
           let { data, error } = await trySend(to, provider);
 
-          // Fallback se falhou e está habilitado
           if (error && autoFallback) {
             const alternativeProvider = getAlternativeProvider();
             console.log(`[SMS] Fallback para ${to}: tentando com ${alternativeProvider}`);
-            
             const fallbackResult = await trySend(to, alternativeProvider);
             data = fallbackResult.data;
             error = fallbackResult.error;
           }
 
           if (error || !data?.success) {
-            console.error(`Error sending to ${to}:`, error || data?.error);
+            const errorMsg = data?.error || error?.message || "Erro desconhecido";
+            console.error(`Error sending to ${to}:`, errorMsg);
             errorCount++;
-            errors.push(`${to}: ${data?.error || error?.message || "Erro desconhecido"}`);
+            errors.push(`${to}: ${errorMsg}`);
+            
+            setPhoneStatuses(prev => prev.map((p, idx) => 
+              idx === i ? { 
+                ...p, 
+                status: 'error', 
+                message: errorMsg,
+                timestamp: new Date() 
+              } : p
+            ));
           } else {
             successCount++;
+            
+            setPhoneStatuses(prev => prev.map((p, idx) => 
+              idx === i ? { 
+                ...p, 
+                status: 'success', 
+                message: 'Enviado com sucesso',
+                timestamp: new Date() 
+              } : p
+            ));
           }
         } catch (err: any) {
           console.error(`Error sending to ${to}:`, err);
           errorCount++;
-          errors.push(`${to}: ${err.message || "Erro inesperado"}`);
+          const errorMsg = err.message || "Erro inesperado";
+          errors.push(`${to}: ${errorMsg}`);
+          
+          setPhoneStatuses(prev => prev.map((p, idx) => 
+            idx === i ? { 
+              ...p, 
+              status: 'error', 
+              message: errorMsg,
+              timestamp: new Date() 
+            } : p
+          ));
+        }
+
+        // Delay para evitar rate limiting
+        if (i < validDestinations.length - 1 && !cancelRequested) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
-      // Mostrar resultado final
+      // Toast final
       if (errorCount === 0) {
-        toast.success(`✅ ${successCount} SMS enviados com sucesso!`, {
-          description: `Enviado para ${validDestinations.length} número(s)`,
-          duration: 4000,
-        });
+        toast.success(`✅ ${successCount} SMS enviados com sucesso!`);
         setMessage("");
         setDestinations([""]);
         if (onSmsSent) onSmsSent();
       } else if (successCount > 0) {
-        toast.warning(`${successCount} enviados, ${errorCount} falharam`, {
-          description: errors.slice(0, 2).join("\n") + (errors.length > 2 ? `\n... e mais ${errors.length - 2}` : ""),
-          duration: 6000,
-        });
+        toast.warning(`${successCount} enviados, ${errorCount} falharam`);
       } else {
-        toast.error(`Falha ao enviar para todos os números`, {
-          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
-          duration: 6000,
-        });
+        toast.error(`Falha ao enviar para todos os números`);
       }
     } catch (error: any) {
       console.error("Erro ao enviar SMS:", error);
       toast.error("Erro inesperado", {
-        description: error.message || "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
+        description: error.message,
         duration: 6000,
       });
     } finally {
@@ -312,6 +364,16 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         onSave={(template) => createTemplate.mutate(template)}
         defaultType="sms"
         defaultContent={message}
+      />
+      
+      <BatchSendProgress
+        open={showProgress}
+        onOpenChange={setShowProgress}
+        phoneStatuses={phoneStatuses}
+        currentIndex={currentIndex}
+        total={phoneStatuses.length}
+        onCancel={() => setCancelRequested(true)}
+        title="Enviando SMS em Lote"
       />
     </Card>
   );

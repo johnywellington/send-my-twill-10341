@@ -20,6 +20,7 @@ import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 import { Badge } from "@/components/ui/badge";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
+import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -40,6 +41,12 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
   
+  // Estados para progresso de envio em lote
+  const [showProgress, setShowProgress] = useState(false);
+  const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  
   const maxLength = 5000; // Vonage Voice API limit
   const messageLength = message.length;
   const isNearLimit = messageLength > maxLength * 0.8;
@@ -48,7 +55,6 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Filtrar números válidos
     const validDestinations = destinations.filter(d => d.trim() !== "");
     
     if (validDestinations.length === 0) {
@@ -62,6 +68,16 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
     }
 
     setLoading(true);
+    setCancelRequested(false);
+
+    // Inicializar status de todos os números como 'pending'
+    const initialStatuses: PhoneStatus[] = validDestinations.map(number => ({
+      number,
+      status: 'pending' as const,
+    }));
+    setPhoneStatuses(initialStatuses);
+    setCurrentIndex(0);
+    setShowProgress(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -80,13 +96,13 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         }
       }
 
-      // Se há erros de validação, mostrar e parar
       if (errors.length > 0) {
         toast.error("Números inválidos encontrados", {
           description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
           duration: 6000,
         });
         setLoading(false);
+        setShowProgress(false);
         return;
       }
 
@@ -106,60 +122,96 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         });
       };
 
-      // Enviar para cada destino
-      for (const to of validDestinations) {
+      // Enviar para cada destino COM ATUALIZAÇÕES DE STATUS
+      for (let i = 0; i < validDestinations.length; i++) {
+        if (cancelRequested) {
+          toast.info("Envio cancelado pelo usuário");
+          break;
+        }
+
+        const to = validDestinations[i];
+        
+        // Atualizar status para 'sending'
+        setPhoneStatuses(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'sending', timestamp: new Date() } : p
+        ));
+        setCurrentIndex(i + 1);
+
         try {
           console.log(`[Voice] Iniciando chamada para ${to} via ${provider}`);
           let { data, error } = await trySend(to, provider);
 
-          // Fallback se falhou e está habilitado
           if (error && autoFallback) {
             const alternativeProvider = getAlternativeProvider();
             console.log(`[Voice] Fallback para ${to}: tentando com ${alternativeProvider}`);
-            
             const fallbackResult = await trySend(to, alternativeProvider);
             data = fallbackResult.data;
             error = fallbackResult.error;
           }
 
           if (error || !data?.success) {
-            console.error(`Error calling ${to}:`, error || data?.error);
+            const errorMsg = data?.error || error?.message || "Erro desconhecido";
+            console.error(`Error calling ${to}:`, errorMsg);
             errorCount++;
-            errors.push(`${to}: ${data?.error || error?.message || "Erro desconhecido"}`);
+            errors.push(`${to}: ${errorMsg}`);
+            
+            setPhoneStatuses(prev => prev.map((p, idx) => 
+              idx === i ? { 
+                ...p, 
+                status: 'error', 
+                message: errorMsg,
+                timestamp: new Date() 
+              } : p
+            ));
           } else {
             successCount++;
+            
+            setPhoneStatuses(prev => prev.map((p, idx) => 
+              idx === i ? { 
+                ...p, 
+                status: 'success', 
+                message: 'Chamada iniciada com sucesso',
+                timestamp: new Date() 
+              } : p
+            ));
           }
         } catch (err: any) {
           console.error(`Error calling ${to}:`, err);
           errorCount++;
-          errors.push(`${to}: ${err.message || "Erro inesperado"}`);
+          const errorMsg = err.message || "Erro inesperado";
+          errors.push(`${to}: ${errorMsg}`);
+          
+          setPhoneStatuses(prev => prev.map((p, idx) => 
+            idx === i ? { 
+              ...p, 
+              status: 'error', 
+              message: errorMsg,
+              timestamp: new Date() 
+            } : p
+          ));
+        }
+
+        // Delay para evitar rate limiting
+        if (i < validDestinations.length - 1 && !cancelRequested) {
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
 
-      // Mostrar resultado final
+      // Toast final
       if (errorCount === 0) {
-        toast.success(`✅ ${successCount} chamada(s) iniciada(s) com sucesso!`, {
-          description: `Enviado para ${validDestinations.length} número(s)`,
-          duration: 4000,
-        });
+        toast.success(`✅ ${successCount} chamada(s) iniciada(s) com sucesso!`);
         setMessage("");
         setDestinations([""]);
         if (onCallMade) onCallMade();
       } else if (successCount > 0) {
-        toast.warning(`${successCount} iniciadas, ${errorCount} falharam`, {
-          description: errors.slice(0, 2).join("\n") + (errors.length > 2 ? `\n... e mais ${errors.length - 2}` : ""),
-          duration: 6000,
-        });
+        toast.warning(`${successCount} iniciadas, ${errorCount} falharam`);
       } else {
-        toast.error(`Falha ao iniciar chamadas`, {
-          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
-          duration: 6000,
-        });
+        toast.error(`Falha ao iniciar chamadas`);
       }
     } catch (error: any) {
       console.error("Error making calls:", error);
       toast.error("Erro inesperado", {
-        description: error.message || "Ocorreu um erro ao processar sua solicitação.",
+        description: error.message,
         duration: 6000,
       });
     } finally {
@@ -358,6 +410,16 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           onSave={(template) => createTemplate.mutate(template)}
           defaultType="voice"
           defaultContent={message}
+        />
+        
+        <BatchSendProgress
+          open={showProgress}
+          onOpenChange={setShowProgress}
+          phoneStatuses={phoneStatuses}
+          currentIndex={currentIndex}
+          total={phoneStatuses.length}
+          onCancel={() => setCancelRequested(true)}
+          title="Iniciando Chamadas em Lote"
         />
       </Card>
     </div>

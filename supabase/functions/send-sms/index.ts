@@ -14,6 +14,12 @@ interface SmsRequest {
   dryRun?: boolean;
 }
 
+// Função auxiliar para detectar se é Sender ID alfanumérico
+const isSenderId = (value: string): boolean => {
+  // Sender ID: 3-11 caracteres alfanuméricos (apenas letras e números)
+  return /^[A-Za-z0-9]{3,11}$/.test(value);
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -223,7 +229,19 @@ const handler = async (req: Request): Promise<Response> => {
       
       // Normalizar números para formato E.164 (Twilio exige + no início)
       const normalizedTo = to.startsWith('+') ? to : `+${to}`;
-      const normalizedFrom = from.startsWith('+') ? from : `+${from}`;
+      
+      // Para "from": distinguir entre Sender ID alfanumérico e número
+      const normalizedFrom = isSenderId(from)
+        ? from  // Sender ID: usar como está (sem +)
+        : (from.startsWith('+') ? from : `+${from}`);  // Número: adicionar + se necessário
+
+      console.log(`Normalized from: "${from}" -> "${normalizedFrom}" (isSenderId: ${isSenderId(from)})`);
+      console.log('Twilio request params:', {
+        To: normalizedTo,
+        From: normalizedFrom,
+        FromType: isSenderId(from) ? 'Sender ID' : 'Phone Number',
+        BodyLength: body.length
+      });
       
       const formData = new URLSearchParams();
       formData.append('To', normalizedTo);

@@ -82,6 +82,22 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // ALSO UPDATE ivr_logs for IVR calls
+    const { error: ivrError } = await supabase
+      .from('ivr_logs')
+      .update(updateData)
+      .eq('call_uuid', webhookData.uuid);
+
+    if (!ivrError) {
+      console.log(`IVR log ${webhookData.uuid} updated to status: ${status}`);
+    } else {
+      // If not found by call_uuid, try by conversation_uuid
+      await supabase
+        .from('ivr_logs')
+        .update(updateData)
+        .eq('conversation_uuid', webhookData.conversation_uuid);
+    }
+
     console.log(`Voice call ${webhookData.uuid} updated to status: ${status}`);
 
     return new Response(JSON.stringify({ success: true }), {

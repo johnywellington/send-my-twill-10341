@@ -23,8 +23,15 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('=== IVR V2 Events Webhook Called ===');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+
   try {
-    const event: ConnectEvent = await req.json();
+    const rawBody = await req.text();
+    console.log('Raw body received:', rawBody);
+    
+    const event: ConnectEvent = JSON.parse(rawBody);
     
     console.log('IVR V2 Connect Event received:', JSON.stringify(event, null, 2));
     console.log(`Status: ${event.status}, Duration: ${event.duration}s, Conversation: ${event.conversation_uuid}`);
@@ -159,10 +166,12 @@ serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Error in ivr-webhook-v2-events:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
     
+    // Return 200 even with error to not interrupt call flow
     return new Response(
-      JSON.stringify({ error: 'Internal server error', status: 'error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ status: 'error', message: 'Parse error' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

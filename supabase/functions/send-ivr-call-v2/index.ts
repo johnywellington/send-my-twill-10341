@@ -291,7 +291,9 @@ serve(async (req: Request) => {
     const vonagePayload = {
       to: [{ type: 'phone', number: to.replace(/[^0-9]/g, '') }],
       from: { type: 'phone', number: from.replace(/[^0-9]/g, '') },
-      ncco: nccoWithWebhook
+      ncco: nccoWithWebhook,
+      event_url: [`${supabaseUrl}/functions/v1/vonage-voice-webhook`],
+      event_method: 'POST'
     };
 
     console.log('Vonage API Payload:', JSON.stringify(vonagePayload, null, 2));

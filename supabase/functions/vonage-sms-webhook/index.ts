@@ -49,7 +49,35 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const webhookData: VonageSmsWebhook = await req.json();
+    let webhookData: VonageSmsWebhook;
+
+    // Accept multiple formats: JSON, GET params, or form-urlencoded
+    const contentType = req.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json') && req.method === 'POST') {
+      // JSON format
+      webhookData = await req.json();
+    } else if (req.method === 'GET') {
+      // GET request - extract from query parameters
+      const url = new URL(req.url);
+      webhookData = {
+        'message-id': url.searchParams.get('messageId') || url.searchParams.get('message-id') || '',
+        status: url.searchParams.get('status') || '',
+        to: url.searchParams.get('to') || '',
+        'err-code': url.searchParams.get('err-code') || undefined,
+        'message-timestamp': url.searchParams.get('message-timestamp') || undefined
+      };
+    } else {
+      // POST with form-urlencoded
+      const formData = await req.formData();
+      webhookData = {
+        'message-id': formData.get('messageId')?.toString() || formData.get('message-id')?.toString() || '',
+        status: formData.get('status')?.toString() || '',
+        to: formData.get('to')?.toString() || '',
+        'err-code': formData.get('err-code')?.toString() || undefined,
+        'message-timestamp': formData.get('message-timestamp')?.toString() || undefined
+      };
+    }
 
     console.log('Vonage SMS Webhook received:', webhookData);
 

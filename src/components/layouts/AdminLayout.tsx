@@ -1,9 +1,10 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Shield, Home } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <SidebarProvider>
@@ -32,6 +34,16 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             </div>
             
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Voltar ao Dashboard
+              </Button>
+              
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{user?.email}</span>
               </div>

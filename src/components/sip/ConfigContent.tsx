@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Settings, Star, MoreVertical, Plus } from "lucide-react";
+import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle } from "lucide-react";
 import { useSIPConfig } from "@/hooks/use-sip-config";
+import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
 
 export function ConfigContent() {
   const { 
@@ -68,6 +69,35 @@ export function ConfigContent() {
     setVonageDisplayName('');
   };
 
+  const handleGenerateRandomTwilio = () => {
+    const generated = generateRandomSipName('sip');
+    
+    createDomain({
+      provider: 'twilio',
+      setAsDefault: !hasTwilioConfigs,
+      twilioConfig: {
+        friendlyName: generated.friendlyName,
+        domainName: generated.domainName,
+        displayName: generated.displayName,
+      },
+    });
+  };
+
+  const handleGenerateRandomVonage = () => {
+    const generated = generateRandomVonageName();
+    
+    createDomain({
+      provider: 'vonage',
+      setAsDefault: !hasVonageConfigs,
+      vonageConfig: {
+        name: generated.appName,
+        displayName: generated.displayName,
+        answerUrl: `${baseUrl}/ivr-webhook-v2`,
+        eventUrl: `${baseUrl}/ivr-webhook-v2-events`,
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -89,10 +119,21 @@ export function ConfigContent() {
               </CardTitle>
               <CardDescription>Gerencie múltiplos domínios SIP Twilio</CardDescription>
             </div>
-            <Button onClick={() => setTwilioDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Novo
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleGenerateRandomTwilio} 
+                size="sm" 
+                variant="outline"
+                disabled={isCreating}
+              >
+                <Shuffle className="h-4 w-4 mr-2" />
+                Gerar Aleatório
+              </Button>
+              <Button onClick={() => setTwilioDialogOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Novo
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -186,10 +227,21 @@ export function ConfigContent() {
               </CardTitle>
               <CardDescription>Gerencie múltiplas aplicações SIP Vonage</CardDescription>
             </div>
-            <Button onClick={() => setVonageDialogOpen(true)} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Novo
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleGenerateRandomVonage} 
+                size="sm" 
+                variant="outline"
+                disabled={isCreating}
+              >
+                <Shuffle className="h-4 w-4 mr-2" />
+                Gerar Aleatório
+              </Button>
+              <Button onClick={() => setVonageDialogOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Novo
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

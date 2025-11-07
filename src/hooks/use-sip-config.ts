@@ -92,9 +92,10 @@ export function useSIPConfig() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sip-config'] });
-      toast.success('Domínio criado com sucesso!');
+      const displayName = variables.twilioConfig?.displayName || variables.vonageConfig?.displayName;
+      toast.success(`Domínio "${displayName}" criado com sucesso!`);
     },
     onError: (error: Error) => {
       toast.error(`Erro ao criar domínio: ${error.message}`);

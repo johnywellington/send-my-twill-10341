@@ -19,6 +19,7 @@ import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 import { Badge } from "@/components/ui/badge";
+import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -27,7 +28,7 @@ interface VoiceCallFormProps {
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
-  const [to, setTo] = useState("351911019866");
+  const [destinations, setDestinations] = useState<string[]>(["351911019866"]);
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("Hello from Voice API");
   const [language, setLanguage] = useState("en-US");
@@ -47,94 +48,119 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!to || !from || !message) {
-      toast.error("Please fill all required fields");
+    // Filtrar números válidos
+    const validDestinations = destinations.filter(d => d.trim() !== "");
+    
+    if (validDestinations.length === 0) {
+      toast.error("Adicione pelo menos um número de destino");
       return;
     }
-    
-    // Validar número com adapter
-    const phoneValidation = adapter.validatePhoneNumber(to, 'voice');
-    if (!phoneValidation.valid) {
-      toast.error("Número inválido", {
-        description: phoneValidation.error,
-      });
+
+    if (!from || !message) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
     setLoading(true);
 
-    const trySend = async (providerToUse: 'twilio' | 'vonage') => {
-      return await supabase.functions.invoke('send-voice-call', {
-        body: {
-          to,
-          from,
-          text: message,
-          language,
-          style: parseInt(style),
-          premium,
-          voiceName: voiceName || undefined,
-          provider: providerToUse,
-          dryRun
-        }
-      });
-    };
-
     try {
-      console.log(`[Voice] Tentando via ${provider}`);
-      let { data, error } = await trySend(provider);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      // Fallback
-      if (error && autoFallback) {
-        const alternativeProvider = getAlternativeProvider();
-        toast.info(`Tentando com ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}...`, {
-          description: `Fallback automático ativado`,
-          duration: 2000,
-        });
-        
-        console.log(`[Voice] Fallback: tentando com ${alternativeProvider}`);
-        const fallbackResult = await trySend(alternativeProvider);
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-        
-        if (!error && data?.success) {
-          toast.success("Chamada iniciada via fallback!", {
-            description: `Enviado via ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}`,
-            duration: 4000,
-          });
-          setMessage("");
-          if (onCallMade) onCallMade();
-          return;
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      // Validar todos os números antes de enviar
+      for (const to of validDestinations) {
+        const phoneValidation = adapter.validatePhoneNumber(to, 'voice');
+        if (!phoneValidation.valid) {
+          errors.push(`${to}: ${phoneValidation.error}`);
+          errorCount++;
         }
       }
 
-      if (error) {
-        console.error('Error making call:', error);
-        const errorTitle = autoFallback 
-          ? "Falha em ambos providers" 
-          : "Erro ao iniciar chamada";
-        
-        toast.error(errorTitle, {
-          description: error.message || "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
+      // Se há erros de validação, mostrar e parar
+      if (errors.length > 0) {
+        toast.error("Números inválidos encontrados", {
+          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
           duration: 6000,
         });
+        setLoading(false);
         return;
       }
 
-      if (data?.success) {
-        const providerUsed = data.provider || provider;
-        toast.success("Call initiated successfully!", {
-          description: `Via ${providerUsed === 'twilio' ? 'Twilio' : 'Vonage'} • UUID: ${data.uuid}`
+      const trySend = async (to: string, providerToUse: 'twilio' | 'vonage') => {
+        return await supabase.functions.invoke('send-voice-call', {
+          body: {
+            to,
+            from,
+            text: message,
+            language,
+            style: parseInt(style),
+            premium,
+            voiceName: voiceName || undefined,
+            provider: providerToUse,
+            dryRun
+          }
         });
-        onCallMade?.();
+      };
+
+      // Enviar para cada destino
+      for (const to of validDestinations) {
+        try {
+          console.log(`[Voice] Iniciando chamada para ${to} via ${provider}`);
+          let { data, error } = await trySend(to, provider);
+
+          // Fallback se falhou e está habilitado
+          if (error && autoFallback) {
+            const alternativeProvider = getAlternativeProvider();
+            console.log(`[Voice] Fallback para ${to}: tentando com ${alternativeProvider}`);
+            
+            const fallbackResult = await trySend(to, alternativeProvider);
+            data = fallbackResult.data;
+            error = fallbackResult.error;
+          }
+
+          if (error || !data?.success) {
+            console.error(`Error calling ${to}:`, error || data?.error);
+            errorCount++;
+            errors.push(`${to}: ${data?.error || error?.message || "Erro desconhecido"}`);
+          } else {
+            successCount++;
+          }
+        } catch (err: any) {
+          console.error(`Error calling ${to}:`, err);
+          errorCount++;
+          errors.push(`${to}: ${err.message || "Erro inesperado"}`);
+        }
+      }
+
+      // Mostrar resultado final
+      if (errorCount === 0) {
+        toast.success(`✅ ${successCount} chamada(s) iniciada(s) com sucesso!`, {
+          description: `Enviado para ${validDestinations.length} número(s)`,
+          duration: 4000,
+        });
+        setMessage("");
+        setDestinations([""]);
+        if (onCallMade) onCallMade();
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} iniciadas, ${errorCount} falharam`, {
+          description: errors.slice(0, 2).join("\n") + (errors.length > 2 ? `\n... e mais ${errors.length - 2}` : ""),
+          duration: 6000,
+        });
       } else {
-        toast.error("Failed to make call", {
-          description: data?.error || "Unknown error"
+        toast.error(`Falha ao iniciar chamadas`, {
+          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
+          duration: 6000,
         });
       }
     } catch (error: any) {
-      console.error("Error making call:", error);
-      toast.error("Unexpected error", {
-        description: error.message || "An error occurred",
+      console.error("Error making calls:", error);
+      toast.error("Erro inesperado", {
+        description: error.message || "Ocorreu um erro ao processar sua solicitação.",
+        duration: 6000,
       });
     } finally {
       setLoading(false);
@@ -163,20 +189,14 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
               description="Escolha um número cadastrado ou adicione novos em 'Números'. Sender ID não é suportado em chamadas de voz."
             />
 
-            <div className="space-y-2.5">
-              <Label htmlFor="to" className="text-sm font-medium text-foreground">
-                Número de Destino <span className="text-muted-foreground text-xs">ⓘ</span>
-              </Label>
-              <Input
-                id="to"
-                type="tel"
-                placeholder="351911019866"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                required
-                className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
+            <DestinationNumbersInput
+              value={destinations}
+              onChange={setDestinations}
+              maxNumbers={1000}
+              label="Números de Destino"
+              placeholder="351911019866"
+              description="Use formato internacional completo: +[código país][número] (mínimo 10 dígitos). Ou importe via CSV."
+            />
 
             <div className="space-y-4">
               <div className="space-y-2.5">

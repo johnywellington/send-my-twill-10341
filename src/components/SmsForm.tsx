@@ -16,6 +16,7 @@ import { SenderIdTooltip } from "./SenderIdTooltip";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
+import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -24,7 +25,7 @@ interface SmsFormProps {
 export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const { provider, autoFallback, getAlternativeProvider } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
-  const [to, setTo] = useState("");
+  const [destinations, setDestinations] = useState<string[]>([""]);
   const [from, setFrom] = useState("");
   const [senderId, setSenderId] = useState("");
   const [message, setMessage] = useState("");
@@ -40,161 +41,119 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar número com adapter
-    const phoneValidation = adapter.validatePhoneNumber(to, 'sms');
-    if (!phoneValidation.valid) {
-      toast.error("Número inválido", {
-        description: phoneValidation.error,
-      });
+    // Filtrar números válidos
+    const validDestinations = destinations.filter(d => d.trim() !== "");
+    
+    if (validDestinations.length === 0) {
+      toast.error("Adicione pelo menos um número de destino");
       return;
     }
-    
-    // Validar Sender ID se fornecido
-    if (senderId) {
-      const senderValidation = adapter.validateSenderId(senderId);
-      if (!senderValidation.valid) {
-        toast.error("Sender ID inválido", {
-          description: senderValidation.error,
-        });
-        return;
-      }
-    }
-    
+
     setLoading(true);
 
-    const trySend = async (providerToUse: 'twilio' | 'vonage') => {
-      return await supabase.functions.invoke('send-sms', {
-        body: {
-          to,
-          from: senderId || from,
-          body: message,
-          provider: providerToUse,
-          dryRun
-        }
-      });
-    };
-
     try {
-      console.log(`[SMS] Tentando envio via ${provider}`);
-      let { data, error } = await trySend(provider);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      // Fallback se falhou e está habilitado
-      if (error && autoFallback) {
-        const alternativeProvider = getAlternativeProvider();
-        
-        toast.info(`Tentando com ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}...`, {
-          description: `${provider === 'twilio' ? 'Twilio' : 'Vonage'} falhou, usando fallback`,
-          duration: 2000,
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      // Validar todos os números antes de enviar
+      for (const to of validDestinations) {
+        const phoneValidation = adapter.validatePhoneNumber(to, 'sms');
+        if (!phoneValidation.valid) {
+          errors.push(`${to}: ${phoneValidation.error}`);
+          errorCount++;
+        }
+      }
+
+      // Se há erros de validação, mostrar e parar
+      if (errors.length > 0) {
+        toast.error("Números inválidos encontrados", {
+          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
+          duration: 6000,
         });
-        
-        console.log(`[SMS] Fallback: tentando com ${alternativeProvider}`);
-        const fallbackResult = await trySend(alternativeProvider);
-        data = fallbackResult.data;
-        error = fallbackResult.error;
-        
-        if (!error && data?.success) {
-          toast.success("SMS enviado via fallback!", {
-            description: `Enviado com sucesso via ${alternativeProvider === 'twilio' ? 'Twilio' : 'Vonage'}`,
-            duration: 4000,
+        setLoading(false);
+        return;
+      }
+
+      // Validar Sender ID se fornecido
+      if (senderId) {
+        const senderValidation = adapter.validateSenderId(senderId);
+        if (!senderValidation.valid) {
+          toast.error("Sender ID inválido", {
+            description: senderValidation.error,
           });
-          setMessage("");
-          setTo("");
-          if (onSmsSent) onSmsSent();
+          setLoading(false);
           return;
         }
       }
 
-      if (error) {
-        // Handle error with detailed messages
-        const errorData = data?.error || error.message;
-        const errorCode = data?.code;
-        const errorProvider = data?.provider || provider;
-        
-        let errorTitle = "Erro ao enviar SMS";
-        let errorDescription = "Por favor, tente novamente";
-        
-        if (errorProvider === "twilio") {
-          errorTitle = "Erro Twilio";
-          
-          // Twilio-specific error codes
-          if (errorCode === "21211") {
-            errorDescription = "Número de destino inválido. Verifique se o número está no formato internacional correto (+1234567890).";
-          } else if (errorCode === "21408") {
-            errorDescription = "Permissão negada para enviar SMS para este país. Verifique as configurações de geo-permissões na sua conta Twilio.";
-          } else if (errorCode === "21610") {
-            errorDescription = "Número bloqueado. O destinatário optou por não receber mensagens (opt-out).";
-          } else if (errorCode === "20003") {
-            errorDescription = "Credenciais Twilio inválidas. Verifique o TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN nos secrets.";
-          } else if (errorCode === "21606") {
-            errorDescription = "Número de origem não verificado. Para contas trial, você precisa verificar o número de destino primeiro.";
-          } else if (errorData?.includes("not a valid phone number")) {
-            errorDescription = "Formato de número inválido. Use o formato internacional: +[código do país][número] (ex: +5511999999999).";
-          } else if (errorData?.includes("insufficient funds")) {
-            errorDescription = "Saldo insuficiente na conta Twilio. Adicione créditos para continuar enviando SMS.";
-          } else {
-            errorDescription = `${errorData}. Verifique: 1) Formato do número (+5511999999999), 2) Saldo da conta, 3) Credenciais nos secrets.`;
+      const trySend = async (to: string, providerToUse: 'twilio' | 'vonage') => {
+        return await supabase.functions.invoke('send-sms', {
+          body: {
+            to,
+            from: senderId || from,
+            body: message,
+            provider: providerToUse,
+            dryRun
           }
-        } else if (errorProvider === "vonage") {
-          errorTitle = "Erro Vonage";
-          
-          // Vonage-specific status codes
-          if (errorCode === "1") {
-            errorDescription = "Limitação de taxa excedida. Aguarde alguns segundos antes de enviar novamente.";
-          } else if (errorCode === "2") {
-            errorDescription = "Parâmetros faltando. Verifique se todos os campos estão preenchidos corretamente.";
-          } else if (errorCode === "3") {
-            errorDescription = "Formato de número inválido. Use apenas dígitos, sem espaços ou caracteres especiais (ex: 5511999999999).";
-          } else if (errorCode === "4") {
-            errorDescription = "Credenciais Vonage inválidas. Verifique o VONAGE_API_KEY e VONAGE_API_SECRET nos secrets.";
-          } else if (errorCode === "5") {
-            errorDescription = "Erro interno do Vonage. Tente novamente em alguns instantes.";
-          } else if (errorCode === "6") {
-            errorDescription = "Mensagem rejeitada pelo Vonage. Verifique se o conteúdo não contém caracteres proibidos.";
-          } else if (errorCode === "7") {
-            errorDescription = "Número bloqueado pela Vonage. O número pode estar em uma lista de bloqueio.";
-          } else if (errorCode === "9") {
-            errorDescription = "Saldo insuficiente na conta Vonage. Adicione créditos para continuar.";
-          } else if (errorCode === "15") {
-            errorDescription = "Número de destino não permitido. Verifique se você tem permissão para enviar SMS para este país.";
-          } else {
-            errorDescription = `${errorData}. Dicas: 1) Remova '+' do número, 2) Verifique credenciais API, 3) Confirme saldo da conta.`;
-          }
-        } else {
-          // Generic errors
-          if (errorData?.includes("Autenticação")) {
-            errorDescription = "Erro de autenticação. Faça login novamente.";
-          } else if (errorData?.includes("credenciais")) {
-            errorDescription = `Credenciais ${provider === "twilio" ? "Twilio" : "Vonage"} não configuradas. Entre em contato com o administrador do sistema.`;
-          } else if (error.message?.includes("Edge Function returned a non-2xx status code")) {
-            errorDescription = "Erro no servidor. Verifique os logs para mais detalhes ou entre em contato com o suporte.";
-          } else if (errorData) {
-            errorDescription = errorData;
-          }
-        }
-        
-        toast.error(errorTitle, {
-          description: errorDescription,
-          duration: 6000,
         });
-        return;
+      };
+
+      // Enviar para cada destino
+      for (const to of validDestinations) {
+        try {
+          console.log(`[SMS] Enviando para ${to} via ${provider}`);
+          let { data, error } = await trySend(to, provider);
+
+          // Fallback se falhou e está habilitado
+          if (error && autoFallback) {
+            const alternativeProvider = getAlternativeProvider();
+            console.log(`[SMS] Fallback para ${to}: tentando com ${alternativeProvider}`);
+            
+            const fallbackResult = await trySend(to, alternativeProvider);
+            data = fallbackResult.data;
+            error = fallbackResult.error;
+          }
+
+          if (error || !data?.success) {
+            console.error(`Error sending to ${to}:`, error || data?.error);
+            errorCount++;
+            errors.push(`${to}: ${data?.error || error?.message || "Erro desconhecido"}`);
+          } else {
+            successCount++;
+          }
+        } catch (err: any) {
+          console.error(`Error sending to ${to}:`, err);
+          errorCount++;
+          errors.push(`${to}: ${err.message || "Erro inesperado"}`);
+        }
       }
 
-      if (data?.success) {
-        const providerUsed = data.provider || provider;
-        toast.success("SMS enviado com sucesso!", {
-          description: `Via ${providerUsed === 'twilio' ? 'Twilio' : 'Vonage'} • Message SID: ${data.messageSid}`
+      // Mostrar resultado final
+      if (errorCount === 0) {
+        toast.success(`✅ ${successCount} SMS enviados com sucesso!`, {
+          description: `Enviado para ${validDestinations.length} número(s)`,
+          duration: 4000,
         });
         setMessage("");
-        setTo("");
-        if (onSmsSent) {
-          onSmsSent();
-        }
+        setDestinations([""]);
+        if (onSmsSent) onSmsSent();
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} enviados, ${errorCount} falharam`, {
+          description: errors.slice(0, 2).join("\n") + (errors.length > 2 ? `\n... e mais ${errors.length - 2}` : ""),
+          duration: 6000,
+        });
       } else {
-        throw new Error(data?.error || "Falha ao enviar SMS");
+        toast.error(`Falha ao enviar para todos os números`, {
+          description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
+          duration: 6000,
+        });
       }
     } catch (error: any) {
       console.error("Erro ao enviar SMS:", error);
-      
       toast.error("Erro inesperado", {
         description: error.message || "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
         duration: 6000,
@@ -261,23 +220,14 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             </p>
           </div>
 
-          <div className="space-y-2.5">
-            <Label htmlFor="to" className="text-sm font-medium text-foreground">
-              Número de Destino
-            </Label>
-            <Input
-              id="to"
-              type="tel"
-              placeholder="Ex: +351911019866 ou +5511999999999"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              required
-              className="h-11 transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            />
-            <p className="text-xs text-muted-foreground">
-              Use formato internacional completo: +[código país][número] (mínimo 10 dígitos)
-            </p>
-          </div>
+          <DestinationNumbersInput
+            value={destinations}
+            onChange={setDestinations}
+            maxNumbers={1000}
+            label="Números de Destino"
+            placeholder="351911019866"
+            description="Use formato internacional completo: +[código país][número] (mínimo 10 dígitos). Ou importe via CSV."
+          />
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">

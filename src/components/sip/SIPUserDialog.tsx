@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Star } from "lucide-react";
+import { RefreshCw, Star, Lightbulb } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { useSIPConfig } from "@/hooks/use-sip-config";
+import { useExtensionAvailability } from "@/hooks/use-extension-availability";
+import { ExtensionAvailability } from "./ExtensionAvailability";
+import { toast } from "sonner";
 
 interface SIPUserDialogProps {
   open: boolean;
@@ -32,6 +35,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
 
   const { createUser, isCreating } = useSIPUsers();
   const { configs } = useSIPConfig();
+  const { analysis, isExtensionAvailable } = useExtensionAvailability(provider);
 
   // Filtrar domínios ativos do provider selecionado
   const availableDomains = useMemo(() => {
@@ -57,6 +61,14 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
     e.preventDefault();
     
     if (!username || !password || !extension) {
+      return;
+    }
+    
+    // Validar disponibilidade da extensão
+    if (!isExtensionAvailable(extension)) {
+      toast.error("Extensão já em uso", {
+        description: `A extensão ${extension} já está cadastrada. Use a sugerida: ${analysis?.nextAvailable}`,
+      });
       return;
     }
 
@@ -165,14 +177,40 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="extension">Ramal (Extension) *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="extension">Ramal (Extension) *</Label>
+              {analysis && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setExtension(analysis.nextAvailable)}
+                  className="h-7 text-xs"
+                >
+                  <Lightbulb className="h-3 w-3 mr-1" />
+                  Usar Sugerida ({analysis.nextAvailable})
+                </Button>
+              )}
+            </div>
             <Input
               id="extension"
               value={extension}
               onChange={(e) => setExtension(e.target.value)}
-              placeholder="1001"
+              placeholder={analysis?.nextAvailable || "1001"}
               required
+              className={
+                extension && !isExtensionAvailable(extension)
+                  ? "border-red-500 focus-visible:ring-red-500"
+                  : extension && isExtensionAvailable(extension)
+                  ? "border-green-500 focus-visible:ring-green-500"
+                  : ""
+              }
             />
+            {extension && !isExtensionAvailable(extension) && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                ⚠️ Esta extensão já está em uso
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -184,6 +222,12 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
               placeholder="João Silva"
             />
           </div>
+
+          {/* Visualizador de Extensões */}
+          <ExtensionAvailability 
+            provider={provider} 
+            currentExtension={extension}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

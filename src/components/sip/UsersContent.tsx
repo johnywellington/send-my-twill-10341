@@ -30,6 +30,21 @@ export function UsersContent() {
   const twilioUsers = users?.filter(u => u.provider === 'twilio').length || 0;
   const vonageUsers = users?.filter(u => u.provider === 'vonage').length || 0;
 
+  // Estatísticas de extensões
+  const extensionsByProvider = {
+    twilio: users?.filter(u => u.provider === 'twilio').map(u => parseInt(u.extension)).filter(n => !isNaN(n)).sort((a, b) => a - b) || [],
+    vonage: users?.filter(u => u.provider === 'vonage').map(u => parseInt(u.extension)).filter(n => !isNaN(n)).sort((a, b) => a - b) || [],
+  };
+
+  const nextAvailableExt = {
+    twilio: extensionsByProvider.twilio.length > 0 
+      ? Math.max(...extensionsByProvider.twilio) + 1 
+      : 1000,
+    vonage: extensionsByProvider.vonage.length > 0 
+      ? Math.max(...extensionsByProvider.vonage) + 1 
+      : 1000,
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -45,10 +60,10 @@ export function UsersContent() {
 
       <SIPUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle>Total Usuários</CardTitle>
+            <CardTitle className="text-sm">Total Usuários</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{totalUsers}</p>
@@ -56,18 +71,55 @@ export function UsersContent() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Twilio</CardTitle>
+            <CardTitle className="text-sm">Twilio</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              Próxima: {nextAvailableExt.twilio}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{twilioUsers}</p>
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {extensionsByProvider.twilio?.map(ext => (
+                <Badge key={ext} variant="outline" className="text-xs font-mono">
+                  {ext}
+                </Badge>
+              ))}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Vonage</CardTitle>
+            <CardTitle className="text-sm">Vonage</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              Próxima: {nextAvailableExt.vonage}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{vonageUsers}</p>
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {extensionsByProvider.vonage?.map(ext => (
+                <Badge key={ext} variant="outline" className="text-xs font-mono">
+                  {ext}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+          <CardHeader>
+            <CardTitle className="text-sm">Última Criada</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {users && users.length > 0 ? (
+              <>
+                <p className="text-2xl font-bold font-mono">{users[0].extension}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {users[0].display_name || users[0].sip_username}
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">-</p>
+            )}
           </CardContent>
         </Card>
       </div>

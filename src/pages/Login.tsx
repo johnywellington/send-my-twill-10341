@@ -44,7 +44,47 @@ const Login = () => {
         return;
       }
 
-      if (data.session) {
+      if (data.session && data.user) {
+        // Verificar se usuário está ativo
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_active, suspended_at, suspension_reason')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          await supabase.auth.signOut();
+          toast.error("Erro ao verificar status da conta");
+          return;
+        }
+
+        // Usuário está suspenso
+        if (profile.suspended_at) {
+          await supabase.auth.signOut();
+          toast.error("Conta suspensa", {
+            description: profile.suspension_reason || "Entre em contato com o administrador",
+            duration: 6000,
+          });
+          return;
+        }
+
+        // Usuário ainda não foi aprovado
+        if (!profile.is_active) {
+          await supabase.auth.signOut();
+          toast.warning("Aguardando aprovação", {
+            description: "Sua conta está aguardando aprovação do administrador. Você receberá um email quando for aprovada.",
+            duration: 8000,
+          });
+          return;
+        }
+
+        // Atualizar last_login_at
+        await supabase
+          .from('profiles')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('user_id', data.user.id);
+
         toast.success("Login realizado com sucesso!");
         // The auth hook will handle redirection based on role
       }
@@ -94,11 +134,20 @@ const Login = () => {
       }
 
       if (data.session) {
-        toast.success("Conta criada com sucesso!");
-        // The auth hook will handle redirection based on role
+        toast.success(
+          "Conta criada com sucesso! Aguardando aprovação do administrador.",
+          {
+            description: "Você receberá uma notificação quando sua conta for aprovada.",
+            duration: 8000,
+          }
+        );
       } else {
         toast.success(
-          "Conta criada! Por favor, verifique seu email para confirmar."
+          "Conta criada! Aguardando aprovação do administrador.",
+          {
+            description: "Verifique seu email para confirmar e aguarde a aprovação.",
+            duration: 8000,
+          }
         );
       }
     } catch (error) {

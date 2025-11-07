@@ -70,9 +70,11 @@ Deno.serve(async (req) => {
 
     // Apply status filter
     if (statusFilter === 'active') {
-      query = query.eq('is_active', true);
+      query = query.eq('is_active', true).is('suspended_at', null);
     } else if (statusFilter === 'suspended') {
-      query = query.eq('is_active', false);
+      query = query.not('suspended_at', 'is', null);
+    } else if (statusFilter === 'pending') {
+      query = query.eq('is_active', false).is('suspended_at', null);
     }
 
     const { data: profiles, error: profilesError } = await query.order('created_at', { ascending: false });

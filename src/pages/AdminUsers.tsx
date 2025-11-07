@@ -49,6 +49,8 @@ import {
   Activity,
   Ban,
   Trash2,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -61,7 +63,7 @@ const AdminUsers = () => {
   const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended" | "pending">("all");
 
   const { users, loading, fetchUsers, deleteUser, activateUser } = useUsers();
 
@@ -83,8 +85,9 @@ const AdminUsers = () => {
   const stats = {
     total: users.length,
     admins: users.filter((u) => u.role === "admin").length,
-    active: users.filter((u) => u.is_active).length,
-    suspended: users.filter((u) => !u.is_active).length,
+    active: users.filter((u) => u.is_active && !u.suspended_at).length,
+    suspended: users.filter((u) => u.suspended_at).length,
+    pending: users.filter((u) => !u.is_active && !u.suspended_at).length,
   };
 
   const handleEditUser = (user: UserProfile) => {
@@ -119,6 +122,14 @@ const AdminUsers = () => {
     const success = await activateUser(user.user_id);
     if (success) {
       toast.success(`${user.full_name} foi reativado com sucesso`);
+      fetchUsers();
+    }
+  };
+
+  const handleApproveUser = async (user: UserProfile) => {
+    const success = await activateUser(user.user_id);
+    if (success) {
+      toast.success(`Usuário ${user.email} aprovado com sucesso!`);
       fetchUsers();
     }
   };
@@ -190,6 +201,19 @@ const AdminUsers = () => {
             <div className="text-2xl font-bold">{stats.suspended}</div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Aguardando aprovação
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros */}
@@ -218,6 +242,7 @@ const AdminUsers = () => {
             <SelectItem value="all">Todos os status</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="suspended">Suspensos</SelectItem>
+            <SelectItem value="pending">Pendentes de Aprovação</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -285,15 +310,20 @@ const AdminUsers = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.is_active ? (
-                      <Badge variant="default">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Ativo
+                    {!user.is_active && !user.suspended_at ? (
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Pendente
                       </Badge>
-                    ) : (
+                    ) : user.suspended_at ? (
                       <Badge variant="destructive">
                         <Ban className="h-3 w-3 mr-1" />
                         Suspenso
+                      </Badge>
+                    ) : (
+                      <Badge variant="default" className="bg-green-500">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Ativo
                       </Badge>
                     )}
                   </TableCell>
@@ -310,6 +340,15 @@ const AdminUsers = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {!user.is_active && !user.suspended_at && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleApproveUser(user)}>
+                              <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                              Aprovar Usuário
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         <DropdownMenuItem onClick={() => handleEditUser(user)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Editar Perfil

@@ -34,6 +34,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [dryRun, setDryRun] = useState(false);
+  const [useSenderId, setUseSenderId] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
   
@@ -78,12 +79,53 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       let errorCount = 0;
       const errors: string[] = [];
 
-      // Validar todos os números antes de enviar
-      for (const to of validDestinations) {
-        const phoneValidation = adapter.validatePhoneNumber(to, 'sms');
+      // Validar modo de remetente
+      if (useSenderId) {
+        // Modo Sender ID: obrigatório
+        if (!senderId) {
+          toast.error("Preencha o Sender ID");
+          setLoading(false);
+          setShowProgress(false);
+          return;
+        }
+        const senderValidation = adapter.validateSenderId(senderId);
+        if (!senderValidation.valid) {
+          toast.error("Sender ID inválido", {
+            description: senderValidation.error,
+          });
+          setLoading(false);
+          setShowProgress(false);
+          return;
+        }
+      } else {
+        // Modo número: obrigatório
+        if (!from) {
+          toast.error("Escolha um número de origem");
+          setLoading(false);
+          setShowProgress(false);
+          return;
+        }
+      }
+
+      // Normalizar e validar números
+      const normalizedDestinations: string[] = [];
+
+      for (let to of validDestinations) {
+        // Tentar adicionar + automaticamente se faltar
+        let normalizedNumber = to.trim();
+        
+        // Se não tem + e parece ser um número internacional, adicionar +
+        if (!normalizedNumber.startsWith('+') && /^\d{10,15}$/.test(normalizedNumber)) {
+          normalizedNumber = '+' + normalizedNumber;
+          console.log(`Auto-normalizando: ${to} → ${normalizedNumber}`);
+        }
+        
+        const phoneValidation = adapter.validatePhoneNumber(normalizedNumber, 'sms');
         if (!phoneValidation.valid) {
           errors.push(`${to}: ${phoneValidation.error}`);
           errorCount++;
+        } else {
+          normalizedDestinations.push(normalizedNumber);
         }
       }
 
@@ -97,23 +139,11 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         return;
       }
 
-      if (senderId) {
-        const senderValidation = adapter.validateSenderId(senderId);
-        if (!senderValidation.valid) {
-          toast.error("Sender ID inválido", {
-            description: senderValidation.error,
-          });
-          setLoading(false);
-          setShowProgress(false);
-          return;
-        }
-      }
-
       const trySend = async (to: string, providerToUse: 'twilio' | 'vonage') => {
         return await supabase.functions.invoke('send-sms', {
           body: {
             to,
-            from: senderId || from,
+            from: useSenderId ? senderId : from,
             body: message,
             provider: providerToUse,
             dryRun
@@ -122,13 +152,13 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       };
 
       // Enviar para cada destino COM ATUALIZAÇÕES DE STATUS
-      for (let i = 0; i < validDestinations.length; i++) {
+      for (let i = 0; i < normalizedDestinations.length; i++) {
         if (cancelRequested) {
           toast.info("Envio cancelado pelo usuário");
           break;
         }
 
-        const to = validDestinations[i];
+        const to = normalizedDestinations[i];
         
         // Atualizar status para 'sending'
         setPhoneStatuses(prev => prev.map((p, idx) => 
@@ -191,7 +221,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         }
 
         // Delay dinâmico baseado no throttle configurado
-        if (i < validDestinations.length - 1 && !cancelRequested) {
+        if (i < normalizedDestinations.length - 1 && !cancelRequested) {
           const delay = calculateDelay(provider, 'sms', throttle);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -236,45 +266,77 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       </CardHeader>
       <CardContent className="space-y-5 px-6 pb-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <PhoneNumberSelector
-            value={from}
-            onChange={setFrom}
-            filterType="sms"
-            label="Número de Origem"
-            description="Escolha um número cadastrado ou adicione novos em 'Números'"
-          />
+          {/* Toggle: Usar Sender ID */}
+          <Card className="bg-muted/50 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="useSenderId" className="text-sm font-medium cursor-pointer">
+                    Usar Sender ID Personalizado
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Envie com nome personalizado (ex: EMPRESA) ao invés de número
+                  </p>
+                </div>
+                <Switch
+                  id="useSenderId"
+                  checked={useSenderId}
+                  onCheckedChange={(checked) => {
+                    setUseSenderId(checked);
+                    if (checked) {
+                      setFrom(""); // Limpar número ao ativar Sender ID
+                    } else {
+                      setSenderId(""); // Limpar Sender ID ao desativar
+                    }
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Sender ID (Opcional) */}
-          <div className="space-y-2.5">
-            <Label htmlFor="senderId" className="text-sm font-medium text-foreground flex items-center gap-2">
-              Sender ID (Opcional)
-              <SenderIdTooltip />
-            </Label>
-            <Input
-              id="senderId"
-              type="text"
-              placeholder="Ex: EMPRESA, LOJA, ALERT"
-              value={senderId}
-              onChange={(e) => {
-                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                if (value.length <= 11) {
-                  setSenderId(value);
-                }
-              }}
-              maxLength={11}
-              className="h-11 font-mono transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
+          {!useSenderId && (
+            <PhoneNumberSelector
+              value={from}
+              onChange={setFrom}
+              filterType="sms"
+              label="Número de Origem"
+              description="Escolha um número cadastrado ou adicione novos em 'Números'"
             />
-            <p className="text-xs text-muted-foreground">
-              {senderId ? (
-                <>
-                  <span className="text-primary font-medium">{senderId.length}/11</span> caracteres
-                  {senderId.length > 0 && <> • Será usado como remetente</>}
-                </>
-              ) : (
-                'Deixe vazio para usar o número de origem'
-              )}
-            </p>
-          </div>
+          )}
+
+          {useSenderId && (
+            <div className="space-y-2.5">
+              <Label htmlFor="senderId" className="text-sm font-medium text-foreground flex items-center gap-2">
+                Sender ID <span className="text-destructive">*</span>
+                <SenderIdTooltip />
+              </Label>
+              <Input
+                id="senderId"
+                type="text"
+                placeholder="Ex: EMPRESA, LOJA, ALERT"
+                value={senderId}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                  if (value.length <= 11) {
+                    setSenderId(value);
+                  }
+                }}
+                maxLength={11}
+                required={useSenderId}
+                className="h-11 font-mono transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                {senderId ? (
+                  <>
+                    <span className="text-primary font-medium">{senderId.length}/11</span> caracteres
+                    {senderId.length >= 3 && <span className="text-green-500 ml-2">✓ Válido</span>}
+                  </>
+                ) : (
+                  <span className="text-amber-600">Digite 3-11 caracteres alfanuméricos</span>
+                )}
+              </p>
+            </div>
+          )}
 
           <DestinationNumbersInput
             value={destinations}
@@ -282,7 +344,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             maxNumbers={1000}
             label="Números de Destino"
             placeholder="351911019866"
-            description="Use formato internacional completo: +[código país][número] (mínimo 10 dígitos). Ou importe via CSV."
+            description="Digite o número com código do país (ex: 351911019866 ou +351911019866). Sistema adiciona + automaticamente se necessário."
           />
 
           <div className="space-y-2.5">

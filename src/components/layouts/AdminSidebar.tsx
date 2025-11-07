@@ -1,12 +1,10 @@
 import { 
   LayoutDashboard, 
   Users, 
-  Shield, 
-  Phone, 
   Settings, 
+  Network, 
   Activity, 
-  FileText, 
-  DollarSign 
+  BarChart3, 
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -25,6 +23,11 @@ import {
 const adminRoutes = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Usuários", url: "/admin/users", icon: Users },
+  { title: "SIP - Config", url: "/admin/sip/config", icon: Settings },
+  { title: "SIP - Usuários", url: "/admin/sip/users", icon: Users },
+  { title: "SIP - Rotas", url: "/admin/sip/routes", icon: Network },
+  { title: "SIP - Monitor", url: "/admin/sip/monitor", icon: Activity },
+  { title: "SIP - Analytics", url: "/admin/sip/analytics", icon: BarChart3 },
 ];
 
 export function AdminSidebar() {

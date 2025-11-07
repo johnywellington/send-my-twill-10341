@@ -724,6 +724,39 @@ export type Database = {
           },
         ]
       }
+      sip_provider_config: {
+        Row: {
+          config_key: string
+          config_value: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sip_routes: {
         Row: {
           created_at: string

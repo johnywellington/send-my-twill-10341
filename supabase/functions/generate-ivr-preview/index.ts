@@ -49,6 +49,7 @@ serve(async (req) => {
       headers: {
         'xi-api-key': elevenLabsApiKey,
         'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
         text: text,
@@ -66,19 +67,21 @@ serve(async (req) => {
       throw new Error(`Erro ao gerar áudio: ${response.status} - ${errorText}`);
     }
 
-    // Converter áudio para base64 em chunks (evita stack overflow)
+    // Converter áudio para base64 sem usar spreads (evita stack overflow)
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    const chunkSize = 0x8000; // 32KB chunks
     let binaryString = '';
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-      binaryString += String.fromCharCode(...chunk);
-    }
-    
-    const base64Audio = btoa(binaryString);
 
+    // Converte em blocos pequenos sem usar muitos argumentos em fromCharCode
+    const blockSize = 4096;
+    for (let i = 0; i < uint8Array.length; i += blockSize) {
+      const sub = uint8Array.subarray(i, Math.min(i + blockSize, uint8Array.length));
+      for (let j = 0; j < sub.length; j++) {
+        binaryString += String.fromCharCode(sub[j]);
+      }
+    }
+
+    const base64Audio = btoa(binaryString);
     console.log(`✅ Áudio gerado com sucesso (${arrayBuffer.byteLength} bytes)`);
 
     return new Response(

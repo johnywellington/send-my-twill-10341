@@ -61,6 +61,16 @@ serve(async (req) => {
         throw new Error('Twilio configuration required');
       }
 
+      // O Twilio espera o domínio completo com .sip.twilio.com
+      const fullDomainName = twilioConfig.domainName.includes('.sip.twilio.com') 
+        ? twilioConfig.domainName 
+        : `${twilioConfig.domainName}.sip.twilio.com`;
+
+      console.log('Creating Twilio SIP domain:', {
+        friendlyName: twilioConfig.friendlyName,
+        domainName: fullDomainName
+      });
+
       const twilioResponse = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/Domains.json`,
         {
@@ -71,7 +81,7 @@ serve(async (req) => {
           },
           body: new URLSearchParams({
             FriendlyName: twilioConfig.friendlyName,
-            DomainName: twilioConfig.domainName,
+            DomainName: fullDomainName,
           }),
         }
       );

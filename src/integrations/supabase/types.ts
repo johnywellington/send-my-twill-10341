@@ -677,6 +677,74 @@ export type Database = {
           },
         ]
       }
+      sip_connectivity_tests: {
+        Row: {
+          account_status: string | null
+          api_reachable: boolean | null
+          created_at: string | null
+          credentials_valid: boolean | null
+          endpoint_registered: boolean | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          last_seen_at: string | null
+          latency_ms: number | null
+          metadata: Json | null
+          provider: string
+          recommendations: Json | null
+          sip_user_id: string | null
+          status: string
+          test_type: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string | null
+          api_reachable?: boolean | null
+          created_at?: string | null
+          credentials_valid?: boolean | null
+          endpoint_registered?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          last_seen_at?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          provider: string
+          recommendations?: Json | null
+          sip_user_id?: string | null
+          status: string
+          test_type: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string | null
+          api_reachable?: boolean | null
+          created_at?: string | null
+          credentials_valid?: boolean | null
+          endpoint_registered?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          last_seen_at?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          provider?: string
+          recommendations?: Json | null
+          sip_user_id?: string | null
+          status?: string
+          test_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_connectivity_tests_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sip_endpoints: {
         Row: {
           expires_at: string | null

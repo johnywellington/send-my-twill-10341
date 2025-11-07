@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useMakeSIPCall } from "@/hooks/use-make-sip-call";
+import { ConnectivityStatus } from "./ConnectivityStatus";
+import { useSIPConnectivityTest } from "@/hooks/use-sip-connectivity-test";
 
 interface SIPCallDialogProps {
   open: boolean;
@@ -18,6 +20,7 @@ export function SIPCallDialog({ open, onOpenChange }: SIPCallDialogProps) {
   const [destination, setDestination] = useState('');
 
   const { makeCall, isCalling } = useMakeSIPCall();
+  const { canMakeCalls } = useSIPConnectivityTest();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +41,16 @@ export function SIPCallDialog({ open, onOpenChange }: SIPCallDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Fazer Chamada SIP</DialogTitle>
           <DialogDescription>
             Inicie uma chamada através do seu ramal SIP
           </DialogDescription>
         </DialogHeader>
+
+        {/* Status de Conectividade */}
+        <ConnectivityStatus provider={provider} autoTest={false} />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -95,8 +101,8 @@ export function SIPCallDialog({ open, onOpenChange }: SIPCallDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isCalling}>
-              {isCalling ? "Ligando..." : "Ligar"}
+            <Button type="submit" disabled={isCalling || !canMakeCalls}>
+              {!canMakeCalls ? "Sistema Indisponível" : (isCalling ? "Ligando..." : "Ligar")}
             </Button>
           </div>
         </form>

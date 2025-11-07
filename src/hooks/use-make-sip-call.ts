@@ -13,7 +13,17 @@ export function useMakeSIPCall() {
 
   const makeCall = useMutation({
     mutationFn: async (params: MakeCallParams) => {
-      // Determinar qual edge function chamar baseado no provider e tipo
+      // NOVO: Verificar conectividade antes de fazer a chamada
+      const { data: testResult, error: testError } = await supabase.functions.invoke(
+        'sip-test-connectivity',
+        { body: { provider: params.provider, test_type: 'registration' } }
+      );
+      
+      if (testError || testResult?.status === 'failed') {
+        throw new Error(testResult?.error_message || 'Sistema SIP indisponível. Execute o diagnóstico na aba correspondente.');
+      }
+      
+      // Se passou nos testes, prosseguir com a chamada
       const functionName = params.call_type === 'internal'
         ? (params.provider === 'twilio' ? 'sip-twilio-call-sip' : 'sip-vonage-call-sip')
         : (params.provider === 'twilio' ? 'sip-twilio-call-pstn' : 'sip-vonage-call-pstn');

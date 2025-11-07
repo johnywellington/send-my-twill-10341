@@ -5,6 +5,7 @@ import { MyExtensionContent } from "@/components/sip/MyExtensionContent";
 import { MakeCallContent } from "@/components/sip/MakeCallContent";
 import { CallsHistoryContent } from "@/components/sip/CallsHistoryContent";
 import { QRCodeContent } from "@/components/sip/QRCodeContent";
+import { DiagnosticContent } from "@/components/sip/DiagnosticContent";
 
 export default function SIP() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,8 +23,9 @@ export default function SIP() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="ramal">🔑 Meu Ramal</TabsTrigger>
+          <TabsTrigger value="diagnostico">🔍 Diagnóstico</TabsTrigger>
           <TabsTrigger value="qrcode">📱 QR Code</TabsTrigger>
           <TabsTrigger value="chamada">📞 Fazer Chamada</TabsTrigger>
           <TabsTrigger value="historico">📋 Histórico</TabsTrigger>
@@ -31,6 +33,10 @@ export default function SIP() {
 
         <TabsContent value="ramal" className="mt-6">
           <MyExtensionContent />
+        </TabsContent>
+
+        <TabsContent value="diagnostico" className="mt-6">
+          <DiagnosticContent />
         </TabsContent>
 
         <TabsContent value="qrcode" className="mt-6">

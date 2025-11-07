@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity } from "lucide-react";
+import { formatSIPUri } from "@/lib/sip-utils";
 
 export function MonitorContent() {
   // Buscar endpoints registrados
@@ -12,7 +13,7 @@ export function MonitorContent() {
     queryFn: async () => {
       const { data } = await supabase
         .from('sip_endpoints')
-        .select('*, sip_users(sip_username, extension, display_name)')
+        .select('*, sip_users(sip_username, extension, display_name, sip_domain)')
         .eq('status', 'registered')
         .order('last_seen', { ascending: false });
 
@@ -106,10 +107,16 @@ export function MonitorContent() {
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     <div>
                       <p className="font-medium">
-                        {endpoint.sip_users?.display_name || endpoint.sip_users?.sip_username}
+                        {endpoint.sip_users?.display_name || 'Usuário'}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {formatSIPUri(
+                          endpoint.sip_users?.sip_username, 
+                          endpoint.sip_users?.sip_domain
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {endpoint.ip_address || 'IP não disponível'}
+                        IP: {endpoint.ip_address || 'N/A'}
                       </p>
                     </div>
                   </div>

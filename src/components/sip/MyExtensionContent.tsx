@@ -127,6 +127,24 @@ export function MyExtensionContent() {
               <Badge variant="outline">{extension.provider}</Badge>
             </div>
           </div>
+
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => {
+              const credentials = `SIP URI: ${extension.sip_username}@${extension.sip_domain}
+Usuário: ${extension.sip_username}
+Senha: ${extension.sip_password}
+Ramal: ${extension.extension}
+Provider: ${extension.provider}`;
+              
+              navigator.clipboard.writeText(credentials);
+              toast.success('Credenciais completas copiadas!');
+            }}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            Copiar Todas as Credenciais
+          </Button>
         </CardContent>
       </Card>
 

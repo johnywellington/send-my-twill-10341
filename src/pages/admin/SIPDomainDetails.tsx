@@ -3,14 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Route, Settings } from "lucide-react";
+import { ArrowLeft, Users, Route, Settings, Copy } from "lucide-react";
 import { useSIPDomainDetails } from "@/hooks/use-sip-domain-details";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatSIPUri } from "@/lib/sip-utils";
+import { toast } from "sonner";
 
 export default function SIPDomainDetails() {
   const { domainGroupId } = useParams<{ domainGroupId: string }>();
   const navigate = useNavigate();
   const { domainInfo, users, routes, callStats, isLoading } = useSIPDomainDetails(domainGroupId || '');
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado!`);
+  };
 
   if (isLoading) {
     return (
@@ -58,6 +65,32 @@ export default function SIPDomainDetails() {
           </Badge>
         </div>
       </div>
+
+      {/* URI Base do Domínio */}
+      {domainInfo.sip_domain && (
+        <Card>
+          <CardHeader>
+            <CardTitle>URI Base do Domínio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 p-2 bg-muted rounded font-mono text-sm">
+                sip:usuario@{domainInfo.sip_domain}
+              </code>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => copyToClipboard(domainInfo.sip_domain, 'Domínio')}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Substitua "usuario" pelo username desejado
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Informações do Domínio */}
       <Card>
@@ -153,7 +186,7 @@ export default function SIPDomainDetails() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
+                  <TableHead>SIP URI</TableHead>
                   <TableHead>Ramal</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Status</TableHead>
@@ -163,7 +196,9 @@ export default function SIPDomainDetails() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-mono text-sm">{user.sip_username}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {formatSIPUri(user.sip_username, user.sip_domain)}
+                    </TableCell>
                     <TableCell>{user.extension}</TableCell>
                     <TableCell>{user.display_name || '-'}</TableCell>
                     <TableCell>

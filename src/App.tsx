@@ -4,6 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { UserRoute } from "@/components/UserRoute";
+import { AdminRoute } from "@/components/AdminRoute";
+import { PublicLayout } from "@/components/layouts/PublicLayout";
+import { UserLayout } from "@/components/layouts/UserLayout";
+import { AdminLayout } from "@/components/layouts/AdminLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +18,7 @@ import Templates from "./pages/Templates";
 import ApiTest from "./pages/ApiTest";
 import ApiDocs from "./pages/ApiDocs";
 import Numbers from "./pages/Numbers";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,72 +30,81 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
+          {/* Public Routes */}
+          <Route path="/login" element={
+            <PublicLayout>
+              <Login />
+            </PublicLayout>
+          } />
+
+          {/* User Routes - Green Sidebar */}
+          <Route path="/" element={
+            <UserRoute>
+              <UserLayout>
                 <Index />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/dashboard" element={
+            <UserRoute>
+              <UserLayout>
                 <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/contacts" element={
+            <UserRoute>
+              <UserLayout>
                 <Contacts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/analytics" element={
+            <UserRoute>
+              <UserLayout>
                 <Analytics />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/templates"
-            element={
-              <ProtectedRoute>
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/templates" element={
+            <UserRoute>
+              <UserLayout>
                 <Templates />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/api-test"
-            element={
-              <ProtectedRoute>
-                <ApiTest />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/docs"
-            element={
-              <ProtectedRoute>
-                <ApiDocs />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/numbers"
-            element={
-              <ProtectedRoute>
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/numbers" element={
+            <UserRoute>
+              <UserLayout>
                 <Numbers />
-              </ProtectedRoute>
-            }
-          />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/api-test" element={
+            <UserRoute>
+              <UserLayout>
+                <ApiTest />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/docs" element={
+            <UserRoute>
+              <UserLayout>
+                <ApiDocs />
+              </UserLayout>
+            </UserRoute>
+          } />
+
+          {/* Admin Routes - Red Sidebar */}
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+
+          {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -433,34 +433,14 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="container max-w-7xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Histórico de comunicações SMS, Voz e IVR
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate("/")}>
-              Voltar
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/templates")}>
-              <FileText className="mr-2 h-4 w-4" />
-              Templates
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/analytics")}>
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Analytics
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">
+          Histórico de comunicações SMS, Voz e IVR
+        </p>
+      </div>
 
         {/* Filters */}
         <Card>
@@ -578,11 +558,10 @@ const Dashboard = () => {
             )}
           </TabsContent>
         </Tabs>
-      </div>
 
-      {renderDetailsDialog()}
-    </div>
-  );
-};
+        {renderDetailsDialog()}
+      </div>
+    );
+  };
 
 export default Dashboard;

@@ -1,0 +1,58 @@
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AdminSidebar } from "./AdminSidebar";
+import { Button } from "@/components/ui/button";
+import { LogOut, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
+export const AdminLayout = ({ children }: AdminLayoutProps) => {
+  const { signOut, user } = useAuth();
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AdminSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="text-red-700 dark:text-red-300" />
+              <div className="flex items-center gap-3">
+                <h1 className="text-lg font-semibold text-foreground">SMS Sender Admin</h1>
+                <Badge variant="destructive" className="gap-1">
+                  <Shield className="h-3 w-3" />
+                  Admin
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{user?.email}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 p-6 bg-background overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+};

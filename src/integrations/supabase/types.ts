@@ -266,6 +266,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ivr_transfer_params: {
+        Row: {
+          assistant_number: string
+          call_uuid: string | null
+          conversation_uuid: string | null
+          created_at: string | null
+          expires_at: string | null
+          from_number: string
+          id: string
+          transfer_timeout: number | null
+          user_id: string | null
+        }
+        Insert: {
+          assistant_number: string
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          from_number: string
+          id?: string
+          transfer_timeout?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          assistant_number?: string
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          from_number?: string
+          id?: string
+          transfer_timeout?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       message_templates: {
         Row: {
           category: string | null
@@ -362,6 +398,51 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           webhook_configured?: boolean | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          metadata: Json | null
+          phone: string | null
+          suspended_at: string | null
+          suspension_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -506,6 +587,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -589,6 +700,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_ivr_params: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

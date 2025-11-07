@@ -21,6 +21,8 @@ import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 import { Badge } from "@/components/ui/badge";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
+import { RateLimitSelector } from "@/components/RateLimitSelector";
+import { calculateDelay } from "@/lib/rate-limits";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -46,6 +48,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [throttle, setThrottle] = useState(1.0); // 100% por padrão
   
   const maxLength = 5000; // Vonage Voice API limit
   const messageLength = message.length;
@@ -186,9 +189,10 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
           ));
         }
 
-        // Delay para evitar rate limiting
+        // Delay dinâmico baseado no throttle configurado
         if (i < validDestinations.length - 1 && !cancelRequested) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          const delay = calculateDelay(provider, 'voice', throttle);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
 
@@ -365,6 +369,16 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
                 onCheckedChange={setDryRun}
               />
             </div>
+
+            {/* Controle de Velocidade de Envio - mostra apenas quando há múltiplos destinos */}
+            {destinations.filter(d => d.trim()).length > 1 && (
+              <RateLimitSelector
+                provider={provider}
+                type="voice"
+                value={throttle}
+                onChange={setThrottle}
+              />
+            )}
 
             <div className="flex gap-2">
               <Button 

@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BulkSendStats } from "@/components/analytics/BulkSendStats";
 import { ReceivedAnalytics } from "@/components/analytics/ReceivedAnalytics";
+import { IVRAnalytics } from "@/components/analytics/IVRAnalytics";
 import { Inbox } from "lucide-react";
 
 interface AnalyticsData {
@@ -283,7 +284,11 @@ export default function Analytics() {
             <ReceivedAnalytics dateRange={parseInt(dateRange)} />
           </TabsContent>
 
-          {activeTab !== 'bulk' && activeTab !== 'received' && (
+          <TabsContent value="ivr" className="space-y-6 mt-6">
+            <IVRAnalytics dateRange={parseInt(dateRange)} />
+          </TabsContent>
+
+          {activeTab !== 'bulk' && activeTab !== 'received' && activeTab !== 'ivr' && (
             <TabsContent value={activeTab} className="space-y-6 mt-6">
             {/* Empty State */}
             {analytics.totalSent === 0 && (
@@ -386,7 +391,6 @@ export default function Analytics() {
                       )}
                       {activeTab === "sms" && <Line type="monotone" dataKey="sms" stroke="hsl(var(--primary))" name="SMS" />}
                       {activeTab === "voice" && <Line type="monotone" dataKey="voice" stroke="hsl(var(--destructive))" name="Voice" />}
-                      {activeTab === "ivr" && <Line type="monotone" dataKey="ivr" stroke="hsl(var(--warning))" name="IVR" />}
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>

@@ -16,7 +16,7 @@ export function generateRandomSipName(prefix: string): {
   
   return {
     friendlyName: `${prefix}-${randomName}`,
-    domainName: `${randomName}.sip.twilio.com`,
+    domainName: randomName, // Twilio API adiciona automaticamente .sip.twilio.com
     displayName: `Auto ${adj.charAt(0).toUpperCase() + adj.slice(1)} ${noun.charAt(0).toUpperCase() + noun.slice(1)}`,
   };
 }

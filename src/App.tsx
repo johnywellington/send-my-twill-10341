@@ -18,6 +18,7 @@ import Templates from "./pages/Templates";
 import ApiTest from "./pages/ApiTest";
 import ApiDocs from "./pages/ApiDocs";
 import Numbers from "./pages/Numbers";
+import Monitoring from "./pages/Monitoring";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
@@ -92,6 +93,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <ApiDocs />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/monitoring" element={
+            <UserRoute>
+              <UserLayout>
+                <Monitoring />
               </UserLayout>
             </UserRoute>
           } />

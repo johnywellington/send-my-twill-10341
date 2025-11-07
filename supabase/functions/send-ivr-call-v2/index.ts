@@ -19,6 +19,14 @@ interface IVRV2Request {
   ncco: any[];
   voiceName?: string;
   dryRun?: boolean;
+  provider?: 'twilio' | 'vonage';
+  actions?: {
+    action1?: 'hangup' | 'talk' | 'transfer';
+    action1Message?: string;
+    action2?: 'hangup' | 'talk' | 'transfer';
+    action2Message?: string;
+    actionTimeout?: 'repeat' | 'hangup' | 'transfer';
+  };
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -122,8 +130,12 @@ serve(async (req: Request) => {
       template, 
       ncco,
       voiceName,
-      dryRun = false
+      dryRun = false,
+      provider = 'vonage',
+      actions
     }: IVRV2Request = await req.json();
+    
+    console.log(`🔑 Provider selected: ${provider}`);
     
     // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos
     let finalLanguage = language;
@@ -180,8 +192,202 @@ serve(async (req: Request) => {
 
     console.log('✅ Validation passed - User:', user.id, 'Template:', template);
 
+    // ========== TWILIO IVR ==========
+    if (provider === 'twilio') {
+      console.log('🟦 Using Twilio IVR API');
+      
+      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      
+      console.log(`🔑 Twilio Account SID configured: ${accountSid}`);
+
+      if (!accountSid || !authToken) {
+        return new Response(
+          JSON.stringify({ error: 'Twilio credentials not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mapear voz Vonage para Twilio
+      let twilioVoice = 'Polly.Cristiano';
+      let twilioLanguage = language;
+      
+      if (voiceName) {
+        // Mapeamento simples de vozes
+        const voiceMap: Record<string, string> = {
+          'Camila': 'Polly.Camila',
+          'Vitória': 'Polly.Vitoria',
+          'Ricardo': 'Polly.Ricardo',
+          'Thiago': 'Polly.Thiago',
+          'Inês': 'Polly.Ines',
+          'Cristiano': 'Polly.Cristiano',
+          'Joanna': 'Polly.Joanna',
+          'Matthew': 'Polly.Matthew'
+        };
+        
+        twilioVoice = voiceMap[voiceName] || twilioVoice;
+        console.log(`Mapped voice '${voiceName}' to Twilio voice: ${twilioVoice}`);
+      }
+
+      // Construir URL do TwiML generator
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const twimlUrl = new URL(`${supabaseUrl}/functions/v1/generate-twiml-ivr`);
+      
+      // Extrair mensagem do NCCO
+      const talkAction = ncco.find(action => action.action === 'talk');
+      const messageText = talkAction?.text || 'Bem-vindo ao sistema IVR.';
+      
+      // Extrair configurações de input do NCCO
+      const inputAction = ncco.find(action => action.action === 'input');
+      const captureInput = !!inputAction;
+      const maxDigits = inputAction?.dtmf?.maxDigits?.toString() || '1';
+      const inputTimeout = inputAction?.dtmf?.timeOut?.toString() || '10';
+      
+      // Parâmetros do TwiML
+      twimlUrl.searchParams.set('text', messageText);
+      twimlUrl.searchParams.set('language', twilioLanguage);
+      twimlUrl.searchParams.set('voice', twilioVoice);
+      twimlUrl.searchParams.set('capture_input', captureInput.toString());
+      twimlUrl.searchParams.set('max_digits', maxDigits);
+      twimlUrl.searchParams.set('timeout', inputTimeout);
+      twimlUrl.searchParams.set('assistant_number', assistantNumber);
+      twimlUrl.searchParams.set('transfer_timeout', transferTimeout.toString());
+      twimlUrl.searchParams.set('from_number', from);
+      twimlUrl.searchParams.set('supabase_url', supabaseUrl!);
+      
+      // Adicionar ações se fornecidas
+      if (actions) {
+        if (actions.action1) twimlUrl.searchParams.set('action1', actions.action1);
+        if (actions.action1Message) twimlUrl.searchParams.set('action1_message', actions.action1Message);
+        if (actions.action2) twimlUrl.searchParams.set('action2', actions.action2);
+        if (actions.action2Message) twimlUrl.searchParams.set('action2_message', actions.action2Message);
+      }
+
+      console.log('TwiML URL:', twimlUrl.toString());
+
+      // DRY-RUN para Twilio
+      if (dryRun) {
+        console.log('🧪 DRY-RUN MODE: Skipping actual Twilio IVR call');
+        
+        const mockSid = `mock-twilio-ivr-${Date.now()}`;
+        
+        if (userId) {
+          await authSupabase.from('ivr_logs').insert({
+            user_id: userId,
+            to_number: to,
+            from_number: from,
+            template_used: template,
+            ncco: ncco,
+            language: finalLanguage,
+            style: finalStyle,
+            premium: finalPremium,
+            voice_label: voiceName || null,
+            status: 'dry-run',
+            call_uuid: mockSid,
+            conversation_uuid: mockSid,
+            provider: 'twilio'
+          });
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            uuid: mockSid,
+            status: 'dry-run',
+            conversation_uuid: mockSid,
+            version: 'v2',
+            provider: 'twilio',
+            dryRun: true,
+            message: 'Teste realizado sem chamada Twilio IVR real'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fazer chamada para API do Twilio
+      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`;
+      const twilioAuth = btoa(`${accountSid}:${authToken}`);
+
+      const twilioPayload = new URLSearchParams({
+        To: to.startsWith('+') ? to : `+${to.replace(/[^0-9]/g, '')}`,
+        From: from.startsWith('+') ? from : `+${from.replace(/[^0-9]/g, '')}`,
+        Url: twimlUrl.toString(),
+        StatusCallback: `${supabaseUrl}/functions/v1/twilio-voice-status`,
+        StatusCallbackMethod: 'POST'
+      });
+      
+      // Adicionar múltiplos eventos de status (Twilio aceita múltiplos parâmetros com mesmo nome)
+      twilioPayload.append('StatusCallbackEvent', 'initiated');
+      twilioPayload.append('StatusCallbackEvent', 'ringing');
+      twilioPayload.append('StatusCallbackEvent', 'answered');
+      twilioPayload.append('StatusCallbackEvent', 'completed');
+
+      console.log('Twilio IVR Call Payload:', Object.fromEntries(twilioPayload));
+
+      const twilioResponse = await fetch(twilioUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${twilioAuth}`
+        },
+        body: twilioPayload
+      });
+
+      const twilioData = await twilioResponse.json();
+
+      if (!twilioResponse.ok) {
+        console.error('Twilio API error:', twilioData);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to initiate Twilio IVR call', 
+            details: twilioData 
+          }),
+          { status: twilioResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Twilio IVR call initiated:', twilioData.sid);
+
+      // Log chamada Twilio IVR
+      if (userId) {
+        await authSupabase.from('ivr_logs').insert({
+          user_id: userId,
+          to_number: to,
+          from_number: from,
+          template_used: template,
+          ncco: ncco,
+          language: twilioLanguage,
+          style: 0,
+          premium: false,
+          voice_label: voiceName || null,
+          status: 'initiated',
+          call_uuid: twilioData.sid,
+          conversation_uuid: twilioData.sid,
+          provider: 'twilio'
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          uuid: twilioData.sid,
+          status: twilioData.status,
+          conversation_uuid: twilioData.sid,
+          version: 'v2',
+          provider: 'twilio',
+          assistant_number: assistantNumber
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========== VONAGE IVR (Original) ==========
+    console.log('🟩 Using Vonage IVR API');
+    
     const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
     const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+    
+    console.log(`🔑 Vonage Application ID configured: ${applicationId}`);
 
     if (!applicationId || !privateKey) {
       console.error('Missing Vonage credentials');
@@ -236,7 +442,7 @@ serve(async (req: Request) => {
       
       // Log dry-run IVR V2 call
       if (userId) {
-        await authSupabase.from('ivr_logs').insert({
+      await authSupabase.from('ivr_logs').insert({
           user_id: userId,
           to_number: to,
           from_number: from,
@@ -248,7 +454,8 @@ serve(async (req: Request) => {
           voice_label: voiceName || null,
           status: 'dry-run',
           call_uuid: mockUuid,
-          conversation_uuid: mockConvUuid
+          conversation_uuid: mockConvUuid,
+          provider: 'vonage'
         });
       }
       
@@ -415,7 +622,10 @@ serve(async (req: Request) => {
 
       const { error: logError } = await authSupabase
         .from('ivr_logs')
-        .insert(logData);
+        .insert({
+          ...logData,
+          provider: 'vonage'
+        });
 
       if (logError) {
         console.error('Error logging IVR V2 call:', logError);
@@ -429,6 +639,7 @@ serve(async (req: Request) => {
         status: responseData.status,
         conversation_uuid: responseData.conversation_uuid,
         version: 'v2',
+        provider: 'vonage',
         assistant_number: assistantNumber
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

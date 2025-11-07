@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 
 const templates = {
   "main-menu": {
@@ -254,17 +255,13 @@ export function IVRMenuForm() {
               <p className="text-xs text-muted-foreground">Formato: código país + número</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="from">Número de Origem *</Label>
-              <Input
-                id="from"
-                type="tel"
-                placeholder="447418373268"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                required
-              />
-            </div>
+            <PhoneNumberSelector
+              value={from}
+              onChange={setFrom}
+              filterType="voice"
+              label="Número de Origem *"
+              description="Formato: código país + número. Selecione um número salvo ou digite manualmente."
+            />
           </div>
 
           <div className="space-y-2">

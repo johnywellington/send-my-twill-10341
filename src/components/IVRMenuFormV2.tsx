@@ -19,6 +19,7 @@ import { IVRVoiceTestDialog } from "@/components/IVRVoiceTestDialog";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { Badge } from "@/components/ui/badge";
+import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
 
 export function IVRMenuFormV2() {
   const { provider, autoFallback, getAlternativeProvider } = useProvider();
@@ -399,17 +400,13 @@ export function IVRMenuFormV2() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="from">Número de Origem *</Label>
-                <Input
-                  id="from"
-                  type="tel"
-                  placeholder="447418373268"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  required
-                />
-              </div>
+              <PhoneNumberSelector
+                value={from}
+                onChange={setFrom}
+                filterType="voice"
+                label="Número de Origem *"
+                description="Formato: código país + número. Selecione um número salvo ou digite manualmente."
+              />
             </div>
           </div>
 

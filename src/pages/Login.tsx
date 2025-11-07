@@ -10,18 +10,18 @@ import { useAuth } from "@/hooks/use-auth";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, redirectToDashboard } = useAuth();
+  const { isAuthenticated, redirectToDashboard, role, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState("login");
 
   useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated) {
+    // Redirect if already authenticated and role is loaded
+    if (isAuthenticated && role && !loading) {
       redirectToDashboard();
     }
-  }, [isAuthenticated, redirectToDashboard]);
+  }, [isAuthenticated, role, loading, redirectToDashboard]);
 
   // Reset form when switching tabs
   useEffect(() => {
@@ -86,7 +86,9 @@ const Login = () => {
           .eq('user_id', data.user.id);
 
         toast.success("Login realizado com sucesso!");
-        // The auth hook will handle redirection based on role
+        
+        // Aguardar role ser carregado e redirecionar
+        // O useEffect irá lidar com o redirecionamento quando role estiver disponível
       }
     } catch (error) {
       toast.error("Erro ao fazer login");

@@ -65,13 +65,24 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
     }
   };
 
+  const ACTIVE_CALL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos
+
   const calculateProviderStats = (calls: any[], provider: 'twilio' | 'vonage'): ProviderStats => {
+    const now = Date.now();
     const providerCalls = calls.filter(c => c.provider === provider);
     const completedCalls = providerCalls.filter(c => c.status === 'completed');
     const failedCalls = providerCalls.filter(c => c.status === 'failed');
-    const activeCalls = providerCalls.filter(c => 
-      c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress'
-    );
+    
+    const activeCalls = providerCalls.filter(c => {
+      const isActiveStatus = 
+        c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress';
+      
+      if (!isActiveStatus) return false;
+      
+      // Filtrar chamadas antigas (timeout de 10 minutos)
+      const callAge = now - new Date(c.created_at).getTime();
+      return callAge < ACTIVE_CALL_TIMEOUT_MS;
+    });
 
     const totalCalls = providerCalls.length;
     const successRate = totalCalls > 0 ? (completedCalls.length / totalCalls) * 100 : 0;
@@ -96,12 +107,20 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
   };
 
   const calculateMetrics = (calls: any[]): LiveMetrics => {
+    const now = Date.now();
     const twilioStats = calculateProviderStats(calls, 'twilio');
     const vonageStats = calculateProviderStats(calls, 'vonage');
 
-    const activeCalls = calls.filter(c => 
-      c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress'
-    );
+    const activeCalls = calls.filter(c => {
+      const isActiveStatus = 
+        c.status === 'initiated' || c.status === 'ringing' || c.status === 'answered' || c.status === 'in-progress';
+      
+      if (!isActiveStatus) return false;
+      
+      // Filtrar chamadas antigas (timeout de 10 minutos)
+      const callAge = now - new Date(c.created_at).getTime();
+      return callAge < ACTIVE_CALL_TIMEOUT_MS;
+    });
 
     const completedCalls = calls.filter(c => c.status === 'completed');
     const totalCalls = calls.length;
@@ -237,13 +256,21 @@ export const useRealtimeMonitoring = (timeWindow: '5min' | '1hour' | '24hours') 
         ...(ivrLogs || [])
       ];
 
-      // Filter active calls
-      const active = allCalls.filter(call => 
-        call.status === 'initiated' || 
-        call.status === 'ringing' || 
-        call.status === 'answered' ||
-        call.status === 'in-progress'
-      ).map(call => ({
+      // Filter active calls (only calls less than 10 minutes old)
+      const now = Date.now();
+      const active = allCalls.filter(call => {
+        const isActiveStatus = 
+          call.status === 'initiated' || 
+          call.status === 'ringing' || 
+          call.status === 'answered' ||
+          call.status === 'in-progress';
+        
+        if (!isActiveStatus) return false;
+        
+        // Filtrar chamadas antigas (timeout de 10 minutos)
+        const callAge = now - new Date(call.created_at).getTime();
+        return callAge < ACTIVE_CALL_TIMEOUT_MS;
+      }).map(call => ({
         ...call,
         status: call.status as ActiveCall['status'],
         provider: call.provider as ActiveCall['provider']

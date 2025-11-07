@@ -16,6 +16,7 @@ export interface PhoneNumber {
   is_verified: boolean;
   webhook_configured: boolean;
   notes: string | null;
+  sync_source?: 'manual' | 'twilio' | 'vonage';
   created_at: string;
   updated_at: string;
 }

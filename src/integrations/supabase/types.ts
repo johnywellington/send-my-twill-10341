@@ -361,6 +361,7 @@ export type Database = {
           supports_mms: boolean | null
           supports_sms: boolean | null
           supports_voice: boolean | null
+          sync_source: string | null
           updated_at: string | null
           user_id: string
           webhook_configured: boolean | null
@@ -378,6 +379,7 @@ export type Database = {
           supports_mms?: boolean | null
           supports_sms?: boolean | null
           supports_voice?: boolean | null
+          sync_source?: string | null
           updated_at?: string | null
           user_id: string
           webhook_configured?: boolean | null
@@ -395,6 +397,7 @@ export type Database = {
           supports_mms?: boolean | null
           supports_sms?: boolean | null
           supports_voice?: boolean | null
+          sync_source?: string | null
           updated_at?: string | null
           user_id?: string
           webhook_configured?: boolean | null

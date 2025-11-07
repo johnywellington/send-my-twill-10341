@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import { PhoneNumberList } from "@/components/numbers/PhoneNumberList";
 import { PhoneNumberDialog } from "@/components/numbers/PhoneNumberDialog";
+import { SyncTwilioButton } from "@/components/numbers/SyncTwilioButton";
 
 const Numbers = () => {
   const navigate = useNavigate();
@@ -28,10 +29,13 @@ const Numbers = () => {
             </p>
           </div>
           
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Número
-          </Button>
+          <div className="flex gap-2">
+            <SyncTwilioButton />
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Número
+            </Button>
+          </div>
         </div>
 
         <PhoneNumberList />

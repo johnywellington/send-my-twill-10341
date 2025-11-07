@@ -131,6 +131,11 @@ export const PhoneNumberList = () => {
                     ) : (
                       <Badge variant="destructive">⚠️ Configure Webhooks</Badge>
                     )}
+                    {phone.sync_source === 'twilio' && (
+                      <Badge variant="secondary" className="gap-1">
+                        🔄 Sincronizado
+                      </Badge>
+                    )}
                   </div>
 
                   <Collapsible>

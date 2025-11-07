@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ChevronDown, Edit, Trash2, Plus, AlertCircle } from "lucide-react";
+import { List, Edit, Trash2, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeletePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
-import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface PhoneNumberSelectorProps {
@@ -29,7 +28,6 @@ export function PhoneNumberSelector({
   description,
   className
 }: PhoneNumberSelectorProps) {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [editingPhone, setEditingPhone] = useState<PhoneNumber | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -94,72 +92,54 @@ export function PhoneNumberSelector({
     setIsOpen(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className={cn("space-y-2", className)}>
-        <Label>{label}</Label>
-        <div className="h-11 rounded-md border border-input bg-muted animate-pulse" />
-      </div>
-    );
-  }
-
-  if (!phoneNumbers || phoneNumbers.length === 0) {
-    return (
-      <div className={cn("space-y-2", className)}>
-        <Label>{label}</Label>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Nenhum número configurado.{' '}
-            <Button 
-              variant="link" 
-              className="p-0 h-auto"
-              onClick={() => navigate('/numbers')}
-            >
-              Adicionar número
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className={cn("space-y-2", className)}>
-        <Label htmlFor="phone-selector">{label}</Label>
+        <Label htmlFor="phone-input">{label}</Label>
+        
+        <div className="flex gap-2">
+          {/* Input Livre */}
+          <div className="flex-1 relative">
+            <Input
+              id="phone-input"
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Digite o número (ex: 351911019866)"
+              disabled={isLoading}
+              className={cn(
+                selectedNumber && "pr-24"
+              )}
+            />
+            
+            {/* Badge do provider se número corresponder a um salvo */}
+            {selectedNumber && (
+              <Badge 
+                variant={selectedNumber.provider === 'vonage' ? 'default' : 'secondary'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+              >
+                {selectedNumber.provider}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Botão para abrir lista de salvos */}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setIsOpen(!isOpen)}
+            disabled={isLoading}
+            className={cn(isOpen && "bg-accent")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
         
         <div className="relative">
-          {/* Trigger Button */}
-          <button
-            type="button"
-            id="phone-selector"
-            onClick={() => setIsOpen(!isOpen)}
-            className={cn(
-              "flex h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm transition-all hover:border-primary/50 focus:ring-2 focus:ring-primary/20 focus:outline-none",
-              !value && "text-muted-foreground"
-            )}
-          >
-            {selectedNumber ? (
-              <div className="flex items-center gap-2">
-                <Badge variant={selectedNumber.provider === 'vonage' ? 'default' : 'secondary'} className="text-xs">
-                  {selectedNumber.provider}
-                </Badge>
-                <span>{selectedNumber.phone_number}</span>
-                {selectedNumber.friendly_name && (
-                  <span className="text-muted-foreground text-xs">
-                    ({selectedNumber.friendly_name})
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span>Escolha um número</span>
-            )}
-            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-          </button>
 
           {/* Dropdown Content */}
-          {isOpen && (
+          {isOpen && phoneNumbers && phoneNumbers.length > 0 && (
             <>
               <div 
                 className="fixed inset-0 z-40" 

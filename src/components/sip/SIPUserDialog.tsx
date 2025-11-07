@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Star } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
+import { useSIPConfig } from "@/hooks/use-sip-config";
 
 interface SIPUserDialogProps {
   open: boolean;
@@ -23,12 +24,34 @@ function generatePassword(length = 16): string {
 
 export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   const [provider, setProvider] = useState<'twilio' | 'vonage'>('twilio');
+  const [domainGroupId, setDomainGroupId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(generatePassword());
   const [extension, setExtension] = useState('');
   const [displayName, setDisplayName] = useState('');
 
   const { createUser, isCreating } = useSIPUsers();
+  const { configs } = useSIPConfig();
+
+  // Filtrar domínios ativos do provider selecionado
+  const availableDomains = useMemo(() => {
+    const domains = provider === 'twilio' 
+      ? (configs?.twilio?.filter(d => d.is_active) || [])
+      : (configs?.vonage?.filter(d => d.is_active) || []);
+    return domains;
+  }, [configs, provider]);
+
+  // Auto-selecionar domínio padrão ou único
+  useEffect(() => {
+    if (availableDomains.length === 1) {
+      setDomainGroupId(availableDomains[0].domain_group_id);
+    } else {
+      const defaultDomain = availableDomains.find(d => d.is_default);
+      if (defaultDomain) {
+        setDomainGroupId(defaultDomain.domain_group_id);
+      }
+    }
+  }, [availableDomains]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +66,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
       password,
       extension,
       display_name: displayName || undefined,
+      domain_group_id: domainGroupId || undefined,
     });
 
     onOpenChange(false);
@@ -51,6 +75,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
     setPassword(generatePassword());
     setExtension('');
     setDisplayName('');
+    setDomainGroupId('');
   };
 
   return (
@@ -76,6 +101,36 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {availableDomains.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="domain">Domínio SIP</Label>
+              <Select value={domainGroupId} onValueChange={setDomainGroupId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o domínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDomains.map(domain => (
+                    <SelectItem 
+                      key={domain.domain_group_id} 
+                      value={domain.domain_group_id}
+                    >
+                      {domain.is_default && <Star className="inline h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />}
+                      {domain.friendly_name}
+                      {domain.is_default && ' (padrão)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {availableDomains.length === 0 && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              ⚠️ Nenhum domínio {provider === 'twilio' ? 'Twilio' : 'Vonage'} ativo encontrado. 
+              Configure um domínio primeiro na aba Config.
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="username">Username SIP *</Label>
@@ -134,7 +189,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isCreating}>
+            <Button type="submit" disabled={isCreating || availableDomains.length === 0}>
               {isCreating ? "Criando..." : "Criar Usuário"}
             </Button>
           </div>

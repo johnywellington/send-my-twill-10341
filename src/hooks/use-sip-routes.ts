@@ -10,6 +10,7 @@ interface CreateRouteParams {
   to_pattern: string;
   forward_to: string;
   priority: number;
+  domain_group_id?: string;
 }
 
 export function useSIPRoutes() {

@@ -24,19 +24,42 @@ serve(async (req) => {
     );
     if (authError || !user) throw new Error('Unauthorized');
 
-    const { username, password, extension, display_name } = await req.json();
+    const { username, password, extension, display_name, domain_group_id } = await req.json();
 
-    // Get Vonage config
-    const { data: configs } = await supabase
-      .from('sip_provider_config')
-      .select('config_key, config_value')
-      .eq('provider', 'vonage')
-      .in('config_key', ['app_id', 'sip_domain']);
+    // Get Vonage config (use domain_group_id if provided, otherwise use default)
+    let configMap: Record<string, string>;
+    let domainGroupId: string;
 
-    const configMap = configs?.reduce((acc, c) => ({ ...acc, [c.config_key]: c.config_value }), {} as Record<string, string>) || {};
+    if (domain_group_id) {
+      // Usar app específica
+      const { data: configs } = await supabase
+        .from('sip_provider_config')
+        .select('config_key, config_value, domain_group_id')
+        .eq('domain_group_id', domain_group_id)
+        .in('config_key', ['app_id', 'sip_domain']);
 
-    if (!configMap.app_id || !configMap.sip_domain) {
-      throw new Error('Vonage not configured. Please run setup first.');
+      configMap = configs?.reduce((acc, c) => ({ ...acc, [c.config_key]: c.config_value }), {} as Record<string, string>) || {};
+      domainGroupId = configs?.[0]?.domain_group_id;
+
+      if (!configMap.app_id || !configMap.sip_domain) {
+        throw new Error('Specified Vonage app not found');
+      }
+    } else {
+      // Usar app padrão
+      const { data: configs } = await supabase
+        .from('sip_provider_config')
+        .select('config_key, config_value, domain_group_id')
+        .eq('provider', 'vonage')
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .in('config_key', ['app_id', 'sip_domain']);
+
+      configMap = configs?.reduce((acc, c) => ({ ...acc, [c.config_key]: c.config_value }), {} as Record<string, string>) || {};
+      domainGroupId = configs?.[0]?.domain_group_id;
+
+      if (!configMap.app_id || !configMap.sip_domain) {
+        throw new Error('No default Vonage app configured. Please run setup first.');
+      }
     }
 
     const vonageKey = Deno.env.get('VONAGE_API_KEY');

@@ -24,21 +24,43 @@ serve(async (req) => {
     );
     if (authError || !user) throw new Error('Unauthorized');
 
-    const { username, password, extension, display_name } = await req.json();
+    const { username, password, extension, display_name, domain_group_id } = await req.json();
 
-    // Get Twilio SIP Domain from config
-    const { data: domainConfig } = await supabase
-      .from('sip_provider_config')
-      .select('config_value')
-      .eq('provider', 'twilio')
-      .eq('config_key', 'sip_domain')
-      .single();
+    // Get Twilio SIP Domain from config (use domain_group_id if provided, otherwise use default)
+    let sipDomain: string;
+    let domainGroupId: string;
 
-    if (!domainConfig) {
-      throw new Error('Twilio SIP domain not configured. Please run setup first.');
+    if (domain_group_id) {
+      // Usar domínio específico
+      const { data: domainConfig } = await supabase
+        .from('sip_provider_config')
+        .select('config_value, domain_group_id')
+        .eq('domain_group_id', domain_group_id)
+        .eq('config_key', 'sip_domain')
+        .single();
+      
+      if (!domainConfig) {
+        throw new Error('Specified Twilio SIP domain not found');
+      }
+      sipDomain = domainConfig.config_value;
+      domainGroupId = domainConfig.domain_group_id;
+    } else {
+      // Usar domínio padrão
+      const { data: domainConfig } = await supabase
+        .from('sip_provider_config')
+        .select('config_value, domain_group_id')
+        .eq('provider', 'twilio')
+        .eq('config_key', 'sip_domain')
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .single();
+
+      if (!domainConfig) {
+        throw new Error('No default Twilio SIP domain configured. Please run setup first.');
+      }
+      sipDomain = domainConfig.config_value;
+      domainGroupId = domainConfig.domain_group_id;
     }
-
-    const sipDomain = domainConfig.config_value;
     const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 

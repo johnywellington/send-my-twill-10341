@@ -730,8 +730,11 @@ export type Database = {
           config_value: string
           created_at: string | null
           created_by: string | null
+          domain_group_id: string | null
+          friendly_name: string | null
           id: string
           is_active: boolean | null
+          is_default: boolean | null
           provider: string
           updated_at: string | null
         }
@@ -740,8 +743,11 @@ export type Database = {
           config_value: string
           created_at?: string | null
           created_by?: string | null
+          domain_group_id?: string | null
+          friendly_name?: string | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           provider: string
           updated_at?: string | null
         }
@@ -750,8 +756,11 @@ export type Database = {
           config_value?: string
           created_at?: string | null
           created_by?: string | null
+          domain_group_id?: string | null
+          friendly_name?: string | null
           id?: string
           is_active?: boolean | null
+          is_default?: boolean | null
           provider?: string
           updated_at?: string | null
         }

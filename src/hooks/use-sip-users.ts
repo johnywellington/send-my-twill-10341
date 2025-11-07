@@ -25,6 +25,7 @@ export function useSIPUsers() {
       password: string;
       extension: string;
       display_name?: string;
+      domain_group_id?: string;
     }) => {
       const functionName = params.provider === 'twilio' 
         ? 'sip-twilio-create-user' 

@@ -8,12 +8,15 @@ const corsHeaders = {
 
 interface SetupRequest {
   provider: 'twilio' | 'vonage' | 'both';
+  setAsDefault?: boolean;
   twilioConfig?: {
     friendlyName: string;
     domainName: string;
+    displayName?: string;
   };
   vonageConfig?: {
     name: string;
+    displayName?: string;
     answerUrl: string;
     eventUrl: string;
   };
@@ -42,7 +45,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { provider, twilioConfig, vonageConfig }: SetupRequest = await req.json();
+    const { provider, twilioConfig, vonageConfig, setAsDefault }: SetupRequest = await req.json();
     const results: any = {};
 
     // Setup Twilio
@@ -79,25 +82,43 @@ serve(async (req) => {
       }
 
       const twilioData = await twilioResponse.json();
+      const domainGroupId = crypto.randomUUID();
 
-      await supabase.from('sip_provider_config').upsert([
+      // Se setAsDefault = true, desmarcar outros domínios como default
+      if (setAsDefault) {
+        await supabase
+          .from('sip_provider_config')
+          .update({ is_default: false })
+          .eq('provider', 'twilio');
+      }
+
+      // Inserir novo domínio (não mais upsert!)
+      await supabase.from('sip_provider_config').insert([
         { 
+          domain_group_id: domainGroupId,
           provider: 'twilio', 
           config_key: 'sip_domain', 
           config_value: twilioData.domain_name,
+          friendly_name: twilioConfig.displayName || twilioConfig.domainName,
+          is_default: setAsDefault || false,
           created_by: user.id 
         },
         { 
+          domain_group_id: domainGroupId,
           provider: 'twilio', 
           config_key: 'sip_domain_sid', 
           config_value: twilioData.sid,
+          friendly_name: twilioConfig.displayName || twilioConfig.domainName,
+          is_default: setAsDefault || false,
           created_by: user.id 
         },
-      ], { onConflict: 'provider,config_key' });
+      ]);
 
       results.twilio = {
+        domain_group_id: domainGroupId,
         domain_name: twilioData.domain_name,
         sid: twilioData.sid,
+        friendly_name: twilioConfig.displayName || twilioConfig.domainName,
       };
     }
 
@@ -145,32 +166,53 @@ serve(async (req) => {
       }
 
       const vonageData = await vonageResponse.json();
+      const domainGroupId = crypto.randomUUID();
 
-      await supabase.from('sip_provider_config').upsert([
+      // Se setAsDefault = true, desmarcar outros apps como default
+      if (setAsDefault) {
+        await supabase
+          .from('sip_provider_config')
+          .update({ is_default: false })
+          .eq('provider', 'vonage');
+      }
+
+      // Inserir nova app (não mais upsert!)
+      await supabase.from('sip_provider_config').insert([
         { 
+          domain_group_id: domainGroupId,
           provider: 'vonage', 
           config_key: 'app_id', 
           config_value: vonageData.id,
+          friendly_name: vonageConfig.displayName || vonageConfig.name,
+          is_default: setAsDefault || false,
           created_by: user.id 
         },
         { 
+          domain_group_id: domainGroupId,
           provider: 'vonage', 
           config_key: 'app_name', 
           config_value: vonageData.name,
+          friendly_name: vonageConfig.displayName || vonageConfig.name,
+          is_default: setAsDefault || false,
           created_by: user.id 
         },
         { 
+          domain_group_id: domainGroupId,
           provider: 'vonage', 
           config_key: 'sip_domain', 
           config_value: 'sip.nexmo.com',
+          friendly_name: vonageConfig.displayName || vonageConfig.name,
+          is_default: setAsDefault || false,
           created_by: user.id 
         },
-      ], { onConflict: 'provider,config_key' });
+      ]);
 
       results.vonage = {
+        domain_group_id: domainGroupId,
         app_id: vonageData.id,
         app_name: vonageData.name,
         sip_domain: 'sip.nexmo.com',
+        friendly_name: vonageConfig.displayName || vonageConfig.name,
       };
     }
 

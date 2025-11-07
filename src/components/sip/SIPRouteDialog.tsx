@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Star } from "lucide-react";
 import { useSIPRoutes } from "@/hooks/use-sip-routes";
+import { useSIPConfig } from "@/hooks/use-sip-config";
 
 interface SIPRouteDialogProps {
   open: boolean;
@@ -14,12 +16,34 @@ interface SIPRouteDialogProps {
 export function SIPRouteDialog({ open, onOpenChange }: SIPRouteDialogProps) {
   const [name, setName] = useState('');
   const [provider, setProvider] = useState<'twilio' | 'vonage'>('twilio');
+  const [domainGroupId, setDomainGroupId] = useState('');
   const [routeType, setRouteType] = useState<'sip_to_sip' | 'sip_to_pstn' | 'pstn_to_sip'>('sip_to_sip');
   const [fromPattern, setFromPattern] = useState('');
   const [forwardTo, setForwardTo] = useState('');
   const [priority, setPriority] = useState('0');
 
   const { createRoute, isCreating } = useSIPRoutes();
+  const { configs } = useSIPConfig();
+
+  // Filtrar domínios ativos do provider selecionado
+  const availableDomains = useMemo(() => {
+    const domains = provider === 'twilio' 
+      ? (configs?.twilio?.filter(d => d.is_active) || [])
+      : (configs?.vonage?.filter(d => d.is_active) || []);
+    return domains;
+  }, [configs, provider]);
+
+  // Auto-selecionar domínio padrão ou único
+  useEffect(() => {
+    if (availableDomains.length === 1) {
+      setDomainGroupId(availableDomains[0].domain_group_id);
+    } else {
+      const defaultDomain = availableDomains.find(d => d.is_default);
+      if (defaultDomain) {
+        setDomainGroupId(defaultDomain.domain_group_id);
+      }
+    }
+  }, [availableDomains]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +60,7 @@ export function SIPRouteDialog({ open, onOpenChange }: SIPRouteDialogProps) {
       to_pattern: fromPattern,
       forward_to: forwardTo,
       priority: parseInt(priority),
+      domain_group_id: domainGroupId || undefined,
     });
 
     onOpenChange(false);
@@ -44,6 +69,7 @@ export function SIPRouteDialog({ open, onOpenChange }: SIPRouteDialogProps) {
     setFromPattern('');
     setForwardTo('');
     setPriority('0');
+    setDomainGroupId('');
   };
 
   const getRouteTypeLabel = (type: string) => {
@@ -108,6 +134,36 @@ export function SIPRouteDialog({ open, onOpenChange }: SIPRouteDialogProps) {
             </Select>
           </div>
 
+          {availableDomains.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="domain">Domínio SIP</Label>
+              <Select value={domainGroupId} onValueChange={setDomainGroupId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o domínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDomains.map(domain => (
+                    <SelectItem 
+                      key={domain.domain_group_id} 
+                      value={domain.domain_group_id}
+                    >
+                      {domain.is_default && <Star className="inline h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />}
+                      {domain.friendly_name}
+                      {domain.is_default && ' (padrão)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {availableDomains.length === 0 && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              ⚠️ Nenhum domínio {provider === 'twilio' ? 'Twilio' : 'Vonage'} ativo encontrado. 
+              Configure um domínio primeiro na aba Config.
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="routeType">Tipo de Rota</Label>
             <Select value={routeType} onValueChange={(v) => setRouteType(v as any)}>
@@ -166,7 +222,7 @@ export function SIPRouteDialog({ open, onOpenChange }: SIPRouteDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isCreating}>
+            <Button type="submit" disabled={isCreating || availableDomains.length === 0}>
               {isCreating ? "Criando..." : "Criar Rota"}
             </Button>
           </div>

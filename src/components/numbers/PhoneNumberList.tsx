@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity } from "lucide-react";
-import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, useTestWebhook, type PhoneNumber } from "@/hooks/use-phone-numbers";
+import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
@@ -18,7 +18,6 @@ export const PhoneNumberList = () => {
   const { data: phoneNumbers, isLoading } = usePhoneNumbers();
   const deleteMutation = useDeletePhoneNumber();
   const updateMutation = useUpdatePhoneNumber();
-  const testWebhookMutation = useTestWebhook();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingPhone, setEditingPhone] = useState<PhoneNumber | null>(null);
@@ -42,14 +41,6 @@ export const PhoneNumberList = () => {
     await updateMutation.mutateAsync({
       id: phone.id,
       updates: { is_active: !phone.is_active },
-    });
-  };
-
-  const handleTestWebhook = async (phone: PhoneNumber, testType: 'sms' | 'voice') => {
-    await testWebhookMutation.mutateAsync({
-      phoneNumber: phone.phone_number,
-      provider: phone.provider,
-      testType,
     });
   };
 
@@ -228,27 +219,7 @@ export const PhoneNumberList = () => {
                   )}
 
                   <div className="flex flex-wrap gap-2">
-                    {phone.supports_sms && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleTestWebhook(phone, 'sms')}
-                        disabled={testWebhookMutation.isPending}
-                      >
-                        Testar SMS
-                      </Button>
-                    )}
-                    {phone.supports_voice && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleTestWebhook(phone, 'voice')}
-                        disabled={testWebhookMutation.isPending}
-                      >
-                        Testar Voice
-                      </Button>
-                    )}
-                    <Button 
+                    <Button
                       variant="outline" 
                       size="sm"
                       onClick={() => setValidationDialogPhone(phone)}

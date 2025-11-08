@@ -273,6 +273,7 @@ serve(async (req: Request) => {
           error_message: `Twilio API error: ${errorText}`,
           provider: 'twilio',
           voice_label: voiceName || null,
+          credential_id: credentialId || null,
         });
         
         return new Response(
@@ -300,6 +301,7 @@ serve(async (req: Request) => {
         call_uuid: twilioData.sid,
         provider: 'twilio',
         voice_label: voiceName || null,
+        credential_id: credentialId || null,
       });
 
       return new Response(
@@ -427,7 +429,8 @@ serve(async (req: Request) => {
           voice_label: voiceName || null,
           status: 'dry-run',
           call_uuid: mockUuid,
-          provider: provider || 'vonage'
+          provider: provider || 'vonage',
+          credential_id: credentialId || null,
         });
       }
       
@@ -564,7 +567,8 @@ serve(async (req: Request) => {
           status: 'failed',
           error_message: responseData.title || responseData.detail || "Failed to make call",
           voice_label: voiceName || undefined,
-          provider: 'vonage'
+          provider: 'vonage',
+          credential_id: credentialId || null,
         });
       }
 
@@ -602,7 +606,8 @@ serve(async (req: Request) => {
         voice_label: voiceName || null,
         status: 'initiated',
         call_uuid: responseData.uuid,
-        provider: 'vonage'
+        provider: 'vonage',
+        credential_id: credentialId || null,
       };
 
       const { error: logError } = await supabase

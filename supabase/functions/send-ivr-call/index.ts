@@ -258,7 +258,8 @@ serve(async (req: Request) => {
           premium: premium,
           status: 'dry-run',
           call_uuid: mockUuid,
-          conversation_uuid: mockConvUuid
+          conversation_uuid: mockConvUuid,
+          credential_id: credentialId || null,
         });
       }
       
@@ -380,7 +381,8 @@ serve(async (req: Request) => {
         premium: premium,
         status: 'initiated',
         call_uuid: responseData.uuid,
-        conversation_uuid: responseData.conversation_uuid
+        conversation_uuid: responseData.conversation_uuid,
+        credential_id: credentialId || null,
       };
 
       const { error: logError } = await supabase

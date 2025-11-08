@@ -20,6 +20,7 @@ interface IVRV2Request {
   voiceName?: string;
   dryRun?: boolean;
   provider?: 'twilio' | 'vonage';
+  credentialId?: string;
   actions?: {
     action1?: 'hangup' | 'talk' | 'transfer';
     action1Message?: string;
@@ -132,6 +133,7 @@ serve(async (req: Request) => {
       voiceName,
       dryRun = false,
       provider = 'vonage',
+      credentialId,
       actions
     }: IVRV2Request = await req.json();
     
@@ -285,7 +287,8 @@ serve(async (req: Request) => {
             status: 'dry-run',
             call_uuid: mockSid,
             conversation_uuid: mockSid,
-            provider: 'twilio'
+            provider: 'twilio',
+            credential_id: credentialId || null,
           });
         }
         
@@ -363,7 +366,8 @@ serve(async (req: Request) => {
           status: 'initiated',
           call_uuid: twilioData.sid,
           conversation_uuid: twilioData.sid,
-          provider: 'twilio'
+          provider: 'twilio',
+          credential_id: credentialId || null,
         });
       }
 
@@ -455,7 +459,8 @@ serve(async (req: Request) => {
           status: 'dry-run',
           call_uuid: mockUuid,
           conversation_uuid: mockConvUuid,
-          provider: 'vonage'
+          provider: 'vonage',
+          credential_id: credentialId || null,
         });
       }
       
@@ -617,7 +622,8 @@ serve(async (req: Request) => {
         voice_label: voiceName || null,
         status: 'initiated',
         call_uuid: responseData.uuid,
-        conversation_uuid: responseData.conversation_uuid
+        conversation_uuid: responseData.conversation_uuid,
+        credential_id: credentialId || null,
       };
 
       const { error: logError } = await authSupabase

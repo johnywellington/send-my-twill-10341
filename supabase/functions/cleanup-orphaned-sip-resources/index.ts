@@ -20,19 +20,37 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[Orphaned Cleanup] Request received');
+    
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('No authorization header');
+    if (!authHeader) {
+      console.error('[Orphaned Cleanup] No authorization header');
+      throw new Error('No authorization header');
+    }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Orphaned Cleanup] Missing Supabase credentials');
+      throw new Error('Missing Supabase configuration');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
-    if (authError || !user) throw new Error('Unauthorized');
+    
+    if (authError || !user) {
+      console.error('[Orphaned Cleanup] Auth error:', authError);
+      throw new Error('Unauthorized');
+    }
 
-    const { action = 'detect', provider, orphanedIds = [] } = await req.json();
+    const requestBody = await req.json();
+    const { action = 'detect', provider, orphanedIds = [] } = requestBody;
+    
+    console.log(`[Orphaned Cleanup] Processing request - Action: ${action}, Provider: ${provider || 'all'}, OrphanedIds count: ${orphanedIds.length}`);
 
     console.log(`[Orphaned Cleanup] Action: ${action}, Provider: ${provider || 'all'}`);
 
@@ -40,126 +58,184 @@ serve(async (req) => {
 
     // ========== TWILIO: Detectar CredentialLists órfãs ==========
     if (!provider || provider === 'twilio') {
-      console.log('[Twilio] Checking for orphaned CredentialLists...');
-      
-      const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      try {
+        console.log('[Twilio] Checking for orphaned CredentialLists...');
+        
+        const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 
-      if (twilioSid && twilioToken) {
-        // Buscar todos os CredentialLists do Twilio
-        const twilioResponse = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists.json`,
-          {
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
-            },
-          }
-        );
-
-        const twilioData = await twilioResponse.json();
-        const twilioCredLists = twilioData.credential_lists || [];
-
-        console.log(`[Twilio] Found ${twilioCredLists.length} CredentialLists in API`);
-
-        // Buscar todos os usuários SIP Twilio do banco
-        const { data: dbTwilioUsers } = await supabase
-          .from('sip_users')
-          .select('twilio_credlist_sid, sip_username')
-          .eq('provider', 'twilio')
-          .not('twilio_credlist_sid', 'is', null);
-
-        const dbCredListSids = new Set(dbTwilioUsers?.map(u => u.twilio_credlist_sid) || []);
-
-        console.log(`[Twilio] Found ${dbCredListSids.size} CredentialLists in database`);
-
-        // Identificar órfãos
-        for (const credList of twilioCredLists) {
-          if (!dbCredListSids.has(credList.sid)) {
-            orphanedResources.push({
-              id: credList.sid,
-              name: credList.friendly_name,
-              type: 'credential_list',
-              provider: 'twilio',
-              metadata: {
-                date_created: credList.date_created,
-                date_updated: credList.date_updated,
+        if (twilioSid && twilioToken) {
+          // Buscar todos os CredentialLists do Twilio
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          
+          try {
+            const twilioResponse = await fetch(
+              `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists.json`,
+              {
+                headers: {
+                  'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+                },
+                signal: controller.signal,
               }
-            });
-          }
-        }
+            );
+            
+            clearTimeout(timeoutId);
 
-        console.log(`[Twilio] Found ${orphanedResources.filter(r => r.provider === 'twilio').length} orphaned CredentialLists`);
+            if (!twilioResponse.ok) {
+              console.error(`[Twilio] API error: ${twilioResponse.status} ${twilioResponse.statusText}`);
+              throw new Error(`Twilio API returned ${twilioResponse.status}`);
+            }
+
+            const twilioData = await twilioResponse.json();
+            const twilioCredLists = twilioData.credential_lists || [];
+
+            console.log(`[Twilio] Found ${twilioCredLists.length} CredentialLists in API`);
+
+            // Buscar todos os usuários SIP Twilio do banco
+            const { data: dbTwilioUsers, error: dbError } = await supabase
+              .from('sip_users')
+              .select('twilio_credlist_sid, sip_username')
+              .eq('provider', 'twilio')
+              .not('twilio_credlist_sid', 'is', null);
+
+            if (dbError) {
+              console.error('[Twilio] Database error:', dbError);
+              throw dbError;
+            }
+
+            const dbCredListSids = new Set(dbTwilioUsers?.map(u => u.twilio_credlist_sid) || []);
+
+            console.log(`[Twilio] Found ${dbCredListSids.size} CredentialLists in database`);
+
+            // Identificar órfãos
+            for (const credList of twilioCredLists) {
+              if (!dbCredListSids.has(credList.sid)) {
+                orphanedResources.push({
+                  id: credList.sid,
+                  name: credList.friendly_name,
+                  type: 'credential_list',
+                  provider: 'twilio',
+                  metadata: {
+                    date_created: credList.date_created,
+                    date_updated: credList.date_updated,
+                  }
+                });
+              }
+            }
+
+            console.log(`[Twilio] Found ${orphanedResources.filter(r => r.provider === 'twilio').length} orphaned CredentialLists`);
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              console.error('[Twilio] Request timeout');
+            } else {
+              console.error('[Twilio] Fetch error:', fetchError);
+            }
+            throw fetchError;
+          }
+        } else {
+          console.log('[Twilio] Credentials not configured, skipping...');
+        }
+      } catch (twilioError: any) {
+        console.error('[Twilio] Error checking orphaned resources:', twilioError.message);
+        // Continue to Vonage check even if Twilio fails
       }
     }
 
     // ========== VONAGE: Detectar Endpoints órfãos ==========
     if (!provider || provider === 'vonage') {
-      console.log('[Vonage] Checking for orphaned Endpoints...');
-      
-      const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
-      const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
+      try {
+        console.log('[Vonage] Checking for orphaned Endpoints...');
+        
+        const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
+        const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
 
-      if (vonageApiKey && vonageApiSecret) {
-        // Buscar todas as aplicações Vonage ativas do banco
-        const { data: vonageApps } = await supabase
-          .from('sip_provider_config')
-          .select('config_value')
-          .eq('provider', 'vonage')
-          .eq('config_key', 'app_id')
-          .eq('is_active', true);
+        if (vonageApiKey && vonageApiSecret) {
+          // Buscar todas as aplicações Vonage ativas do banco
+          const { data: vonageApps, error: dbError } = await supabase
+            .from('sip_provider_config')
+            .select('config_value')
+            .eq('provider', 'vonage')
+            .eq('config_key', 'app_id')
+            .eq('is_active', true);
 
-        const appIds = vonageApps?.map(a => a.config_value) || [];
+          if (dbError) {
+            console.error('[Vonage] Database error:', dbError);
+            throw dbError;
+          }
 
-        console.log(`[Vonage] Found ${appIds.length} active applications`);
+          const appIds = vonageApps?.map(a => a.config_value) || [];
 
-        // Para cada aplicação, verificar endpoints
-        for (const appId of appIds) {
-          try {
-            const vonageResponse = await fetch(
-              `https://api.nexmo.com/v1/applications/${appId}?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}`
-            );
+          console.log(`[Vonage] Found ${appIds.length} active applications`);
 
-            if (!vonageResponse.ok) continue;
-
-            const appData = await vonageResponse.json();
-            const endpoints = appData.voice?.webhooks?.sip || [];
-
-            console.log(`[Vonage] App ${appId}: Found ${endpoints.length} endpoints in API`);
-
-            // Buscar endpoints do banco para esta aplicação
-            const { data: dbVonageUsers } = await supabase
-              .from('sip_users')
-              .select('vonage_endpoint_id, sip_username')
-              .eq('provider', 'vonage')
-              .not('vonage_endpoint_id', 'is', null);
-
-            const dbEndpointIds = new Set(dbVonageUsers?.map(u => u.vonage_endpoint_id) || []);
-
-            console.log(`[Vonage] App ${appId}: Found ${dbEndpointIds.size} endpoints in database`);
-
-            // Identificar órfãos (endpoints na API mas não no banco)
-            for (const endpoint of endpoints) {
-              const endpointId = endpoint.uri?.split('@')[0]?.replace('sip:', '');
+          // Para cada aplicação, verificar endpoints
+          for (const appId of appIds) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
               
-              if (endpointId && !dbEndpointIds.has(endpointId)) {
-                orphanedResources.push({
-                  id: endpointId,
-                  name: endpoint.uri || endpointId,
-                  type: 'endpoint',
-                  provider: 'vonage',
-                  metadata: {
-                    app_id: appId,
-                    uri: endpoint.uri,
-                  }
-                });
+              const vonageResponse = await fetch(
+                `https://api.nexmo.com/v1/applications/${appId}?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}`,
+                { signal: controller.signal }
+              );
+              
+              clearTimeout(timeoutId);
+
+              if (!vonageResponse.ok) {
+                console.log(`[Vonage] App ${appId}: API returned ${vonageResponse.status}, skipping...`);
+                continue;
+              }
+
+              const appData = await vonageResponse.json();
+              const endpoints = appData.voice?.webhooks?.sip || [];
+
+              console.log(`[Vonage] App ${appId}: Found ${endpoints.length} endpoints in API`);
+
+              // Buscar endpoints do banco para esta aplicação
+              const { data: dbVonageUsers } = await supabase
+                .from('sip_users')
+                .select('vonage_endpoint_id, sip_username')
+                .eq('provider', 'vonage')
+                .not('vonage_endpoint_id', 'is', null);
+
+              const dbEndpointIds = new Set(dbVonageUsers?.map(u => u.vonage_endpoint_id) || []);
+
+              console.log(`[Vonage] App ${appId}: Found ${dbEndpointIds.size} endpoints in database`);
+
+              // Identificar órfãos (endpoints na API mas não no banco)
+              for (const endpoint of endpoints) {
+                const endpointId = endpoint.uri?.split('@')[0]?.replace('sip:', '');
+                
+                if (endpointId && !dbEndpointIds.has(endpointId)) {
+                  orphanedResources.push({
+                    id: endpointId,
+                    name: endpoint.uri || endpointId,
+                    type: 'endpoint',
+                    provider: 'vonage',
+                    metadata: {
+                      app_id: appId,
+                      uri: endpoint.uri,
+                    }
+                  });
+                }
+              }
+            } catch (fetchError: any) {
+              if (fetchError.name === 'AbortError') {
+                console.error(`[Vonage] App ${appId}: Request timeout`);
+              } else {
+                console.error(`[Vonage] Error checking app ${appId}:`, fetchError.message);
               }
             }
-          } catch (error) {
-            console.error(`[Vonage] Error checking app ${appId}:`, error);
           }
-        }
 
-        console.log(`[Vonage] Found ${orphanedResources.filter(r => r.provider === 'vonage').length} orphaned Endpoints`);
+          console.log(`[Vonage] Found ${orphanedResources.filter(r => r.provider === 'vonage').length} orphaned Endpoints`);
+        } else {
+          console.log('[Vonage] Credentials not configured, skipping...');
+        }
+      } catch (vonageError: any) {
+        console.error('[Vonage] Error checking orphaned resources:', vonageError.message);
+        // Continue even if Vonage fails
       }
     }
 

@@ -131,15 +131,66 @@ serve(async (req) => {
     }
 
     const { provider, credentialId } = await req.json();
+    
+    console.log(`[Account Status] Checking ${provider}, credentialId: ${credentialId}`);
 
     let accountStatus: AccountStatus;
     let latencyMs: number;
     const startTime = Date.now();
 
-    if (provider === 'twilio') {
-      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    // Carregar credenciais dinamicamente
+    let accountSid: string | undefined;
+    let authToken: string | undefined;
+    let apiKey: string | undefined;
+    let apiSecret: string | undefined;
 
+    if (credentialId) {
+      console.log(`🔑 Loading credentials from credentialId: ${credentialId}`);
+      
+      // Buscar a credential do banco
+      const { data: credential, error: credError } = await supabase
+        .from('provider_credentials')
+        .select('secret_key, account_identifier, provider')
+        .eq('id', credentialId)
+        .eq('is_active', true)
+        .single();
+
+      if (credError || !credential) {
+        console.error('Failed to load credential:', credError);
+        throw new Error('Credencial não encontrada ou inativa');
+      }
+
+      const secretKey = credential.secret_key;
+
+      if (credential.provider === 'twilio') {
+        if (secretKey === 'legacy_twilio') {
+          accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+          authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+        } else if (secretKey) {
+          accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
+          authToken = Deno.env.get(`CRED_${secretKey}_token`);
+        }
+      } else if (credential.provider === 'vonage') {
+        if (secretKey === 'legacy_vonage') {
+          apiKey = Deno.env.get('VONAGE_API_KEY');
+          apiSecret = Deno.env.get('VONAGE_API_SECRET');
+        } else if (secretKey) {
+          apiKey = Deno.env.get(`CRED_${secretKey}_api_key`);
+          apiSecret = Deno.env.get(`CRED_${secretKey}_api_secret`);
+        }
+      }
+    } else {
+      // Fallback para credenciais globais (legacy)
+      if (provider === 'twilio') {
+        accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      } else if (provider === 'vonage') {
+        apiKey = Deno.env.get('VONAGE_API_KEY');
+        apiSecret = Deno.env.get('VONAGE_API_SECRET');
+      }
+    }
+
+    if (provider === 'twilio') {
       if (!accountSid || !authToken) {
         throw new Error('Credenciais Twilio não configuradas');
       }
@@ -147,9 +198,6 @@ serve(async (req) => {
       accountStatus = await checkTwilioAccount(accountSid, authToken);
       latencyMs = Date.now() - startTime;
     } else if (provider === 'vonage') {
-      const apiKey = Deno.env.get('VONAGE_API_KEY');
-      const apiSecret = Deno.env.get('VONAGE_API_SECRET');
-
       if (!apiKey || !apiSecret) {
         throw new Error('Credenciais Vonage não configuradas');
       }

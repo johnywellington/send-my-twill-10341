@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Star, Lightbulb, Eye, EyeOff, Copy, Check, X } from "lucide-react";
+import { RefreshCw, Star, Lightbulb, Eye, EyeOff, Copy, Check, X, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useExtensionAvailability } from "@/hooks/use-extension-availability";
+import { useSIPConnectivityTest } from "@/hooks/use-sip-connectivity-test";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ExtensionAvailability } from "./ExtensionAvailability";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 interface SIPUserDialogProps {
@@ -103,11 +105,18 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [lastCreatedUser, setLastCreatedUser] = useState<{
+    userId: string;
+    provider: 'twilio' | 'vonage';
+    username: string;
+  } | null>(null);
 
   const { selectedCredentialId } = useProvider();
-  const { createUser, isCreating } = useSIPUsers(selectedCredentialId);
+  const { createUserAsync, isCreating } = useSIPUsers(selectedCredentialId);
   const { configs } = useSIPConfig();
   const { analysis, isExtensionAvailable } = useExtensionAvailability(provider);
+  const { testConnectivity, isTesting, lastTest } = useSIPConnectivityTest();
 
   // Filtrar domínios ativos do provider selecionado
   const availableDomains = useMemo(() => {
@@ -129,7 +138,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
     }
   }, [availableDomains]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!username || !password || !extension) {
@@ -153,24 +162,51 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
       return;
     }
 
-    createUser({
-      provider,
-      username,
-      password,
-      extension,
-      display_name: displayName || undefined,
-      domain_group_id: domainGroupId || undefined,
-      credentialId: selectedCredentialId || undefined,
-    });
+    try {
+      const result = await createUserAsync({
+        provider,
+        username,
+        password,
+        extension,
+        display_name: displayName || undefined,
+        domain_group_id: domainGroupId || undefined,
+        credentialId: selectedCredentialId || undefined,
+      });
 
-    onOpenChange(false);
-    // Reset form
-    setUsername('');
-    setPassword(generatePassword());
-    setExtension('');
-    setDisplayName('');
-    setDomainGroupId('');
-    setPasswordCopied(false);
+      // Salvar dados do usuário criado
+      setLastCreatedUser({
+        userId: result.id,
+        provider: provider,
+        username: username,
+      });
+
+      // Fechar dialog de criação
+      onOpenChange(false);
+
+      // Reset form
+      setUsername('');
+      setPassword(generatePassword());
+      setExtension('');
+      setDisplayName('');
+      setDomainGroupId('');
+      setPasswordCopied(false);
+
+      // Aguardar 3 segundos para propagação da API
+      toast.info('Iniciando teste de conectividade...', {
+        description: 'Aguarde enquanto validamos as credenciais'
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Disparar teste automático
+      testConnectivity({ provider, test_type: 'post_creation' });
+
+      // Abrir dialog com resultados
+      setShowTestDialog(true);
+
+    } catch (error) {
+      console.error('Error creating user:', error);
+    }
   };
 
   const handleCopyPassword = () => {
@@ -181,14 +217,15 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Criar Usuário SIP</DialogTitle>
-          <DialogDescription>
-            Configure um novo usuário/ramal SIP no provedor selecionado
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Criar Usuário SIP</DialogTitle>
+            <DialogDescription>
+              Configure um novo usuário/ramal SIP no provedor selecionado
+            </DialogDescription>
+          </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -413,5 +450,121 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+      <AlertDialogContent className="max-w-2xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            {lastTest?.status === 'passed' && <CheckCircle className="h-5 w-5 text-green-600" />}
+            {lastTest?.status === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-600" />}
+            {lastTest?.status === 'failed' && <XCircle className="h-5 w-5 text-red-600" />}
+            Teste de Conectividade - {lastCreatedUser?.username}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Validação automática das credenciais SIP criadas
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-4">
+          {/* Status Geral */}
+          <div className={`p-4 rounded-lg ${
+            lastTest?.status === 'passed' ? 'bg-green-50 dark:bg-green-950/20' :
+            lastTest?.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+            'bg-red-50 dark:bg-red-950/20'
+          }`}>
+            <p className="font-medium">
+              Status: {
+                lastTest?.status === 'passed' ? '✅ Aprovado' :
+                lastTest?.status === 'warning' ? '⚠️ Aviso' :
+                '❌ Falhou'
+              }
+            </p>
+            {lastTest?.latency_ms && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Latência: {lastTest.latency_ms}ms
+              </p>
+            )}
+          </div>
+
+          {/* Checklist de Testes */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-2 p-3 bg-background border rounded-lg">
+              {lastTest?.credentials_valid ? 
+                <Check className="h-4 w-4 text-green-600" /> : 
+                <X className="h-4 w-4 text-red-600" />
+              }
+              <span className="text-sm">Credenciais Válidas</span>
+            </div>
+            
+            <div className="flex items-center gap-2 p-3 bg-background border rounded-lg">
+              {lastTest?.endpoint_registered ? 
+                <Check className="h-4 w-4 text-green-600" /> : 
+                <X className="h-4 w-4 text-gray-400" />
+              }
+              <span className="text-sm">Endpoint Registrado</span>
+            </div>
+            
+            <div className="flex items-center gap-2 p-3 bg-background border rounded-lg">
+              {lastTest?.api_reachable ? 
+                <Check className="h-4 w-4 text-green-600" /> : 
+                <X className="h-4 w-4 text-red-600" />
+              }
+              <span className="text-sm">API Acessível</span>
+            </div>
+            
+            <div className="flex items-center gap-2 p-3 bg-background border rounded-lg">
+              {lastTest?.account_status === 'active' ? 
+                <Check className="h-4 w-4 text-green-600" /> : 
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              }
+              <span className="text-sm">Conta Ativa</span>
+            </div>
+          </div>
+
+          {/* Recomendações */}
+          {lastTest?.recommendations && Array.isArray(lastTest.recommendations) && lastTest.recommendations.length > 0 && (
+            <Alert>
+              <AlertDescription>
+                <h4 className="font-medium text-sm mb-2">Recomendações:</h4>
+                <ul className="space-y-1">
+                  {(lastTest.recommendations as string[]).map((rec, idx) => (
+                    <li key={idx} className="text-sm flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Informações Técnicas */}
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Detalhes técnicos
+            </summary>
+            <div className="mt-2 p-3 bg-muted rounded-lg font-mono">
+              <pre className="text-xs overflow-auto">{JSON.stringify(lastTest, null, 2)}</pre>
+            </div>
+          </details>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={() => setShowTestDialog(false)}>
+            Entendi
+          </AlertDialogAction>
+          {lastTest?.status !== 'passed' && (
+            <Button 
+              variant="outline" 
+              onClick={() => testConnectivity({ provider: lastCreatedUser!.provider, test_type: 'full' })}
+              disabled={isTesting}
+            >
+              {isTesting ? 'Testando...' : 'Testar Novamente'}
+            </Button>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }

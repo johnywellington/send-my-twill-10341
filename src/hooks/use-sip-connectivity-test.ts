@@ -35,7 +35,7 @@ export function useSIPConnectivityTest() {
   const testConnectivity = useMutation({
     mutationFn: async (params: {
       provider: 'twilio' | 'vonage';
-      test_type?: 'registration' | 'credentials' | 'api' | 'full';
+      test_type?: 'registration' | 'credentials' | 'api' | 'full' | 'post_creation';
     }) => {
       const { data, error } = await supabase.functions.invoke('sip-test-connectivity', {
         body: params,

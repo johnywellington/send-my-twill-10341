@@ -39,6 +39,7 @@ serve(async (req) => {
 
     const { provider, test_type = 'full' } = await req.json();
     const startTime = Date.now();
+    const isPostCreation = test_type === 'post_creation';
 
     const result: TestResult = {
       status: 'passed',
@@ -50,7 +51,7 @@ serve(async (req) => {
       recommendations: [],
     };
 
-    console.log('[SIP Connectivity Test] Starting test for provider:', provider);
+    console.log('[SIP Connectivity Test] Starting test for provider:', provider, 'type:', test_type);
 
     // TESTE 1: Verificar se o SIP user existe
     const { data: sipUser, error: sipError } = await supabase
@@ -95,10 +96,18 @@ serve(async (req) => {
         result.recommendations.push('Verifique se seu softphone está conectado');
       }
     } else {
-      result.status = 'warning';
-      result.recommendations.push('⚠️ Ramal não está registrado no servidor SIP');
-      result.recommendations.push('Configure seu softphone com as credenciais da aba "Meu Ramal"');
-      result.recommendations.push('Use o QR Code para configuração automática');
+      // Para testes pós-criação, endpoint não registrado ainda é NORMAL
+      if (isPostCreation) {
+        result.status = result.status === 'failed' ? 'warning' : result.status;
+        result.recommendations.push('✓ Usuário criado com sucesso!');
+        result.recommendations.push('⏳ Endpoint ainda não registrado (normal para usuário novo)');
+        result.recommendations.push('📱 Configure seu softphone com as credenciais para ativar o ramal');
+      } else {
+        result.status = 'warning';
+        result.recommendations.push('⚠️ Ramal não está registrado no servidor SIP');
+        result.recommendations.push('Configure seu softphone com as credenciais da aba "Meu Ramal"');
+        result.recommendations.push('Use o QR Code para configuração automática');
+      }
       console.log('[SIP Connectivity Test] Endpoint NOT registered');
     }
 

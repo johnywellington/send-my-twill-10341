@@ -71,11 +71,12 @@ export function useSIPUsers(credentialId?: string) {
       }
       
       console.log(`[SIP User Creation] Success from ${functionName}:`, data);
-      return data;
+      return { ...data, provider: params.provider, username: params.username };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['sip-users'] });
       toast.success('Usuário SIP criado com sucesso!');
+      return data;
     },
     onError: (error: Error) => {
       toast.error(`Erro ao criar usuário: ${error.message}`);
@@ -117,6 +118,7 @@ export function useSIPUsers(credentialId?: string) {
     users,
     isLoading,
     createUser: createUser.mutate,
+    createUserAsync: createUser.mutateAsync,
     deleteUser: deleteUser.mutate,
     isCreating: createUser.isPending,
     isDeleting: deleteUser.isPending,

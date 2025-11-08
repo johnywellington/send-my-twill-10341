@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { RefreshCw, CheckCircle2, XCircle, AlertTriangle, Database, Cloud, Loade
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getProviderIcon } from "@/lib/sip-utils";
+
+const STORAGE_KEY = 'sip-sync-results-v1';
 
 interface TwilioCredential {
   sid: string;
@@ -36,6 +38,21 @@ export function SyncDashboard() {
   const [isRecovering, setIsRecovering] = useState(false);
   const [syncResults, setSyncResults] = useState<SyncResult[]>([]);
 
+  // Load last sync results from localStorage when opening the tab
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSyncResults(parsed);
+        }
+      }
+    } catch (e) {
+      // ignore parsing errors
+    }
+  }, []);
+
   const handleSync = async () => {
     setIsLoading(true);
     try {
@@ -46,6 +63,7 @@ export function SyncDashboard() {
       if (error) throw error;
 
       setSyncResults(data.results || []);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.results || []));
       toast.success(`Sincronização concluída! ${data.total_checked || 0} usuários verificados`);
     } catch (error: any) {
       toast.error(`Erro ao sincronizar: ${error.message}`);

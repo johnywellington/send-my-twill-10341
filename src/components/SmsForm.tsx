@@ -337,6 +337,52 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             </CardContent>
           </Card>
 
+          {/* Aviso sobre limitações da conta Trial Twilio */}
+          {provider === 'twilio' && isTrial && (
+            <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertTitle className="text-amber-900 dark:text-amber-100">
+                Conta Twilio Trial Detectada
+              </AlertTitle>
+              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-2">
+                <p className="text-sm">
+                  Sua conta Twilio é <strong>trial</strong> e possui algumas limitações:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>❌ Não pode usar Sender IDs alfanuméricos (como "JOTA", "EMPRESA")</li>
+                  <li>⚠️ Só pode enviar para números verificados no painel Twilio</li>
+                  <li>✅ Pode usar números reais como remetente</li>
+                </ul>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open('https://console.twilio.com/us1/billing/upgrade', '_blank');
+                    }}
+                    className="text-xs bg-white dark:bg-gray-800"
+                  >
+                    Fazer Upgrade da Conta
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      toast.info("💡 Alternativa: Use Vonage", {
+                        description: "Vonage permite Sender IDs mesmo em contas normais. Troque o provider acima.",
+                        duration: 6000,
+                      });
+                    }}
+                    className="text-xs bg-white dark:bg-gray-800"
+                  >
+                    Usar Vonage (Permite Sender ID)
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {!useSenderId && (
             <PhoneNumberSelector

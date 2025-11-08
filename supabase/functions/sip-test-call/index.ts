@@ -94,54 +94,63 @@ serve(async (req) => {
       console.log('[Twilio] Test call initiated:', callResult.sid);
 
     } else if (provider === 'vonage') {
-      // Fazer chamada de teste Vonage
-      const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
+      // Fazer chamada de teste Vonage (JWT com chave privada da aplicação)
       const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
       const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID');
 
-      if (!vonageApiKey || !vonagePrivateKey || !vonageAppId) {
+      if (!vonagePrivateKey || !vonageAppId) {
         throw new Error('Vonage credentials not configured');
       }
 
-      // Gerar JWT token para autenticação
-      const encoder = new TextEncoder();
-      const keyData = encoder.encode(vonagePrivateKey.replace(/\\n/g, '\n'));
-      
-      const header = { alg: 'RS256', typ: 'JWT' };
+      // Helpers para JWT RS256
+      const pemToArrayBuffer = (pem: string): ArrayBuffer => {
+        const clean = pem
+          .replace(/\\n/g, '\n')
+          .replace('-----BEGIN PRIVATE KEY-----', '')
+          .replace('-----END PRIVATE KEY-----', '')
+          .replace(/\r?\n|\s/g, '');
+        const binary = atob(clean);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes.buffer;
+      };
+
+      const base64UrlEncode = (input: Uint8Array) =>
+        btoa(String.fromCharCode(...input))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+      const base64UrlEncodeString = (str: string) =>
+        base64UrlEncode(new TextEncoder().encode(str));
+
+      // Montar JWT
       const now = Math.floor(Date.now() / 1000);
+      const header = { alg: 'RS256', typ: 'JWT' };
       const payload = {
         application_id: vonageAppId,
         iat: now,
-        exp: now + 900, // 15 minutos
+        exp: now + 15 * 60,
         jti: crypto.randomUUID(),
       };
 
-      // Importar chave privada
-      const key = await crypto.subtle.importKey(
+      const encodedHeader = base64UrlEncodeString(JSON.stringify(header));
+      const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
+      const toSign = `${encodedHeader}.${encodedPayload}`;
+
+      const privateKey = await crypto.subtle.importKey(
         'pkcs8',
-        keyData,
+        pemToArrayBuffer(vonagePrivateKey),
         { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
         false,
         ['sign']
       );
-
-      // Criar JWT
-      const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '');
-      const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '');
-      const signatureInput = `${encodedHeader}.${encodedPayload}`;
-      
       const signature = await crypto.subtle.sign(
         'RSASSA-PKCS1-v1_5',
-        key,
-        encoder.encode(signatureInput)
+        privateKey,
+        new TextEncoder().encode(toSign)
       );
-      
-      const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-      
-      const jwt = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+      const jwt = `${toSign}.${base64UrlEncode(new Uint8Array(signature))}`;
 
       const sipUri = `sip:${sipUser.sip_username}@${sipUser.sip_domain}`;
 
@@ -170,15 +179,9 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            to: [{
-              type: 'sip',
-              uri: sipUri,
-            }],
-            from: {
-              type: 'phone',
-              number: '15555555555',
-            },
-            ncco: ncco,
+            to: [{ type: 'sip', uri: sipUri }],
+            from: { type: 'app', user: 'sip-test' },
+            ncco,
             event_url: [`${supabaseUrl}/functions/v1/vonage-voice-webhook`],
           }),
         }

@@ -13,12 +13,17 @@ interface ApiBalancesDialogProps {
 }
 
 export function ApiBalancesDialog({ open, onOpenChange }: ApiBalancesDialogProps) {
-  const { balances, totalByProvider, grandTotal, isLoading, refresh, lastUpdated } = useApiBalances();
+  const { balances, totalByProvider, grandTotal, isLoading, error, refresh, lastUpdated } = useApiBalances();
 
   const handleRefresh = async () => {
     toast.info("Atualizando saldos...");
-    await refresh();
-    toast.success("Saldos atualizados!");
+    try {
+      await refresh();
+      toast.success("Saldos atualizados!");
+    } catch (err) {
+      console.error('[Dialog] Refresh error:', err);
+      toast.error("Erro ao atualizar saldos. Verifique os logs do console.");
+    }
   };
 
   const twilioBalances = balances.filter(b => b.provider === 'twilio');
@@ -62,6 +67,14 @@ export function ApiBalancesDialog({ open, onOpenChange }: ApiBalancesDialogProps
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {error && (
+            <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600">
+              <p className="font-semibold">Erro ao carregar saldos</p>
+              <p className="text-sm mt-1">{error instanceof Error ? error.message : 'Erro desconhecido'}</p>
+              <p className="text-xs mt-2">Verifique se as credenciais das APIs estão configuradas corretamente.</p>
+            </div>
+          )}
+          
           {isLoading ? (
             <div className="space-y-6">
               <div className="space-y-3">

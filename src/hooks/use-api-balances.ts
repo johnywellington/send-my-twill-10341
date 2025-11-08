@@ -33,17 +33,26 @@ export function useApiBalances() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['api-balances'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-all-balances');
+      console.log('[API Balances Hook] Fetching balances...');
       
-      if (error) {
-        console.error('[API Balances Hook] Error:', error);
-        throw error;
+      try {
+        const { data, error } = await supabase.functions.invoke('get-all-balances');
+        
+        if (error) {
+          console.error('[API Balances Hook] Error:', error);
+          throw error;
+        }
+        
+        console.log('[API Balances Hook] Success:', data);
+        return data as { balances: BalanceResponse[]; rates: any };
+      } catch (err) {
+        console.error('[API Balances Hook] Catch error:', err);
+        throw err;
       }
-      
-      return data as { balances: BalanceResponse[]; rates: any };
     },
     staleTime: 3 * 60 * 1000, // Cache for 3 minutes
-    retry: 1,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const balances = data?.balances || [];

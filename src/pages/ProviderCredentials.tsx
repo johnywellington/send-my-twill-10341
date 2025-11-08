@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download } from "lucide-react";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
+import { useImportCredentials } from "@/hooks/use-import-credentials";
 import { CredentialDialog } from "@/components/credentials/CredentialDialog";
 
 export default function ProviderCredentials() {
@@ -17,6 +18,7 @@ export default function ProviderCredentials() {
   const createMutation = useCreateProviderCredential();
   const updateMutation = useUpdateProviderCredential();
   const deleteMutation = useDeleteProviderCredential();
+  const importCredentials = useImportCredentials();
 
   const handleOpenDialog = (credential?: ProviderCredential) => {
     setEditingCredential(credential);
@@ -57,10 +59,20 @@ export default function ProviderCredentials() {
             Gerencie múltiplas contas Twilio e Vonage
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Credencial
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => importCredentials.mutate()}
+            disabled={importCredentials.isPending}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {importCredentials.isPending ? 'Importando...' : 'Importar Credenciais'}
+          </Button>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Credencial
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

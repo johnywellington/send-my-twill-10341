@@ -7,7 +7,6 @@ import { TestCard } from "@/components/api-test/TestCard";
 import { CredentialValidator } from "@/components/api-test/CredentialValidator";
 import { RateLimitMonitor } from "@/components/api-test/RateLimitMonitor";
 import { TestHistory } from "@/components/api-test/TestHistory";
-import { AccountStatusCard } from "@/components/api-test/AccountStatusCard";
 import { ValidationHistory } from "@/components/api-test/ValidationHistory";
 
 export interface TestResult {
@@ -95,15 +94,7 @@ const ApiTest = () => {
           />
         </div>
 
-        {/* 2. Status das Contas */}
-        <div className="mb-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <AccountStatusCard provider="twilio" />
-            <AccountStatusCard provider="vonage" />
-          </div>
-        </div>
-
-        {/* 3. Rate Limit Monitor */}
+        {/* 2. Rate Limit Monitor */}
         <div className="mb-6">
           <RateLimitMonitor key={refreshKey} />
         </div>

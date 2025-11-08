@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Users, Copy, Trash2 } from "lucide-react";
+import { Loader2, Plus, Users, Copy, Trash2, Scan } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
+import { useCleanupOrphanedResources } from "@/hooks/use-cleanup-orphaned-resources";
 import { SIPUserDialog } from "./SIPUserDialog";
+import { OrphanedResourcesDialog } from "./OrphanedResourcesDialog";
 import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { toast } from "sonner";
 import { useProvider } from "@/contexts/ProviderContext";
@@ -28,11 +30,13 @@ export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [orphanedDialogOpen, setOrphanedDialogOpen] = useState(false);
   const [orphanedUsers, setOrphanedUsers] = useState<any[]>([]);
+  const [orphanedResourcesDialogOpen, setOrphanedResourcesDialogOpen] = useState(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const { selectedCredentialId } = useProvider();
   const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
+  const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
 
   const handleOrphansDetected = (orphaned: any[]) => {
     setOrphanedUsers(orphaned);
@@ -85,6 +89,22 @@ export function UsersContent() {
     }
   };
 
+  const handleDetectOrphans = async () => {
+    try {
+      const result = await detectOrphansAsync(undefined);
+      if (result && result.count > 0) {
+        setOrphanedResourcesDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error detecting orphans:', error);
+    }
+  };
+
+  const handleCleanupOrphanedResources = (selectedIds: string[]) => {
+    cleanupOrphans({ orphanedIds: selectedIds });
+    setOrphanedResourcesDialogOpen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -121,6 +141,23 @@ export function UsersContent() {
         </div>
         <div className="flex gap-2">
           <SyncEndpointsButton onOrphansDetected={handleOrphansDetected} />
+          <Button 
+            variant="outline" 
+            onClick={handleDetectOrphans}
+            disabled={isDetecting}
+          >
+            {isDetecting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              <>
+                <Scan className="h-4 w-4 mr-2" />
+                Detectar Órfãos
+              </>
+            )}
+          </Button>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Criar Usuário SIP
@@ -129,12 +166,21 @@ export function UsersContent() {
       </div>
 
       <SIPUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      
       <OrphanedUsersDialog 
         open={orphanedDialogOpen}
         onOpenChange={setOrphanedDialogOpen}
         orphanedUsers={orphanedUsers}
         onCleanup={handleCleanupOrphans}
         isLoading={isCleaningUp}
+      />
+
+      <OrphanedResourcesDialog
+        open={orphanedResourcesDialogOpen}
+        onOpenChange={setOrphanedResourcesDialogOpen}
+        orphanedResources={lastDetection?.orphaned || []}
+        onCleanup={handleCleanupOrphanedResources}
+        isLoading={isCleaning}
       />
 
       <div className="grid gap-4 md:grid-cols-4">

@@ -18,12 +18,43 @@ interface SIPUserDialogProps {
 }
 
 function generatePassword(length = 16): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  // Twilio requires: min 12 chars, at least 1 number, 1 uppercase, 1 lowercase
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*';
+  
+  // Ensure minimum requirements are met
   let password = '';
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]; // At least 1 uppercase
+  password += lowercase[Math.floor(Math.random() * lowercase.length)]; // At least 1 lowercase
+  password += numbers[Math.floor(Math.random() * numbers.length)];     // At least 1 number
+  password += special[Math.floor(Math.random() * special.length)];     // At least 1 special
+  
+  // Fill the rest with random characters
+  const allChars = lowercase + uppercase + numbers + special;
+  for (let i = password.length; i < Math.max(length, 12); i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
   }
-  return password;
+  
+  // Shuffle to avoid predictable pattern
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+function validatePassword(password: string): { valid: boolean; message?: string } {
+  if (password.length < 12) {
+    return { valid: false, message: 'Senha deve ter no mínimo 12 caracteres' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos um número' };
+  }
+  return { valid: true };
 }
 
 export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
@@ -63,6 +94,15 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
     e.preventDefault();
     
     if (!username || !password || !extension) {
+      return;
+    }
+    
+    // Validar senha
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      toast.error("Senha inválida", {
+        description: passwordValidation.message,
+      });
       return;
     }
     
@@ -161,13 +201,27 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
           <div className="space-y-2">
             <Label htmlFor="password">Password *</Label>
             <div className="flex gap-2">
-              <Input
-                id="password"
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="flex-1">
+                <Input
+                  id="password"
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className={
+                    password && !validatePassword(password).valid
+                      ? "border-red-500"
+                      : password && validatePassword(password).valid
+                      ? "border-green-500"
+                      : ""
+                  }
+                />
+                {password && !validatePassword(password).valid && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    {validatePassword(password).message}
+                  </p>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -177,6 +231,9 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Mínimo 12 caracteres, com letra maiúscula, minúscula e número
+            </p>
           </div>
 
           <div className="space-y-2">

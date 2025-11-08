@@ -1,11 +1,12 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useApiBalances } from "@/hooks/use-api-balances";
 import { BalanceCard } from "./BalanceCard";
 import { formatCurrency } from "@/lib/currency-converter";
-import { RefreshCw, DollarSign } from "lucide-react";
-import { toast } from "sonner";
+import { RefreshCw, DollarSign, Database, Wifi } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface ApiBalancesDialogProps {
   open: boolean;
@@ -13,16 +14,38 @@ interface ApiBalancesDialogProps {
 }
 
 export function ApiBalancesDialog({ open, onOpenChange }: ApiBalancesDialogProps) {
-  const { balances, totalByProvider, grandTotal, isLoading, error, refresh, lastUpdated } = useApiBalances();
+  const { 
+    balances, 
+    totalByProvider, 
+    grandTotal, 
+    isLoading, 
+    isFetching,
+    error, 
+    refresh, 
+    lastUpdated,
+    isUsingCache,
+    cacheAge,
+    hasCached,
+  } = useApiBalances();
 
   const handleRefresh = async () => {
-    toast.info("Atualizando saldos...");
+    toast({
+      title: "Atualizando saldos...",
+      description: "Buscando dados atualizados das APIs",
+    });
     try {
       await refresh();
-      toast.success("Saldos atualizados!");
+      toast({
+        title: "✅ Saldos atualizados!",
+        description: "Dados mais recentes carregados com sucesso",
+      });
     } catch (err) {
       console.error('[Dialog] Refresh error:', err);
-      toast.error("Erro ao atualizar saldos. Verifique os logs do console.");
+      toast({
+        title: "❌ Erro ao atualizar",
+        description: "Verifique os logs do console para mais detalhes",
+        variant: "destructive",
+      });
     }
   };
 
@@ -44,23 +67,42 @@ export function ApiBalancesDialog({ open, onOpenChange }: ApiBalancesDialogProps
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                <DollarSign className="h-6 w-6" />
-                Saldo das APIs
-              </DialogTitle>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                  <DollarSign className="h-6 w-6" />
+                  Saldo das APIs
+                </DialogTitle>
+                {isUsingCache && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    <Database className="h-3 w-3" />
+                    Cache Local
+                  </Badge>
+                )}
+                {isFetching && (
+                  <Badge variant="secondary" className="gap-1.5">
+                    <Wifi className="h-3 w-3 animate-pulse" />
+                    Atualizando...
+                  </Badge>
+                )}
+              </div>
               <DialogDescription>
                 Visualize os saldos de todas as suas contas configuradas em múltiplas moedas
+                {isUsingCache && cacheAge && (
+                  <span className="block mt-1 text-xs">
+                    📦 Dados em cache ({Math.floor(cacheAge / 60)} min atrás) • Conectando para atualizar...
+                  </span>
+                )}
               </DialogDescription>
             </div>
             <Button
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={isLoading || isFetching}
               variant="outline"
               size="sm"
               className="gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${(isLoading || isFetching) ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
           </div>
@@ -75,7 +117,7 @@ export function ApiBalancesDialog({ open, onOpenChange }: ApiBalancesDialogProps
             </div>
           )}
           
-          {isLoading ? (
+          {isLoading && !hasCached ? (
             <div className="space-y-6">
               <div className="space-y-3">
                 <Skeleton className="h-6 w-32" />

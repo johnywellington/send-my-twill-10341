@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  saveBalanceCache, 
+  getBalanceCache, 
+  getCacheAge,
+  hasCachedData 
+} from "@/lib/balance-cache";
+import { useEffect, useState } from "react";
 
 export interface BalanceResponse {
   credentialId: string;
@@ -30,7 +37,10 @@ export interface BalancesByProvider {
 }
 
 export function useApiBalances() {
-  const { data, isLoading, error, refetch } = useQuery({
+  const [isUsingCache, setIsUsingCache] = useState(false);
+  const cachedData = getBalanceCache();
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['api-balances'],
     queryFn: async () => {
       console.log('[API Balances Hook] Fetching balances...');
@@ -44,16 +54,48 @@ export function useApiBalances() {
         }
         
         console.log('[API Balances Hook] Success:', data);
+        
+        // Save to cache on successful fetch
+        if (data && data.balances) {
+          saveBalanceCache(data);
+          setIsUsingCache(false);
+        }
+        
         return data as { balances: BalanceResponse[]; rates: any };
       } catch (err) {
         console.error('[API Balances Hook] Catch error:', err);
+        
+        // If fetch fails, try to use cached data
+        const cached = getBalanceCache();
+        if (cached) {
+          console.log('[API Balances Hook] Using cached data due to fetch error');
+          setIsUsingCache(true);
+          return { balances: cached.balances, rates: cached.rates };
+        }
+        
         throw err;
       }
     },
+    // Use cached data as initial data if available
+    initialData: cachedData ? { balances: cachedData.balances, rates: cachedData.rates } : undefined,
     staleTime: 3 * 60 * 1000, // Cache for 3 minutes
     retry: 2,
     retryDelay: 1000,
   });
+
+  // Set isUsingCache on mount if we have cached data
+  useEffect(() => {
+    if (cachedData && !data) {
+      setIsUsingCache(true);
+    }
+  }, []);
+
+  // Update isUsingCache when we get fresh data
+  useEffect(() => {
+    if (data && isFetching === false) {
+      setIsUsingCache(false);
+    }
+  }, [data, isFetching]);
 
   const balances = data?.balances || [];
 
@@ -81,14 +123,20 @@ export function useApiBalances() {
   };
 
   const lastUpdated = balances.length > 0 ? new Date(balances[0].lastUpdated) : null;
+  const cacheAge = getCacheAge();
+  const hasCached = hasCachedData();
 
   return {
     balances,
     totalByProvider,
     grandTotal,
     isLoading,
+    isFetching,
     error,
     refresh: refetch,
     lastUpdated,
+    isUsingCache,
+    cacheAge,
+    hasCached,
   };
 }

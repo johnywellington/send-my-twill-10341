@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity } from "lucide-react";
 import { formatSIPUri } from "@/lib/sip-utils";
+import { SyncEndpointsButton } from "./SyncEndpointsButton";
 
 export function MonitorContent() {
-  // Buscar endpoints registrados
+  // Buscar endpoints registrados com polling inteligente
   const { data: onlineEndpoints, isLoading: loadingEndpoints } = useQuery({
     queryKey: ['sip-endpoints-online'],
     queryFn: async () => {
@@ -19,7 +20,11 @@ export function MonitorContent() {
 
       return data || [];
     },
-    refetchInterval: 10000, // Atualizar a cada 10 segundos
+    // Polling inteligente: 10s se há endpoints online, 30s se não há
+    refetchInterval: (query) => {
+      const hasOnlineEndpoints = query.state.data && query.state.data.length > 0;
+      return hasOnlineEndpoints ? 10000 : 30000;
+    },
   });
 
   // Buscar chamadas ativas
@@ -39,7 +44,10 @@ export function MonitorContent() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Monitor SIP</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Monitor SIP</h2>
+        <SyncEndpointsButton />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

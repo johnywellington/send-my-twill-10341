@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Phone, Activity, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Phone, Activity, DollarSign, Wallet } from "lucide-react";
+import { ApiBalancesDialog } from "@/components/admin/ApiBalancesDialog";
 
 const AdminDashboard = () => {
+  const [balancesOpen, setBalancesOpen] = useState(false);
   const stats = [
     {
       title: "Total de Usuários",
@@ -35,11 +39,21 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Administrativo</h2>
-        <p className="text-muted-foreground">
-          Visão geral do sistema e métricas importantes
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard Administrativo</h2>
+          <p className="text-muted-foreground">
+            Visão geral do sistema e métricas importantes
+          </p>
+        </div>
+        <Button 
+          onClick={() => setBalancesOpen(true)}
+          className="gap-2"
+          size="lg"
+        >
+          <Wallet className="h-5 w-5" />
+          💰 Saldo das APIs
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -75,6 +89,8 @@ const AdminDashboard = () => {
           </p>
         </CardContent>
       </Card>
+
+      <ApiBalancesDialog open={balancesOpen} onOpenChange={setBalancesOpen} />
     </div>
   );
 };

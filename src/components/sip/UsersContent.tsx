@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Trash2, Plus, Search, Loader2, Users, Scan } from "lucide-react";
+import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
+import QRCode from "react-qr-code";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +39,8 @@ export function UsersContent() {
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [selectedUserForTest, setSelectedUserForTest] = useState<any>(null);
+  const [showQRCodeDialog, setShowQRCodeDialog] = useState(false);
+  const [selectedUserForQR, setSelectedUserForQR] = useState<any>(null);
   const { selectedCredentialId } = useProvider();
   const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
   const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
@@ -117,6 +120,11 @@ export function UsersContent() {
       test_type: 'full'
     });
     setShowTestDialog(true);
+  };
+
+  const handleShowQRCode = (user: any) => {
+    setSelectedUserForQR(user);
+    setShowQRCodeDialog(true);
   };
 
   if (isLoading) {
@@ -429,6 +437,14 @@ export function UsersContent() {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            onClick={() => handleShowQRCode(user)}
+                            title="QR Code para Configuração"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             onClick={() => handleTestConnectivity(user)}
                             disabled={isTesting}
                             title="Testar Conectividade"
@@ -471,6 +487,76 @@ export function UsersContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* QR Code Dialog */}
+      <AlertDialog open={showQRCodeDialog} onOpenChange={setShowQRCodeDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              Configuração via QR Code
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Escaneie o QR Code abaixo com seu app de softphone para configurar automaticamente
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            {selectedUserForQR && (
+              <>
+                {/* QR Code */}
+                <div className="flex justify-center p-6 bg-white rounded-lg">
+                  <QRCode
+                    value={`sip:${selectedUserForQR.sip_username}:${selectedUserForQR.sip_password}@${selectedUserForQR.sip_domain}`}
+                    size={200}
+                    level="H"
+                  />
+                </div>
+
+                {/* Informações do Ramal */}
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Ramal</p>
+                    <p className="font-mono font-semibold">{selectedUserForQR.extension}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Usuário SIP</p>
+                    <p className="font-mono text-sm">{selectedUserForQR.sip_username}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Domínio</p>
+                    <p className="font-mono text-sm">{selectedUserForQR.sip_domain}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Provider</p>
+                    <Badge variant="outline">{selectedUserForQR.provider}</Badge>
+                  </div>
+                </div>
+
+                {/* Instruções */}
+                <div className="text-sm space-y-2">
+                  <p className="font-semibold">📱 Apps compatíveis:</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Linphone (iOS/Android)</li>
+                    <li>Zoiper (iOS/Android)</li>
+                    <li>Groundwire (iOS/Android)</li>
+                    <li>Bria (iOS/Android)</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    💡 Abra o app, procure por "Scan QR Code" ou "Configurar conta" e aponte a câmera para o código acima.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <Button onClick={() => setShowQRCodeDialog(false)}>
+              Fechar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

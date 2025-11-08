@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { logSyncOperation } from '../_shared/sync-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let userId: string | null = null;
+
   try {
+    // Extrair user_id do header de autorização
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub;
+      } catch (e) {
+        console.warn('Could not extract user_id from token');
+      }
+    }
     const apiKey = Deno.env.get('VONAGE_API_KEY');
     const apiSecret = Deno.env.get('VONAGE_API_SECRET');
 
@@ -109,6 +124,18 @@ serve(async (req) => {
 
     console.log('Successfully formatted numbers:', formattedNumbers.length);
 
+    // Log success
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'phone_numbers',
+        provider: 'vonage',
+        status: 'success',
+        itemsAdded: formattedNumbers.length,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         numbers: formattedNumbers,
@@ -122,6 +149,18 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in sync-vonage-numbers:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log error
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'phone_numbers',
+        provider: 'vonage',
+        status: 'error',
+        errorMessage,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
     
     return new Response(
       JSON.stringify({ 

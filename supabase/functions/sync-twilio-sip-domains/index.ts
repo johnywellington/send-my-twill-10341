@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { logSyncOperation } from '../_shared/sync-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -184,6 +187,17 @@ serve(async (req) => {
       }
     }
 
+    // Log success
+    await logSyncOperation({
+      userId: user.id,
+      syncType: 'sip_domains',
+      provider: 'twilio',
+      status: 'success',
+      itemsAdded: results.length,
+      itemsUpdated: existingDomains.length,
+      executionTimeMs: Date.now() - startTime,
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -196,10 +210,31 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[Twilio SIP Sync] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Log error (try to get user from request)
+    try {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        await logSyncOperation({
+          userId: payload.sub,
+          syncType: 'sip_domains',
+          provider: 'twilio',
+          status: 'error',
+          errorMessage,
+          executionTimeMs: Date.now() - startTime,
+        });
+      }
+    } catch (e) {
+      console.warn('Could not log error');
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         domains: [],
         count: 0,
       } as SyncResponse),

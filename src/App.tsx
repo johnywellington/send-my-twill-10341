@@ -30,6 +30,7 @@ import AdminUsers from "./pages/AdminUsers";
 import AdminSIP from "./pages/admin/SIP";
 import SIPDomainDetails from "./pages/admin/SIPDomainDetails";
 import SIP from "./pages/SIP";
+import SyncLogs from "./pages/SyncLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -151,6 +152,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <ActiveCalls />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/sync-logs" element={
+            <UserRoute>
+              <UserLayout>
+                <SyncLogs />
               </UserLayout>
             </UserRoute>
           } />

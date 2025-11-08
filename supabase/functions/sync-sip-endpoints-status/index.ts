@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { logSyncOperation } from '../_shared/sync-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +19,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let userId: string | null = null;
+
   try {
+    // Extrair user_id do header de autorização se existir
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub;
+      } catch (e) {
+        console.warn('Could not extract user_id from token');
+      }
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -97,7 +112,19 @@ serve(async (req) => {
       console.error('[SIP Endpoint Sync] Error inserting events:', eventsError);
       // Não falhar se eventos não forem inseridos
     } else {
-      console.log(`[SIP Endpoint Sync] Recorded ${events.length} expiration events`);
+    console.log(`[SIP Endpoint Sync] Recorded ${events.length} expiration events`);
+    }
+
+    // Log success (apenas se houver userId)
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'sip_endpoints',
+        status: 'success',
+        itemsUpdated: endpointIds.length,
+        executionTimeMs: Date.now() - startTime,
+        metadata: { total_checked: expiredEndpoints.length },
+      });
     }
 
     return new Response(
@@ -111,10 +138,23 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[SIP Endpoint Sync] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Log error (apenas se houver userId)
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'sip_endpoints',
+        status: 'error',
+        errorMessage,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         expired_count: 0,
         total_checked: 0
       } as SyncResult),

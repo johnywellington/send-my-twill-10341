@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from '../_shared/cors.ts';
+import { logSyncOperation } from '../_shared/sync-logger.ts';
 
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -23,8 +24,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let userId: string | null = null;
+
   try {
     console.log('=== Twilio Numbers Sync Started ===');
+
+    // Extrair user_id do header de autorização
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub;
+      } catch (e) {
+        console.warn('Could not extract user_id from token');
+      }
+    }
 
     // Verificar credenciais
     if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
@@ -102,6 +118,18 @@ serve(async (req) => {
 
     console.log('Numbers formatted successfully:', formattedNumbers.length);
 
+    // Log success
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'phone_numbers',
+        provider: 'twilio',
+        status: 'success',
+        itemsAdded: formattedNumbers.length,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -117,6 +145,19 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in sync-twilio-numbers:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log error
+    if (userId) {
+      await logSyncOperation({
+        userId,
+        syncType: 'phone_numbers',
+        provider: 'twilio',
+        status: 'error',
+        errorMessage,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false, 

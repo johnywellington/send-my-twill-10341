@@ -1047,6 +1047,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          items_added: number | null
+          items_updated: number | null
+          metadata: Json | null
+          provider: string | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          items_added?: number | null
+          items_updated?: number | null
+          metadata?: Json | null
+          provider?: string | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          items_added?: number | null
+          items_updated?: number | null
+          metadata?: Json | null
+          provider?: string | null
+          status?: string
+          sync_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_analytics: {
         Row: {
           created_at: string

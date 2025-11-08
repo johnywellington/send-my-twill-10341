@@ -22,6 +22,13 @@ interface VonageResponse {
   error_message?: string;
 }
 
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -124,6 +131,41 @@ serve(async (req) => {
 
     console.log('Successfully formatted numbers:', formattedNumbers.length);
 
+    // DETECTAR ÓRFÃOS (números no banco mas não na API)
+    const orphanedNumbers: OrphanedNumber[] = [];
+    
+    if (userId) {
+      const apiPhoneNumbers = new Set(formattedNumbers.map(n => n.phone_number));
+      
+      // Buscar todos os números Vonage do usuário no banco
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      const dbResponse = await fetch(`${supabaseUrl}/rest/v1/phone_numbers?user_id=eq.${userId}&provider=eq.vonage&select=id,phone_number,friendly_name,provider`, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+      });
+      
+      if (dbResponse.ok) {
+        const dbNumbers = await dbResponse.json();
+        
+        for (const dbNumber of dbNumbers) {
+          if (!apiPhoneNumbers.has(dbNumber.phone_number)) {
+            orphanedNumbers.push({
+              id: dbNumber.id,
+              phone_number: dbNumber.phone_number,
+              friendly_name: dbNumber.friendly_name,
+              provider: 'vonage',
+            });
+          }
+        }
+      }
+      
+      console.log(`Found ${orphanedNumbers.length} orphaned numbers`);
+    }
+
     // Log success
     if (userId) {
       await logSyncOperation({
@@ -143,6 +185,7 @@ serve(async (req) => {
             country_code: n.country_code,
             webhook_configured: n.webhook_configured,
           })),
+          orphaned_items: orphanedNumbers.slice(0, 100),
         },
       });
     }
@@ -150,7 +193,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         numbers: formattedNumbers,
-        count: data.count 
+        count: data.count,
+        orphaned: orphanedNumbers,
+        orphaned_count: orphanedNumbers.length,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

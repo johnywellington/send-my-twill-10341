@@ -17,12 +17,23 @@ interface VonageNumber {
   notes: string;
 }
 
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
+
 interface SyncResponse {
   numbers: VonageNumber[];
   count: number;
+  orphaned?: OrphanedNumber[];
+  orphaned_count?: number;
 }
 
-export const useSyncVonageNumbers = () => {
+export const useSyncVonageNumbers = (
+  onOrphansDetected?: (orphaned: OrphanedNumber[]) => void
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -133,16 +144,31 @@ export const useSyncVonageNumbers = () => {
         console.log(`Successfully updated ${updatedCount} existing numbers`);
       }
 
-      return {
+      const result = {
         inserted: insertedCount,
         updated: updatedCount,
         total: syncData.count,
       };
+
+      // Passar órfãos para o context
+      if (syncData.orphaned_count && syncData.orphaned_count > 0) {
+        (result as any).orphaned_count = syncData.orphaned_count;
+        (result as any).orphaned = syncData.orphaned;
+      }
+
+      return result;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables, context: any) => {
       queryClient.invalidateQueries({ queryKey: ['phone-numbers'] });
       
-      if (data.inserted === 0 && data.updated === 0) {
+      // Verificar se há órfãos detectados
+      const orphanedCount = context?.orphaned_count || 0;
+      const orphaned = context?.orphaned || [];
+      
+      if (orphanedCount > 0 && onOrphansDetected) {
+        onOrphansDetected(orphaned);
+        toast.error(`⚠️ ${orphanedCount} número(s) órfão(s) detectado(s). Clique em Revisar para remover.`);
+      } else if (data.inserted === 0 && data.updated === 0) {
         toast.info('ℹ️ Todos os números Vonage já estão sincronizados.');
       } else {
         const parts = [];

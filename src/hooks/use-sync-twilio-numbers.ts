@@ -16,14 +16,25 @@ interface TwilioNumber {
   notes: string;
 }
 
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
+
 interface SyncResponse {
   success: boolean;
   numbers: TwilioNumber[];
   count: number;
+  orphaned?: OrphanedNumber[];
+  orphaned_count?: number;
   error?: string;
 }
 
-export const useSyncTwilioNumbers = () => {
+export const useSyncTwilioNumbers = (
+  onOrphansDetected?: (orphaned: OrphanedNumber[]) => void
+) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -107,16 +118,44 @@ export const useSyncTwilioNumbers = () => {
         }
       }
 
-      return {
+      const result = {
         total: data.numbers.length,
         new: newNumbers.length,
         updated: existingTwilioNumbers.length,
       };
+
+      // Passar órfãos para o context
+      if (data.orphaned_count && data.orphaned_count > 0) {
+        (result as any).orphaned_count = data.orphaned_count;
+        (result as any).orphaned = data.orphaned;
+      }
+
+      return result;
     },
-    onSuccess: (result) => {
+    mutationKey: ['sync-twilio-numbers'],
+    onMutate: async () => {
+      // Buscar orphaned info e passar para onSuccess via context
+      const { data } = await supabase.functions.invoke<SyncResponse>('sync-twilio-numbers');
+      return {
+        orphaned_count: data?.orphaned_count || 0,
+        orphaned: data?.orphaned || [],
+      };
+    },
+    onSuccess: (result, variables, context: any) => {
       queryClient.invalidateQueries({ queryKey: ['phone-numbers'] });
       
-      if (result.new === 0 && result.updated === 0) {
+      // Verificar se há órfãos detectados
+      const orphanedCount = context?.orphaned_count || 0;
+      const orphaned = context?.orphaned || [];
+      
+      if (orphanedCount > 0 && onOrphansDetected) {
+        onOrphansDetected(orphaned);
+        toast({
+          title: "⚠️ Números órfãos detectados",
+          description: `${orphanedCount} número(s) órfão(s) detectado(s). Clique em Revisar para remover.`,
+          variant: "destructive",
+        });
+      } else if (result.new === 0 && result.updated === 0) {
         toast({
           title: "Sincronização concluída",
           description: "Todos os números já estão sincronizados.",

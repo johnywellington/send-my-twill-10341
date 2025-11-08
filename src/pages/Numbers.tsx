@@ -6,10 +6,40 @@ import { PhoneNumberList } from "@/components/numbers/PhoneNumberList";
 import { PhoneNumberDialog } from "@/components/numbers/PhoneNumberDialog";
 import { SyncTwilioButton } from "@/components/numbers/SyncTwilioButton";
 import { SyncVonageButton } from "@/components/numbers/SyncVonageButton";
+import { OrphanedNumbersDialog } from "@/components/numbers/OrphanedNumbersDialog";
+import { useDeletePhoneNumber } from "@/hooks/use-phone-numbers";
+import { toast } from "sonner";
+
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
 
 const Numbers = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [orphanedDialog, setOrphanedDialog] = useState<{
+    open: boolean;
+    provider: 'twilio' | 'vonage';
+    orphanedNumbers: OrphanedNumber[];
+  } | null>(null);
+  
+  const deleteMutation = useDeletePhoneNumber();
+
+  const handleCleanupOrphans = async (selectedIds: string[]) => {
+    try {
+      for (const numberId of selectedIds) {
+        await deleteMutation.mutateAsync(numberId);
+      }
+      
+      toast.success(`${selectedIds.length} número(s) órfão(s) removido(s)!`);
+      setOrphanedDialog(null);
+    } catch (error) {
+      toast.error('Erro ao remover números órfãos');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,8 +61,24 @@ const Numbers = () => {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <SyncTwilioButton />
-            <SyncVonageButton />
+            <SyncTwilioButton 
+              onOrphansDetected={(orphaned) => {
+                setOrphanedDialog({
+                  open: true,
+                  provider: 'twilio',
+                  orphanedNumbers: orphaned,
+                });
+              }}
+            />
+            <SyncVonageButton 
+              onOrphansDetected={(orphaned) => {
+                setOrphanedDialog({
+                  open: true,
+                  provider: 'vonage',
+                  orphanedNumbers: orphaned,
+                });
+              }}
+            />
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Número
@@ -46,6 +92,17 @@ const Numbers = () => {
           open={dialogOpen} 
           onOpenChange={setDialogOpen}
         />
+
+        {orphanedDialog && (
+          <OrphanedNumbersDialog
+            open={orphanedDialog.open}
+            onOpenChange={(open) => !open && setOrphanedDialog(null)}
+            provider={orphanedDialog.provider}
+            orphanedNumbers={orphanedDialog.orphanedNumbers}
+            onCleanup={handleCleanupOrphans}
+            isLoading={deleteMutation.isPending}
+          />
+        )}
       </div>
     </div>
   );

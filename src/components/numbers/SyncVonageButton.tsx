@@ -2,8 +2,19 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useSyncVonageNumbers } from "@/hooks/use-sync-vonage-numbers";
 
-export const SyncVonageButton = () => {
-  const { mutate: syncNumbers, isPending } = useSyncVonageNumbers();
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
+
+interface SyncVonageButtonProps {
+  onOrphansDetected?: (orphaned: OrphanedNumber[]) => void;
+}
+
+export const SyncVonageButton = ({ onOrphansDetected }: SyncVonageButtonProps) => {
+  const { mutate: syncNumbers, isPending } = useSyncVonageNumbers(onOrphansDetected);
 
   return (
     <Button

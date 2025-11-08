@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity, AlertTriangle } from "lucide-react";
 import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
+import { useOrphanedNumbers } from "@/hooks/use-orphaned-numbers";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
@@ -16,6 +18,9 @@ import { WebhookHealthDialog } from "./WebhookHealthDialog";
 
 export const PhoneNumberList = () => {
   const { data: phoneNumbers, isLoading } = usePhoneNumbers();
+  const { data: orphanedData } = useOrphanedNumbers();
+  const orphanedIds = orphanedData?.orphanedIds || new Set();
+  
   const deleteMutation = useDeletePhoneNumber();
   const updateMutation = useUpdatePhoneNumber();
 
@@ -24,6 +29,14 @@ export const PhoneNumberList = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [validationDialogPhone, setValidationDialogPhone] = useState<PhoneNumber | null>(null);
+
+  const isOrphan = (numberId: string) => {
+    return orphanedIds.has(numberId);
+  };
+
+  const getOrphanDetails = (numberId: string) => {
+    return orphanedData?.orphanedNumbers.find((o) => o.id === numberId);
+  };
 
   const handleCopyAll = (phone: PhoneNumber) => {
     copyAllWebhooksToClipboard(phone.phone_number, phone.provider);
@@ -133,6 +146,39 @@ export const PhoneNumberList = () => {
                       <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                         🔄 Vonage
                       </Badge>
+                    )}
+                    
+                    {isOrphan(phone.id) && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge 
+                              variant="destructive" 
+                              className="cursor-help animate-pulse"
+                            >
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Órfão
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-2">
+                              <p className="font-semibold text-sm">⚠️ Número Órfão Detectado</p>
+                              <p className="text-xs">
+                                Este número foi deletado do {phone.provider === 'twilio' ? 'Twilio' : 'Vonage'} mas ainda existe no banco de dados local.
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Detectado em: {getOrphanDetails(phone.id) 
+                                  ? new Date(getOrphanDetails(phone.id)!.detected_at).toLocaleString('pt-BR')
+                                  : 'N/A'
+                                }
+                              </p>
+                              <p className="text-xs text-destructive font-medium">
+                                💡 Sincronize novamente para ver a opção de remover
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </div>
 

@@ -2,8 +2,19 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useSyncTwilioNumbers } from "@/hooks/use-sync-twilio-numbers";
 
-export const SyncTwilioButton = () => {
-  const { mutate: syncNumbers, isPending } = useSyncTwilioNumbers();
+interface OrphanedNumber {
+  id: string;
+  phone_number: string;
+  friendly_name: string | null;
+  provider: string;
+}
+
+interface SyncTwilioButtonProps {
+  onOrphansDetected?: (orphaned: OrphanedNumber[]) => void;
+}
+
+export const SyncTwilioButton = ({ onOrphansDetected }: SyncTwilioButtonProps) => {
+  const { mutate: syncNumbers, isPending } = useSyncTwilioNumbers(onOrphansDetected);
 
   return (
     <Button

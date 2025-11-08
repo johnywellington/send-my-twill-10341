@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_validation_logs: {
+        Row: {
+          account_info: Json | null
+          account_type: string | null
+          created_at: string
+          credential_id: string | null
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          provider: string
+          status: string
+          tested_at: string
+          user_id: string
+          validation_type: string
+        }
+        Insert: {
+          account_info?: Json | null
+          account_type?: string | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider: string
+          status: string
+          tested_at?: string
+          user_id: string
+          validation_type: string
+        }
+        Update: {
+          account_info?: Json | null
+          account_type?: string | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider?: string
+          status?: string
+          tested_at?: string
+          user_id?: string
+          validation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_validation_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_send_logs: {
         Row: {
           avg_delay_ms: number

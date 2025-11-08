@@ -7,6 +7,8 @@ import { TestCard } from "@/components/api-test/TestCard";
 import { CredentialValidator } from "@/components/api-test/CredentialValidator";
 import { RateLimitMonitor } from "@/components/api-test/RateLimitMonitor";
 import { TestHistory } from "@/components/api-test/TestHistory";
+import { AccountStatusCard } from "@/components/api-test/AccountStatusCard";
+import { ValidationHistory } from "@/components/api-test/ValidationHistory";
 
 export interface TestResult {
   id: string;
@@ -85,7 +87,7 @@ const ApiTest = () => {
           </div>
         </div>
 
-        {/* Credential Validation */}
+        {/* 1. Validação de Credenciais */}
         <div className="mb-6">
           <CredentialValidator 
             key={refreshKey} 
@@ -93,7 +95,15 @@ const ApiTest = () => {
           />
         </div>
 
-        {/* Rate Limit Monitor */}
+        {/* 2. Status das Contas */}
+        <div className="mb-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <AccountStatusCard provider="twilio" />
+            <AccountStatusCard provider="vonage" />
+          </div>
+        </div>
+
+        {/* 3. Rate Limit Monitor */}
         <div className="mb-6">
           <RateLimitMonitor key={refreshKey} />
         </div>
@@ -253,8 +263,13 @@ const ApiTest = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Test History */}
+        {/* 4. Histórico de Validações */}
         <div className="mt-8">
+          <ValidationHistory />
+        </div>
+
+        {/* 5. Histórico de Testes */}
+        <div className="mt-6">
           <TestHistory
             history={testHistory}
             onClearHistory={handleClearHistory}

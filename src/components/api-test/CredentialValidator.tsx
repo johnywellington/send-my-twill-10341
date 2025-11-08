@@ -6,6 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { TestResult } from "@/pages/ApiTest";
 
+interface LogValidationParams {
+  provider: 'twilio' | 'vonage';
+  status: 'success' | 'error';
+  latency: number;
+  errorMessage?: string;
+}
+
 interface ValidationResult {
   vonage: "idle" | "loading" | "success" | "error";
   twilio: "idle" | "loading" | "success" | "error";
@@ -22,6 +29,25 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
     vonage: "idle",
     twilio: "idle",
   });
+
+  const logValidation = async ({ provider, status, latency, errorMessage }: LogValidationParams) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('api_validation_logs').insert({
+        user_id: user.id,
+        provider,
+        validation_type: 'credential_test',
+        status,
+        latency_ms: latency,
+        error_message: errorMessage,
+        tested_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('[Credential Validator] Failed to log validation:', error);
+    }
+  };
 
   const validateVonage = async () => {
     setValidation((prev) => ({ ...prev, vonage: "loading" }));
@@ -57,6 +83,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
       });
 
       if (success) {
+        await logValidation({ provider: 'vonage', status: 'success', latency });
         setValidation((prev) => ({
           ...prev,
           vonage: "success",
@@ -67,6 +94,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
           description: "Credenciais estão corretas",
         });
       } else {
+        await logValidation({ provider: 'vonage', status: 'error', latency, errorMessage: 'Credenciais inválidas' });
         setValidation((prev) => ({
           ...prev,
           vonage: "error",
@@ -81,6 +109,9 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
     } catch (err) {
       const endTime = Date.now();
       const latency = endTime - startTime;
+      const errorMsg = err instanceof Error ? err.message : "Erro desconhecido";
+
+      await logValidation({ provider: 'vonage', status: 'error', latency, errorMessage: errorMsg });
 
       onTestComplete({
         id: `credential-vonage-${Date.now()}`,
@@ -91,7 +122,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
           provider: "vonage",
           test_type: "credential_validation",
         },
-        response: err instanceof Error ? err.message : "Erro desconhecido",
+        response: errorMsg,
         latency,
       });
 
@@ -143,6 +174,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
       });
 
       if (success) {
+        await logValidation({ provider: 'twilio', status: 'success', latency });
         setValidation((prev) => ({
           ...prev,
           twilio: "success",
@@ -153,6 +185,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
           description: "Credenciais estão corretas",
         });
       } else {
+        await logValidation({ provider: 'twilio', status: 'error', latency, errorMessage: 'Credenciais inválidas' });
         setValidation((prev) => ({
           ...prev,
           twilio: "error",
@@ -167,6 +200,9 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
     } catch (err) {
       const endTime = Date.now();
       const latency = endTime - startTime;
+      const errorMsg = err instanceof Error ? err.message : "Erro desconhecido";
+
+      await logValidation({ provider: 'twilio', status: 'error', latency, errorMessage: errorMsg });
 
       onTestComplete({
         id: `credential-twilio-${Date.now()}`,
@@ -177,7 +213,7 @@ export const CredentialValidator = ({ onTestComplete }: CredentialValidatorProps
           provider: "twilio",
           test_type: "credential_validation",
         },
-        response: err instanceof Error ? err.message : "Erro desconhecido",
+        response: errorMsg,
         latency,
       });
 

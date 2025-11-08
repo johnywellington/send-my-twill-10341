@@ -2,8 +2,19 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useSyncTwilioSIPDomains } from "@/hooks/use-sync-twilio-sip-domains";
 
-export const SyncTwilioDomainsButton = () => {
-  const { mutate: syncDomains, isPending } = useSyncTwilioSIPDomains();
+interface OrphanedDomain {
+  domain_group_id: string;
+  domain_name: string;
+  domain_sid: string;
+  friendly_name: string;
+}
+
+interface SyncTwilioDomainsButtonProps {
+  onOrphansDetected?: (orphaned: OrphanedDomain[]) => void;
+}
+
+export const SyncTwilioDomainsButton = ({ onOrphansDetected }: SyncTwilioDomainsButtonProps) => {
+  const { mutate: syncDomains, isPending } = useSyncTwilioSIPDomains(onOrphansDetected);
 
   return (
     <Button

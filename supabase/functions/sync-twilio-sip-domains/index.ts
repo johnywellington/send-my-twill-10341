@@ -15,6 +15,13 @@ interface TwilioDomain {
   date_updated: string;
 }
 
+interface OrphanedDomain {
+  domain_group_id: string;
+  domain_name: string;
+  domain_sid: string;
+  friendly_name: string;
+}
+
 interface SyncResponse {
   success: boolean;
   domains: Array<{
@@ -25,6 +32,8 @@ interface SyncResponse {
   }>;
   count: number;
   updated?: number;
+  orphaned?: OrphanedDomain[];
+  orphaned_count?: number;
   error?: string;
 }
 
@@ -213,6 +222,47 @@ serve(async (req) => {
       }
     }
 
+    // 6. DETECTAR ÓRFÃOS (no banco mas não na API)
+    console.log('[Twilio SIP Sync] Detecting orphaned domains...');
+    
+    const apiSids = new Set(domains.map(d => d.sid));
+    const apiDomainNames = new Set(domains.map(d => d.domain_name));
+
+    // Buscar TODOS os configs ativos no banco
+    const { data: allDbConfigs } = await supabase
+      .from('sip_provider_config')
+      .select('*')
+      .eq('provider', 'twilio')
+      .eq('is_active', true);
+
+    // Agrupar por domain_group_id
+    const dbDomainGroups = new Map();
+    allDbConfigs?.forEach(config => {
+      if (!dbDomainGroups.has(config.domain_group_id)) {
+        dbDomainGroups.set(config.domain_group_id, {});
+      }
+      dbDomainGroups.get(config.domain_group_id)[config.config_key] = config.config_value;
+    });
+
+    // Identificar grupos órfãos
+    const orphanedGroups: OrphanedDomain[] = [];
+    for (const [groupId, configs] of dbDomainGroups.entries()) {
+      const sid = configs.sip_domain_sid;
+      const domainName = configs.sip_domain;
+      
+      // Órfão se NEM o SID NEM o domain_name existem na API
+      if (sid && !apiSids.has(sid)) {
+        orphanedGroups.push({
+          domain_group_id: groupId,
+          domain_name: domainName,
+          domain_sid: sid,
+          friendly_name: configs.friendly_name || domainName,
+        });
+      }
+    }
+
+    console.log(`[Twilio SIP Sync] Found ${orphanedGroups.length} orphaned domains`);
+
     // Log success
     await logSyncOperation({
       userId: user.id,
@@ -233,6 +283,7 @@ serve(async (req) => {
           friendly_name: d.friendly_name,
           domain_sid: d.sid,
         })),
+        orphaned_items: orphanedGroups.slice(0, 100),
       },
     });
 
@@ -242,6 +293,8 @@ serve(async (req) => {
         domains: results, 
         count: results.length,
         updated: existingDomains.length,
+        orphaned: orphanedGroups,
+        orphaned_count: orphanedGroups.length,
       } as SyncResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

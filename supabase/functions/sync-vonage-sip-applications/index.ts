@@ -15,6 +15,13 @@ interface VonageApplication {
   };
 }
 
+interface OrphanedApplication {
+  domain_group_id: string;
+  domain_name: string;
+  domain_sid: string;
+  friendly_name: string;
+}
+
 interface SyncResponse {
   success: boolean;
   applications: Array<{
@@ -25,6 +32,8 @@ interface SyncResponse {
   }>;
   count: number;
   updated?: number;
+  orphaned?: OrphanedApplication[];
+  orphaned_count?: number;
   error?: string;
 }
 
@@ -226,6 +235,47 @@ serve(async (req) => {
       }
     }
 
+    // 6. DETECTAR ÓRFÃOS (no banco mas não na API)
+    console.log('[Vonage SIP Sync] Detecting orphaned applications...');
+    
+    const apiAppIds = new Set(voiceApps.map(app => app.id));
+    const apiAppNames = new Set(voiceApps.map(app => app.name));
+
+    // Buscar TODOS os configs ativos no banco
+    const { data: allDbConfigs } = await supabase
+      .from('sip_provider_config')
+      .select('*')
+      .eq('provider', 'vonage')
+      .eq('is_active', true);
+
+    // Agrupar por domain_group_id
+    const dbAppGroups = new Map();
+    allDbConfigs?.forEach(config => {
+      if (!dbAppGroups.has(config.domain_group_id)) {
+        dbAppGroups.set(config.domain_group_id, {});
+      }
+      dbAppGroups.get(config.domain_group_id)[config.config_key] = config.config_value;
+    });
+
+    // Identificar grupos órfãos
+    const orphanedGroups: OrphanedApplication[] = [];
+    for (const [groupId, configs] of dbAppGroups.entries()) {
+      const appId = configs.app_id;
+      const appName = configs.app_name;
+      
+      // Órfão se NEM o app_id NEM o app_name existem na API
+      if (appId && !apiAppIds.has(appId)) {
+        orphanedGroups.push({
+          domain_group_id: groupId,
+          domain_name: appName,
+          domain_sid: appId,
+          friendly_name: configs.friendly_name || appName,
+        });
+      }
+    }
+
+    console.log(`[Vonage SIP Sync] Found ${orphanedGroups.length} orphaned applications`);
+
     // Log success
     await logSyncOperation({
       userId: user.id,
@@ -244,6 +294,7 @@ serve(async (req) => {
           application_id: app.id,
           name: app.name,
         })),
+        orphaned_items: orphanedGroups.slice(0, 100),
       },
     });
 
@@ -253,6 +304,8 @@ serve(async (req) => {
         applications: results, 
         count: results.length,
         updated: existingApps.length,
+        orphaned: orphanedGroups,
+        orphaned_count: orphanedGroups.length,
       } as SyncResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

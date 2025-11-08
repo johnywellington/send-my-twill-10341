@@ -16,6 +16,8 @@ import { SyncTwilioDomainsButton } from "./SyncTwilioDomainsButton";
 import { SyncVonageApplicationsButton } from "./SyncVonageApplicationsButton";
 import { EditDomainDialog } from "./EditDomainDialog";
 import { DeleteDomainDialog } from "./DeleteDomainDialog";
+import { OrphanedDomainsDialog } from "./OrphanedDomainsDialog";
+import { toast } from "sonner";
 
 export function ConfigContent() {
   const navigate = useNavigate();
@@ -56,6 +58,17 @@ export function ConfigContent() {
     domainName: string;
     provider: 'twilio' | 'vonage';
     isDefault: boolean;
+  } | null>(null);
+
+  const [orphanedDialog, setOrphanedDialog] = useState<{
+    open: boolean;
+    provider: 'twilio' | 'vonage';
+    orphanedDomains: Array<{
+      domain_group_id: string;
+      domain_name: string;
+      domain_sid?: string;
+      friendly_name: string;
+    }>;
   } | null>(null);
 
   const { data: validationData } = useDomainValidation(deleteDialog?.domainGroupId || null);
@@ -124,6 +137,19 @@ export function ConfigContent() {
     });
   };
 
+  const handleCleanupOrphans = async (selectedIds: string[]) => {
+    try {
+      for (const domainGroupId of selectedIds) {
+        await deleteDomain(domainGroupId);
+      }
+      
+      toast.success(`${selectedIds.length} registro(s) órfão(s) removido(s)!`);
+      setOrphanedDialog(null);
+    } catch (error) {
+      toast.error('Erro ao remover registros órfãos');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -146,8 +172,16 @@ export function ConfigContent() {
               <CardDescription>Gerencie múltiplos domínios SIP Twilio</CardDescription>
             </div>
             <div className="flex gap-2">
-              <SyncTwilioDomainsButton />
-              <Button 
+              <SyncTwilioDomainsButton 
+                onOrphansDetected={(orphaned) => {
+                  setOrphanedDialog({
+                    open: true,
+                    provider: 'twilio',
+                    orphanedDomains: orphaned,
+                  });
+                }}
+              />
+              <Button
                 onClick={handleGenerateRandomTwilio} 
                 size="sm" 
                 variant="outline"
@@ -280,8 +314,16 @@ export function ConfigContent() {
               <CardDescription>Gerencie múltiplas aplicações SIP Vonage</CardDescription>
             </div>
             <div className="flex gap-2">
-              <SyncVonageApplicationsButton />
-              <Button 
+              <SyncVonageApplicationsButton 
+                onOrphansDetected={(orphaned) => {
+                  setOrphanedDialog({
+                    open: true,
+                    provider: 'vonage',
+                    orphanedDomains: orphaned,
+                  });
+                }}
+              />
+              <Button
                 onClick={handleGenerateRandomVonage} 
                 size="sm" 
                 variant="outline"
@@ -530,6 +572,18 @@ export function ConfigContent() {
             deleteDomain(deleteDialog.domainGroupId);
             setDeleteDialog(null);
           }}
+        />
+      )}
+
+      {/* Dialog de Registros Órfãos */}
+      {orphanedDialog && (
+        <OrphanedDomainsDialog
+          open={orphanedDialog.open}
+          onOpenChange={(open) => !open && setOrphanedDialog(null)}
+          provider={orphanedDialog.provider}
+          orphanedDomains={orphanedDialog.orphanedDomains}
+          onCleanup={handleCleanupOrphans}
+          isLoading={false}
         />
       )}
     </div>

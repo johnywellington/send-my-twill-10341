@@ -9,15 +9,26 @@ interface TwilioDomain {
   friendly_name: string;
 }
 
+interface OrphanedDomain {
+  domain_group_id: string;
+  domain_name: string;
+  domain_sid: string;
+  friendly_name: string;
+}
+
 interface SyncResponse {
   success: boolean;
   domains: TwilioDomain[];
   count: number;
   updated?: number;
+  orphaned?: OrphanedDomain[];
+  orphaned_count?: number;
   error?: string;
 }
 
-export const useSyncTwilioSIPDomains = () => {
+export const useSyncTwilioSIPDomains = (
+  onOrphansDetected?: (orphaned: OrphanedDomain[]) => void
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -45,8 +56,15 @@ export const useSyncTwilioSIPDomains = () => {
 
       const newCount = data.count || 0;
       const updatedCount = data.updated || 0;
+      const orphanedCount = data.orphaned_count || 0;
 
-      if (newCount === 0 && updatedCount === 0) {
+      // Se houver órfãos detectados, notificar
+      if (orphanedCount > 0 && onOrphansDetected && data.orphaned) {
+        onOrphansDetected(data.orphaned);
+        toast.warning(`${orphanedCount} registro(s) órfão(s) detectado(s)`, {
+          description: 'Clique em "Revisar Órfãos" para gerenciar.',
+        });
+      } else if (newCount === 0 && updatedCount === 0) {
         toast.success("Sincronização concluída", {
           description: "Todos os domínios SIP já estão sincronizados.",
         });
@@ -56,7 +74,7 @@ export const useSyncTwilioSIPDomains = () => {
         });
       }
 
-      console.log('[Twilio SIP Sync] Sync completed:', { newCount, updatedCount });
+      console.log('[Twilio SIP Sync] Sync completed:', { newCount, updatedCount, orphanedCount });
     },
     onError: (error: Error) => {
       console.error('[Twilio SIP Sync] Mutation error:', error);

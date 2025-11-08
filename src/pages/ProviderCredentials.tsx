@@ -2,11 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useImportCredentials } from "@/hooks/use-import-credentials";
 import { CredentialDialog } from "@/components/credentials/CredentialDialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCredentialStats } from "@/hooks/use-credential-stats";
+import { CredentialStatsCard } from "@/components/credentials/CredentialStatsCard";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProviderCredentials() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -15,6 +19,7 @@ export default function ProviderCredentials() {
   const [credentialToDelete, setCredentialToDelete] = useState<string | null>(null);
 
   const { data: credentials, isLoading } = useProviderCredentials();
+  const { data: allStats, isLoading: statsLoading } = useCredentialStats();
   const createMutation = useCreateProviderCredential();
   const updateMutation = useUpdateProviderCredential();
   const deleteMutation = useDeleteProviderCredential();
@@ -75,12 +80,22 @@ export default function ProviderCredentials() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="list">Lista de Credenciais</TabsTrigger>
+          <TabsTrigger value="stats">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Estatísticas de Uso
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-6">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
           {/* Twilio Section */}
           <Card>
             <CardHeader>
@@ -222,6 +237,31 @@ export default function ProviderCredentials() {
           </Card>
         </div>
       )}
+    </TabsContent>
+
+    <TabsContent value="stats" className="mt-6">
+      {statsLoading ? (
+        <div className="grid gap-6">
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      ) : allStats && Array.isArray(allStats) && allStats.length > 0 ? (
+        <div className="grid gap-6">
+          {allStats.map((stats) => (
+            <CredentialStatsCard key={stats.credentialId} stats={stats} />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Nenhuma estatística disponível ainda</p>
+            <p className="text-sm mt-2">Comece a usar suas credenciais para ver estatísticas aqui</p>
+          </CardContent>
+        </Card>
+      )}
+    </TabsContent>
+  </Tabs>
 
       <CredentialDialog
         open={dialogOpen}

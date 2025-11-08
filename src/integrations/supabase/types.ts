@@ -274,6 +274,7 @@ export type Database = {
           conversation_uuid: string | null
           cost: number | null
           created_at: string
+          credential_id: string | null
           dtmf_response: string | null
           duration: number | null
           error_message: string | null
@@ -296,6 +297,7 @@ export type Database = {
           conversation_uuid?: string | null
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           dtmf_response?: string | null
           duration?: number | null
           error_message?: string | null
@@ -318,6 +320,7 @@ export type Database = {
           conversation_uuid?: string | null
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           dtmf_response?: string | null
           duration?: number | null
           error_message?: string | null
@@ -335,7 +338,15 @@ export type Database = {
           user_id?: string
           voice_label?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ivr_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ivr_responses: {
         Row: {
@@ -1139,6 +1150,7 @@ export type Database = {
         Row: {
           cost: number | null
           created_at: string
+          credential_id: string | null
           error_message: string | null
           external_id: string | null
           from_number: string
@@ -1153,6 +1165,7 @@ export type Database = {
         Insert: {
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           error_message?: string | null
           external_id?: string | null
           from_number: string
@@ -1167,6 +1180,7 @@ export type Database = {
         Update: {
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           error_message?: string | null
           external_id?: string | null
           from_number?: string
@@ -1178,7 +1192,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sync_logs: {
         Row: {
@@ -1341,6 +1363,7 @@ export type Database = {
           call_uuid: string | null
           cost: number | null
           created_at: string
+          credential_id: string | null
           duration: number | null
           error_message: string | null
           from_number: string
@@ -1360,6 +1383,7 @@ export type Database = {
           call_uuid?: string | null
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           duration?: number | null
           error_message?: string | null
           from_number: string
@@ -1379,6 +1403,7 @@ export type Database = {
           call_uuid?: string | null
           cost?: number | null
           created_at?: string
+          credential_id?: string | null
           duration?: number | null
           error_message?: string | null
           from_number?: string
@@ -1394,7 +1419,15 @@ export type Database = {
           user_id?: string
           voice_label?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "voice_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_health_checks: {
         Row: {

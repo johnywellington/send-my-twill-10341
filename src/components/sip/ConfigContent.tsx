@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useDomainValidation } from "@/hooks/use-domain-validation";
+import { useOrphanedDomains } from "@/hooks/use-orphaned-domains";
 import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
 import { useNavigate } from "react-router-dom";
 import { SyncTwilioDomainsButton } from "./SyncTwilioDomainsButton";
@@ -17,10 +18,13 @@ import { SyncVonageApplicationsButton } from "./SyncVonageApplicationsButton";
 import { EditDomainDialog } from "./EditDomainDialog";
 import { DeleteDomainDialog } from "./DeleteDomainDialog";
 import { OrphanedDomainsDialog } from "./OrphanedDomainsDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function ConfigContent() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { 
     configs, 
     isLoading, 
@@ -34,6 +38,9 @@ export function ConfigContent() {
     isCreating,
     isUpdating,
   } = useSIPConfig();
+  
+  const { data: orphanedData } = useOrphanedDomains();
+  const orphanedIds = orphanedData?.orphanedIds || new Set();
   
   const [twilioDialogOpen, setTwilioDialogOpen] = useState(false);
   const [vonageDialogOpen, setVonageDialogOpen] = useState(false);
@@ -143,11 +150,24 @@ export function ConfigContent() {
         await deleteDomain(domainGroupId);
       }
       
+      // Invalidar cache de órfãos
+      queryClient.invalidateQueries({ queryKey: ['orphaned-domains'] });
+      
       toast.success(`${selectedIds.length} registro(s) órfão(s) removido(s)!`);
       setOrphanedDialog(null);
     } catch (error) {
       toast.error('Erro ao remover registros órfãos');
     }
+  };
+
+  const isOrphan = (domainGroupId: string) => {
+    return orphanedIds.has(domainGroupId);
+  };
+
+  const getOrphanDetails = (domainGroupId: string) => {
+    return orphanedData?.orphanedDomains.find(
+      (o) => o.domain_group_id === domainGroupId
+    );
   };
 
   if (isLoading) {
@@ -221,9 +241,55 @@ export function ConfigContent() {
                       {domain.sip_domain_sid}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={domain.is_active ? "default" : "secondary"}>
-                        {domain.is_active ? '🟢 Ativo' : '🔴 Inativo'}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={domain.is_active ? "default" : "secondary"}>
+                          {domain.is_active ? '🟢 Ativo' : '🔴 Inativo'}
+                        </Badge>
+                        
+                        {isOrphan(domain.domain_group_id) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="destructive" 
+                                  className="cursor-help animate-pulse"
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Órfão
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-xs">
+                                <div className="space-y-2">
+                                  <p className="font-semibold text-sm">⚠️ Registro Órfão Detectado</p>
+                                  <p className="text-xs">
+                                    Este domínio foi deletado da Twilio mas ainda existe no banco de dados local.
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Detectado em: {getOrphanDetails(domain.domain_group_id) 
+                                      ? new Date(getOrphanDetails(domain.domain_group_id)!.detected_at).toLocaleString('pt-BR')
+                                      : 'N/A'
+                                    }
+                                  </p>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="w-full mt-2"
+                                    onClick={() => {
+                                      setOrphanedDialog({
+                                        open: true,
+                                        provider: 'twilio',
+                                        orphanedDomains: orphanedData?.orphanedDomains.filter(o => o.provider === 'twilio') || [],
+                                      });
+                                    }}
+                                  >
+                                    Revisar e Remover
+                                  </Button>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -361,9 +427,55 @@ export function ConfigContent() {
                     <TableCell className="font-mono text-xs">{app.app_id}</TableCell>
                     <TableCell className="font-mono text-sm">{app.app_name}</TableCell>
                     <TableCell>
-                      <Badge variant={app.is_active ? "default" : "secondary"}>
-                        {app.is_active ? '🟢 Ativo' : '🔴 Inativo'}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={app.is_active ? "default" : "secondary"}>
+                          {app.is_active ? '🟢 Ativo' : '🔴 Inativo'}
+                        </Badge>
+                        
+                        {isOrphan(app.domain_group_id) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant="destructive" 
+                                  className="cursor-help animate-pulse"
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Órfão
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-xs">
+                                <div className="space-y-2">
+                                  <p className="font-semibold text-sm">⚠️ Registro Órfão Detectado</p>
+                                  <p className="text-xs">
+                                    Esta aplicação foi deletada da Vonage mas ainda existe no banco de dados local.
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Detectado em: {getOrphanDetails(app.domain_group_id) 
+                                      ? new Date(getOrphanDetails(app.domain_group_id)!.detected_at).toLocaleString('pt-BR')
+                                      : 'N/A'
+                                    }
+                                  </p>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="w-full mt-2"
+                                    onClick={() => {
+                                      setOrphanedDialog({
+                                        open: true,
+                                        provider: 'vonage',
+                                        orphanedDomains: orphanedData?.orphanedDomains.filter(o => o.provider === 'vonage') || [],
+                                      });
+                                    }}
+                                  >
+                                    Revisar e Remover
+                                  </Button>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

@@ -17,6 +17,7 @@ interface VoiceCallRequest {
   voiceName?: string;
   provider?: string;
   dryRun?: boolean;
+  credentialId?: string;
 }
 
 async function generateJWT(applicationId: string, privateKey: string): Promise<string> {
@@ -100,7 +101,9 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, provider = 'vonage', dryRun = false }: VoiceCallRequest = await req.json();
+    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, provider = 'vonage', dryRun = false, credentialId }: VoiceCallRequest = await req.json();
+    
+    console.log('Request params:', { provider, credentialId, to, from });
     
     console.log('Provider selected:', provider);
     
@@ -148,8 +151,49 @@ serve(async (req: Request) => {
     if (provider === 'twilio') {
       console.log('🟦 Using Twilio Voice API');
       
-      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      // Carregar credenciais dinamicamente baseado no credentialId
+      let accountSid: string | undefined;
+      let authToken: string | undefined;
+
+      if (credentialId) {
+        console.log(`🔑 Loading Twilio credentials from credentialId: ${credentialId}`);
+        
+        // Buscar a credential do banco
+        const { data: credential, error: credError } = await supabase
+          .from('provider_credentials')
+          .select('secret_key, account_identifier')
+          .eq('id', credentialId)
+          .eq('provider', 'twilio')
+          .eq('is_active', true)
+          .single();
+
+        if (credError || !credential) {
+          console.error('Failed to load credential:', credError);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'Credencial não encontrada ou inativa',
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const secretKey = credential.secret_key;
+        
+        // Se é legacy, usar secrets globais
+        if (secretKey === 'legacy_twilio') {
+          accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+          authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+        } else if (secretKey) {
+          // Usar secrets específicos da credencial
+          accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
+          authToken = Deno.env.get(`CRED_${secretKey}_token`);
+        }
+      } else {
+        // Fallback para credenciais globais (legacy)
+        accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      }
       
       console.log(`🔑 Twilio Account SID configurado: ${accountSid}`);
       
@@ -272,8 +316,49 @@ serve(async (req: Request) => {
     // ============ VONAGE VOICE API BRANCH (EXISTING CODE) ============
     console.log('🟪 Using Vonage Voice API');
     
-    const applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
-    const privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+    // Carregar credenciais dinamicamente baseado no credentialId
+    let applicationId: string | undefined;
+    let privateKey: string | undefined;
+
+    if (credentialId) {
+      console.log(`🔑 Loading Vonage credentials from credentialId: ${credentialId}`);
+      
+      // Buscar a credential do banco
+      const { data: credential, error: credError } = await supabase
+        .from('provider_credentials')
+        .select('secret_key, account_identifier')
+        .eq('id', credentialId)
+        .eq('provider', 'vonage')
+        .eq('is_active', true)
+        .single();
+
+      if (credError || !credential) {
+        console.error('Failed to load credential:', credError);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Credencial não encontrada ou inativa',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const secretKey = credential.secret_key;
+      
+      // Se é legacy, usar secrets globais
+      if (secretKey === 'legacy_vonage') {
+        applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
+        privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+      } else if (secretKey) {
+        // Usar secrets específicos da credencial
+        applicationId = Deno.env.get(`CRED_${secretKey}_app_id`);
+        privateKey = Deno.env.get(`CRED_${secretKey}_private_key`);
+      }
+    } else {
+      // Fallback para credenciais globais (legacy)
+      applicationId = Deno.env.get('VONAGE_APPLICATION_ID');
+      privateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+    }
     
     console.log(`🔑 Vonage Application ID configurado: ${applicationId}`);
 

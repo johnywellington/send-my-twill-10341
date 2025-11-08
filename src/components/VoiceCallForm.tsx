@@ -23,6 +23,7 @@ import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
+import { CredentialSelector } from "@/components/credentials/CredentialSelector";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;
@@ -41,6 +42,7 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [loading, setLoading] = useState(false);
   const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | undefined>();
   const createTemplate = useCreateTemplate();
   
   // Estados para progresso de envio em lote
@@ -120,7 +122,8 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
             premium,
             voiceName: voiceName || undefined,
             provider: providerToUse,
-            dryRun
+            dryRun,
+            credentialId: selectedCredentialId
           }
         });
       };
@@ -233,6 +236,14 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         </CardHeader>
         <CardContent className="pt-8 px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            <CredentialSelector
+              provider={provider}
+              value={selectedCredentialId}
+              onChange={setSelectedCredentialId}
+              label={`Conta ${provider === 'twilio' ? 'Twilio' : 'Vonage'}`}
+              showLegacyOption={true}
+            />
+
             <PhoneNumberSelector
               value={from}
               onChange={setFrom}

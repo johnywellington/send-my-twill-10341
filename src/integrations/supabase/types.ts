@@ -375,6 +375,7 @@ export type Database = {
         Row: {
           country_code: string
           created_at: string | null
+          credential_id: string | null
           friendly_name: string | null
           id: string
           is_active: boolean | null
@@ -393,6 +394,7 @@ export type Database = {
         Insert: {
           country_code: string
           created_at?: string | null
+          credential_id?: string | null
           friendly_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -411,6 +413,7 @@ export type Database = {
         Update: {
           country_code?: string
           created_at?: string | null
+          credential_id?: string | null
           friendly_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -426,7 +429,15 @@ export type Database = {
           user_id?: string
           webhook_configured?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -468,6 +479,42 @@ export type Database = {
           phone?: string | null
           suspended_at?: string | null
           suspension_reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      provider_credentials: {
+        Row: {
+          account_identifier: string
+          created_at: string
+          credential_name: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_identifier: string
+          created_at?: string
+          credential_name: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_identifier?: string
+          created_at?: string
+          credential_name?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider?: string
           updated_at?: string
           user_id?: string
         }

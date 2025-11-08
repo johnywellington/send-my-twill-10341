@@ -1,4 +1,4 @@
-import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Database } from "lucide-react";
+import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Database, Key } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -42,6 +42,7 @@ const userGroups = [
     label: "Gestão",
     routes: [
       { title: "Números", url: "/numbers", icon: Phone },
+      { title: "Credenciais", url: "/credentials", icon: Key },
       { title: "Contatos", url: "/contacts", icon: Users },
       { title: "Templates", url: "/templates", icon: FileText },
       { title: "Validar Números", url: "/validar-numeros", icon: CheckCircle },

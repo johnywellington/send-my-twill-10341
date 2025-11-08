@@ -25,6 +25,7 @@ import HistoricoSMS from "./pages/HistoricoSMS";
 import ValidarNumeros from "./pages/ValidarNumeros";
 import RelatorioCustos from "./pages/RelatorioCustos";
 import ChamadasRecebidas from "./pages/ChamadasRecebidas";
+import ProviderCredentials from "./pages/ProviderCredentials";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import AdminSIP from "./pages/admin/SIP";
@@ -124,6 +125,13 @@ const App = () => (
           <UserRoute>
             <UserLayout>
               <ChamadasURA />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/credentials" element={
+          <UserRoute>
+            <UserLayout>
+              <ProviderCredentials />
             </UserLayout>
           </UserRoute>
         } />

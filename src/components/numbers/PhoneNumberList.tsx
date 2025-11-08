@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity, AlertTriangle } from "lucide-react";
 import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
 import { useOrphanedNumbers } from "@/hooks/use-orphaned-numbers";
+import { useProviderCredentials } from "@/hooks/use-provider-credentials";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
@@ -19,6 +20,7 @@ import { WebhookHealthDialog } from "./WebhookHealthDialog";
 export const PhoneNumberList = () => {
   const { data: phoneNumbers, isLoading } = usePhoneNumbers();
   const { data: orphanedData } = useOrphanedNumbers();
+  const { data: credentials } = useProviderCredentials();
   const orphanedIds = orphanedData?.orphanedIds || new Set();
   
   const deleteMutation = useDeletePhoneNumber();
@@ -36,6 +38,32 @@ export const PhoneNumberList = () => {
 
   const getOrphanDetails = (numberId: string) => {
     return orphanedData?.orphanedNumbers.find((o) => o.id === numberId);
+  };
+
+  const getCredentialInfo = (credentialId: string | null | undefined) => {
+    if (!credentialId || !credentials) return null;
+    return credentials.find(c => c.id === credentialId);
+  };
+
+  const getCredentialBadgeColor = (provider: string, credentialId: string | null | undefined) => {
+    const credential = getCredentialInfo(credentialId);
+    if (!credential) {
+      return provider === 'twilio' 
+        ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' 
+        : 'bg-green-500/10 text-green-600 border-green-500/20';
+    }
+    
+    // Generate consistent color based on credential name
+    const colors = [
+      'bg-blue-500/10 text-blue-600 border-blue-500/20',
+      'bg-purple-500/10 text-purple-600 border-purple-500/20',
+      'bg-pink-500/10 text-pink-600 border-pink-500/20',
+      'bg-orange-500/10 text-orange-600 border-orange-500/20',
+      'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+      'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    ];
+    const hash = credential.credential_name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   const handleCopyAll = (phone: PhoneNumber) => {
@@ -100,6 +128,7 @@ export const PhoneNumberList = () => {
 
   const renderPhoneCard = (phone: PhoneNumber) => {
     const webhooks = getWebhookUrls(phone.phone_number, phone.provider);
+    const credentialInfo = getCredentialInfo(phone.credential_id);
     
     return (
       <Card key={phone.id} className={phone.is_active ? '' : 'opacity-60'}>
@@ -111,9 +140,37 @@ export const PhoneNumberList = () => {
                 <CardDescription>{phone.friendly_name}</CardDescription>
               )}
             </div>
-            <Badge variant={phone.provider === 'vonage' ? 'default' : 'secondary'}>
-              {phone.provider.toUpperCase()}
-            </Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge 
+                    variant="outline"
+                    className={getCredentialBadgeColor(phone.provider, phone.credential_id)}
+                  >
+                    {phone.provider.toUpperCase()}
+                    {credentialInfo && ` • ${credentialInfo.credential_name}`}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs">
+                  <div className="space-y-1 text-xs">
+                    <p className="font-semibold">Provedor: {phone.provider.toUpperCase()}</p>
+                    {credentialInfo ? (
+                      <>
+                        <p>Conta: <span className="font-medium">{credentialInfo.credential_name}</span></p>
+                        <p className="text-muted-foreground font-mono text-[10px]">
+                          {credentialInfo.account_identifier}
+                        </p>
+                        {credentialInfo.is_default && (
+                          <Badge variant="secondary" className="text-[10px] mt-1">Padrão</Badge>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">Conta não identificada</p>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardHeader>
         

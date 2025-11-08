@@ -110,79 +110,36 @@ serve(async (req) => {
       }
     }
 
-    // Gerar JWT para autenticação com Vonage Programmable SIP API
-    const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
-    const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID');
+    // Autenticação PSIP usa Basic (API key/secret)
+    const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
+    const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
 
-    if (!vonagePrivateKey || !vonageAppId) {
-      throw new Error('Vonage credentials not configured');
+    if (!vonageApiKey || !vonageApiSecret) {
+      throw new Error('Vonage API key/secret não configurados');
     }
 
-    // Helpers para JWT RS256
-    const pemToArrayBuffer = (pem: string): ArrayBuffer => {
-      const clean = pem
-        .replace(/\\n/g, '\n')
-        .replace('-----BEGIN PRIVATE KEY-----', '')
-        .replace('-----END PRIVATE KEY-----', '')
-        .replace(/\r?\n|\s/g, '');
-      const binary = atob(clean);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return bytes.buffer;
-    };
+    // Validar e preparar key (Vonage exige a-z, 0-9 e hífen)
+    const key = String(username).toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(key)) {
+      throw new Error('Username inválido: use apenas letras minúsculas, números e hífen (-)');
+    }
 
-    const base64UrlEncode = (input: Uint8Array) =>
-      btoa(String.fromCharCode(...input))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
+    const basicAuth = 'Basic ' + btoa(`${vonageApiKey}:${vonageApiSecret}`);
 
-    const base64UrlEncodeString = (str: string) =>
-      base64UrlEncode(new TextEncoder().encode(str));
+    console.log(`Creating Vonage PSIP user at domain: ${configMap.sip_domain}`, { key });
 
-    // Montar JWT
-    const now = Math.floor(Date.now() / 1000);
-    const header = { alg: 'RS256', typ: 'JWT' };
-    const payload = {
-      application_id: vonageAppId,
-      iat: now,
-      exp: now + 15 * 60,
-      jti: crypto.randomUUID(),
-    };
-
-    const encodedHeader = base64UrlEncodeString(JSON.stringify(header));
-    const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
-    const toSign = `${encodedHeader}.${encodedPayload}`;
-
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      pemToArrayBuffer(vonagePrivateKey),
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    const signature = await crypto.subtle.sign(
-      'RSASSA-PKCS1-v1_5',
-      privateKey,
-      new TextEncoder().encode(toSign)
-    );
-    const jwt = `${toSign}.${base64UrlEncode(new Uint8Array(signature))}`;
-
-    console.log(`Creating Vonage PSIP user at domain: ${configMap.sip_domain}`);
-
-    // Create SIP user via Vonage Programmable SIP API
+    // Create/Update SIP user via Vonage Programmable SIP API (PUT upsert)
     const endpointResponse = await fetch(
-      `https://api.nexmo.com/v1/psip/${configMap.sip_domain}/users`,
+      `https://api.nexmo.com/v1/psip/${configMap.sip_domain}/users/${key}`,
       {
-        method: 'POST',
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${jwt}`,
+          'Authorization': basicAuth,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          key: username,
+          key,
           secret: password,
-          authType: 'digest',
         }),
       }
     );
@@ -212,20 +169,20 @@ serve(async (req) => {
     }
 
     const vonageUser = await endpointResponse.json();
-    console.log('Vonage user created:', vonageUser);
+    console.log('Vonage user created/updated:', vonageUser);
 
-    // Insert into database with correct Vonage user ID
+    // Insert into database with correct Vonage user key as endpoint_id
     const { data: sipUser, error: insertError } = await supabase
       .from('sip_users')
       .insert({
         user_id: user.id,
         provider: 'vonage',
-        sip_username: username,
+        sip_username: key,
         sip_password: password,
         sip_domain: configMap.sip_domain,
         extension,
         display_name,
-        vonage_endpoint_id: vonageUser.id,  // ✅ ID correto da API
+        vonage_endpoint_id: vonageUser.key || key,  // usar key como identificador
         domain_group_id: domainGroupId || null,
         credential_id: credentialId || null,
       })

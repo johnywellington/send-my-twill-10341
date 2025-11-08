@@ -49,61 +49,13 @@ serve(async (req) => {
 
     console.log(`[Vonage Recover] Found ${missingUsers.length} users without endpoint_id`);
 
-    // Gerar JWT para autenticação
-    const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
-    const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID');
-
-    if (!vonagePrivateKey || !vonageAppId) {
-      throw new Error('Vonage credentials not configured');
+    // Autenticação PSIP (Basic)
+    const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
+    const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
+    if (!vonageApiKey || !vonageApiSecret) {
+      throw new Error('Vonage API key/secret não configurados');
     }
-
-    const pemToArrayBuffer = (pem: string): ArrayBuffer => {
-      const clean = pem
-        .replace(/\\n/g, '\n')
-        .replace('-----BEGIN PRIVATE KEY-----', '')
-        .replace('-----END PRIVATE KEY-----', '')
-        .replace(/\r?\n|\s/g, '');
-      const binary = atob(clean);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return bytes.buffer;
-    };
-
-    const base64UrlEncode = (input: Uint8Array) =>
-      btoa(String.fromCharCode(...input))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-    const base64UrlEncodeString = (str: string) =>
-      base64UrlEncode(new TextEncoder().encode(str));
-
-    const now = Math.floor(Date.now() / 1000);
-    const header = { alg: 'RS256', typ: 'JWT' };
-    const payload = {
-      application_id: vonageAppId,
-      iat: now,
-      exp: now + 15 * 60,
-      jti: crypto.randomUUID(),
-    };
-
-    const encodedHeader = base64UrlEncodeString(JSON.stringify(header));
-    const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
-    const toSign = `${encodedHeader}.${encodedPayload}`;
-
-    const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      pemToArrayBuffer(vonagePrivateKey),
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    const signature = await crypto.subtle.sign(
-      'RSASSA-PKCS1-v1_5',
-      privateKey,
-      new TextEncoder().encode(toSign)
-    );
-    const jwt = `${toSign}.${base64UrlEncode(new Uint8Array(signature))}`;
+    const basicAuth = 'Basic ' + btoa(`${vonageApiKey}:${vonageApiSecret}`);
 
     // Recuperar IDs da API para cada usuário
     const results = {
@@ -121,7 +73,7 @@ serve(async (req) => {
           {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${jwt}`,
+              'Authorization': basicAuth,
               'Content-Type': 'application/json',
             },
           }

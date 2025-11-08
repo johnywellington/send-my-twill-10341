@@ -83,20 +83,33 @@ export function useSIPUsers(credentialId?: string) {
   });
 
   const deleteUser = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('sip_users')
-        .delete()
-        .eq('id', id);
+    mutationFn: async (params: { id: string; provider: 'twilio' | 'vonage' }) => {
+      console.log(`[SIP User Delete] Deleting user ${params.id} from ${params.provider}`);
+      
+      const functionName = params.provider === 'twilio' 
+        ? 'sip-twilio-delete-user' 
+        : 'sip-vonage-delete-user';
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: {
+          sip_user_id: params.id,
+        },
+      });
+
+      if (error) {
+        console.error(`[SIP User Delete] Error from ${functionName}:`, error);
+        throw error;
+      }
+      
+      console.log(`[SIP User Delete] Success from ${functionName}:`, data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sip-users'] });
-      toast.success('Usuário removido');
+      toast.success('Usuário removido da API e banco de dados');
     },
     onError: (error: Error) => {
-      toast.error(`Erro ao remover: ${error.message}`);
+      toast.error(`Erro ao remover usuário: ${error.message}`);
     },
   });
 
@@ -106,5 +119,6 @@ export function useSIPUsers(credentialId?: string) {
     createUser: createUser.mutate,
     deleteUser: deleteUser.mutate,
     isCreating: createUser.isPending,
+    isDeleting: deleteUser.isPending,
   };
 }

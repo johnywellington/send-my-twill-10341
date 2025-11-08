@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Users, Copy } from "lucide-react";
+import { Loader2, Plus, Users, Copy, Trash2 } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
 import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
@@ -13,14 +13,26 @@ import { CredentialBadge } from "./CredentialBadge";
 import { SyncEndpointsButton } from "./SyncEndpointsButton";
 import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [orphanedDialogOpen, setOrphanedDialogOpen] = useState(false);
   const [orphanedUsers, setOrphanedUsers] = useState<any[]>([]);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   const { selectedCredentialId } = useProvider();
-  const { users, isLoading } = useSIPUsers(selectedCredentialId);
+  const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
 
   const handleOrphansDetected = (orphaned: any[]) => {
     setOrphanedUsers(orphaned);
@@ -55,6 +67,22 @@ export function UsersContent() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
+  };
+
+  const handleDeleteClick = (user: any) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      deleteUser({
+        id: userToDelete.id,
+        provider: userToDelete.provider
+      });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -189,7 +217,7 @@ export function UsersContent() {
                   <TableHead>Provider</TableHead>
                   <TableHead>Credencial</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -215,13 +243,28 @@ export function UsersContent() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => copyToClipboard(formatSIPUri(user.sip_username, user.sip_domain), 'SIP URI')}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => copyToClipboard(formatSIPUri(user.sip_username, user.sip_domain), 'SIP URI')}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteClick(user)}
+                            disabled={isDeleting}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            {isDeleting && userToDelete?.id === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -237,6 +280,33 @@ export function UsersContent() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o usuário <strong className="font-mono">{userToDelete?.sip_username}</strong> (ramal {userToDelete?.extension})?
+              <br /><br />
+              Esta ação irá:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Remover o usuário da API {userToDelete?.provider === 'twilio' ? 'Twilio' : 'Vonage'}</li>
+                <li>Excluir o registro do banco de dados local</li>
+                <li className="text-destructive font-medium">Esta ação não pode ser desfeita</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

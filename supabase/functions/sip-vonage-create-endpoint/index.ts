@@ -166,8 +166,8 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username,
-          password,
+          key: username,
+          secret: password,
           authType: 'digest',
         }),
       }

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ProviderSelector } from "@/components/ProviderSelector";
+import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { useProvider } from "@/contexts/ProviderContext";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -13,6 +15,7 @@ interface UserLayoutProps {
 
 export const UserLayout = ({ children }: UserLayoutProps) => {
   const { signOut, user, isAdmin } = useAuth();
+  const { provider, selectedCredentialId, setSelectedCredentialId } = useProvider();
   const navigate = useNavigate();
 
   return (
@@ -30,6 +33,15 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
             
             <div className="flex items-center gap-4">
               <ProviderSelector />
+              
+              <div className="w-64">
+                <CredentialSelector
+                  provider={provider}
+                  value={selectedCredentialId}
+                  onChange={setSelectedCredentialId}
+                  showLegacyOption={true}
+                />
+              </div>
               
               {isAdmin && (
                 <Button

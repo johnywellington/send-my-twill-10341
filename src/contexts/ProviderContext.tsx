@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 type Provider = 'twilio' | 'vonage';
 
@@ -9,6 +9,8 @@ interface ProviderContextType {
   setAutoFallback: (enabled: boolean) => void;
   getAlternativeProvider: () => Provider;
   isLoading: boolean;
+  selectedCredentialId: string | undefined;
+  setSelectedCredentialId: (credentialId: string | undefined) => void;
 }
 
 const ProviderContext = createContext<ProviderContextType | undefined>(undefined);
@@ -23,6 +25,11 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
   const [autoFallback, setAutoFallbackState] = useState<boolean>(() => {
     const saved = localStorage.getItem('auto-fallback');
     return saved === 'true';
+  });
+  
+  const [selectedCredentialId, setSelectedCredentialIdState] = useState<string | undefined>(() => {
+    const saved = localStorage.getItem('selected-credential-id');
+    return saved || undefined;
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +49,15 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
     setAutoFallbackState(enabled);
   };
 
+  const setSelectedCredentialId = (credentialId: string | undefined) => {
+    if (credentialId) {
+      localStorage.setItem('selected-credential-id', credentialId);
+    } else {
+      localStorage.removeItem('selected-credential-id');
+    }
+    setSelectedCredentialIdState(credentialId);
+  };
+
   const getAlternativeProvider = (): Provider => {
     return provider === 'twilio' ? 'vonage' : 'twilio';
   };
@@ -53,7 +69,9 @@ export function ProviderProvider({ children }: { children: ReactNode }) {
       autoFallback, 
       setAutoFallback,
       getAlternativeProvider,
-      isLoading 
+      isLoading,
+      selectedCredentialId,
+      setSelectedCredentialId
     }}>
       {children}
     </ProviderContext.Provider>

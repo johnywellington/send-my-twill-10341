@@ -30,7 +30,7 @@ interface SmsFormProps {
 }
 
 export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
-  const { provider, autoFallback, getAlternativeProvider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const { isTrial, isLoading: loadingAccountType } = useTwilioAccountType();
   const [destinations, setDestinations] = useState<string[]>([""]);
@@ -41,7 +41,6 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [dryRun, setDryRun] = useState(false);
   const [useSenderId, setUseSenderId] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string | undefined>();
   const createTemplate = useCreateTemplate();
   
   // Estados para progresso de envio em lote
@@ -348,14 +347,6 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
                 Escolha qual conta usar para enviar esta mensagem
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <CredentialSelector
-                provider={provider}
-                value={selectedCredentialId}
-                onChange={setSelectedCredentialId}
-                showLegacyOption={true}
-              />
-            </CardContent>
           </Card>
 
           {!useSenderId && (

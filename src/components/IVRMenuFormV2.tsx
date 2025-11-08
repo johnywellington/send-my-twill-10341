@@ -25,7 +25,7 @@ import { calculateDelay, calculateEstimatedTime } from "@/lib/rate-limits";
 import { CredentialSelector } from "@/components/credentials/CredentialSelector";
 
 export function IVRMenuFormV2() {
-  const { provider, autoFallback, getAlternativeProvider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>([""]);
   const MAX_DESTINATIONS = 100;
@@ -42,7 +42,6 @@ export function IVRMenuFormV2() {
   const [totalToSend, setTotalToSend] = useState(0);
   const [dryRun, setDryRun] = useState(false);
   const [throttle, setThrottle] = useState(1.0); // 100% por padrão
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string | undefined>();
 
   // Estados do formulário simplificado
   const [messageText, setMessageText] = useState("Está a falar com o serviço de segurança do seu banco. Contactamos para confirmar uma possível tentativa de fraude no seu cartão. Esta chamada está a ser gravada. Se reconhece a operação, prima 1. Se não reconhece, prima 2, e será encaminhado para um assistente.");
@@ -343,14 +342,6 @@ export function IVRMenuFormV2() {
           {/* Configuração Básica */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground/80">Configuração Básica</h3>
-            
-            <CredentialSelector
-              provider={provider}
-              value={selectedCredentialId}
-              onChange={setSelectedCredentialId}
-              label={`Conta ${provider === 'twilio' ? 'Twilio' : 'Vonage'}`}
-              showLegacyOption={true}
-            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-4">

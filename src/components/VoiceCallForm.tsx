@@ -30,7 +30,7 @@ interface VoiceCallFormProps {
 }
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
-  const { provider, autoFallback, getAlternativeProvider } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>(["351911019866"]);
   const [from, setFrom] = useState("");
@@ -42,7 +42,6 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
   const [loading, setLoading] = useState(false);
   const [dryRun, setDryRun] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [selectedCredentialId, setSelectedCredentialId] = useState<string | undefined>();
   const createTemplate = useCreateTemplate();
   
   // Estados para progresso de envio em lote
@@ -236,14 +235,6 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         </CardHeader>
         <CardContent className="pt-8 px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <CredentialSelector
-              provider={provider}
-              value={selectedCredentialId}
-              onChange={setSelectedCredentialId}
-              label={`Conta ${provider === 'twilio' ? 'Twilio' : 'Vonage'}`}
-              showLegacyOption={true}
-            />
-
             <PhoneNumberSelector
               value={from}
               onChange={setFrom}

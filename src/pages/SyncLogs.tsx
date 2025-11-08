@@ -10,14 +10,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function SyncLogs() {
-  const [syncTypeFilter, setSyncTypeFilter] = useState<string>("");
-  const [providerFilter, setProviderFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<"success" | "error" | "">("");
+  const [syncTypeFilter, setSyncTypeFilter] = useState<string>("all");
+  const [providerFilter, setProviderFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: logs, isLoading, refetch } = useSyncLogs({
-    syncType: syncTypeFilter || undefined,
-    provider: providerFilter || undefined,
-    status: statusFilter || undefined,
+    syncType: syncTypeFilter === "all" ? undefined : syncTypeFilter,
+    provider: providerFilter === "all" ? undefined : providerFilter,
+    status: statusFilter === "all" ? undefined : (statusFilter as "success" | "error" | undefined),
   });
 
   // Estatísticas
@@ -40,9 +40,9 @@ export default function SyncLogs() {
   const getSyncTypeLabel = (type: string) => syncTypeLabels[type] || type;
 
   const clearFilters = () => {
-    setSyncTypeFilter("");
-    setProviderFilter("");
-    setStatusFilter("");
+    setSyncTypeFilter("all");
+    setProviderFilter("all");
+    setStatusFilter("all");
   };
 
   return (
@@ -120,7 +120,7 @@ export default function SyncLogs() {
                 <SelectValue placeholder="Tipo de Sincronização" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="phone_numbers">Números de Telefone</SelectItem>
                 <SelectItem value="sip_domains">Domínios SIP</SelectItem>
                 <SelectItem value="sip_applications">Aplicações SIP</SelectItem>
@@ -133,24 +133,24 @@ export default function SyncLogs() {
                 <SelectValue placeholder="Provedor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os provedores</SelectItem>
+                <SelectItem value="all">Todos os provedores</SelectItem>
                 <SelectItem value="twilio">Twilio</SelectItem>
                 <SelectItem value="vonage">Vonage</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="success">Sucesso</SelectItem>
                 <SelectItem value="error">Erro</SelectItem>
               </SelectContent>
             </Select>
 
-            {(syncTypeFilter || providerFilter || statusFilter) && (
+            {(syncTypeFilter !== "all" || providerFilter !== "all" || statusFilter !== "all") && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 Limpar Filtros
               </Button>

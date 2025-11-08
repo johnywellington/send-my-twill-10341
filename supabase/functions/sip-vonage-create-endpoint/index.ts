@@ -84,14 +84,14 @@ serve(async (req) => {
         .from('sip_provider_config')
         .select('config_key, config_value, domain_group_id')
         .eq('domain_group_id', domain_group_id)
-        .in('config_key', ['app_id', 'sip_domain']);
+         .in('config_key', ['app_id', 'sip_domain', 'app_name']);
 
       configMap = configs?.reduce((acc, c) => ({ ...acc, [c.config_key]: c.config_value }), {} as Record<string, string>) || {};
       domainGroupId = configs?.[0]?.domain_group_id;
 
-      if (!configMap.app_id || !configMap.sip_domain) {
-        throw new Error('Specified Vonage app not found');
-      }
+       if (!configMap.app_id || !configMap.sip_domain || !configMap.app_name) {
+         throw new Error('Specified Vonage app not found (missing app_id/app_name/sip_domain)');
+       }
     } else {
       // Usar app padrão
       const { data: configs } = await supabase
@@ -100,14 +100,14 @@ serve(async (req) => {
         .eq('provider', 'vonage')
         .eq('is_default', true)
         .eq('is_active', true)
-        .in('config_key', ['app_id', 'sip_domain']);
+        .in('config_key', ['app_id', 'sip_domain', 'app_name']);
 
       configMap = configs?.reduce((acc, c) => ({ ...acc, [c.config_key]: c.config_value }), {} as Record<string, string>) || {};
       domainGroupId = configs?.[0]?.domain_group_id;
 
-      if (!configMap.app_id || !configMap.sip_domain) {
-        throw new Error('No default Vonage app configured. Please run setup first.');
-      }
+       if (!configMap.app_id || !configMap.sip_domain || !configMap.app_name) {
+         throw new Error('No default Vonage app configured. Please run setup first. (missing app_id/app_name/sip_domain)');
+       }
     }
 
     // Autenticação PSIP usa Basic (API key/secret)

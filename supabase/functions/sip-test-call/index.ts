@@ -96,11 +96,52 @@ serve(async (req) => {
     } else if (provider === 'vonage') {
       // Fazer chamada de teste Vonage
       const vonageApiKey = Deno.env.get('VONAGE_API_KEY');
-      const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
+      const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+      const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID');
 
-      if (!vonageApiKey || !vonageApiSecret) {
+      if (!vonageApiKey || !vonagePrivateKey || !vonageAppId) {
         throw new Error('Vonage credentials not configured');
       }
+
+      // Gerar JWT token para autenticação
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(vonagePrivateKey.replace(/\\n/g, '\n'));
+      
+      const header = { alg: 'RS256', typ: 'JWT' };
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        application_id: vonageAppId,
+        iat: now,
+        exp: now + 900, // 15 minutos
+        jti: crypto.randomUUID(),
+      };
+
+      // Importar chave privada
+      const key = await crypto.subtle.importKey(
+        'pkcs8',
+        keyData,
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+
+      // Criar JWT
+      const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '');
+      const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '');
+      const signatureInput = `${encodedHeader}.${encodedPayload}`;
+      
+      const signature = await crypto.subtle.sign(
+        'RSASSA-PKCS1-v1_5',
+        key,
+        encoder.encode(signatureInput)
+      );
+      
+      const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      
+      const jwt = `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 
       const sipUri = `sip:${sipUser.sip_username}@${sipUser.sip_domain}`;
 
@@ -125,7 +166,7 @@ serve(async (req) => {
         {
           method: 'POST',
           headers: {
-            'Authorization': 'Basic ' + btoa(`${vonageApiKey}:${vonageApiSecret}`),
+            'Authorization': `Bearer ${jwt}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -135,7 +176,7 @@ serve(async (req) => {
             }],
             from: {
               type: 'phone',
-              number: '15555555555', // Número fictício para testes
+              number: '15555555555',
             },
             ncco: ncco,
             event_url: [`${supabaseUrl}/functions/v1/vonage-voice-webhook`],

@@ -98,6 +98,45 @@ serve(async (req) => {
     const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 
+    // 🔧 CORREÇÃO: Verificar se CredentialList já existe e deletá-la
+    const credListName = `SIP User ${username}`;
+    console.log('Checking for existing CredentialList:', credListName);
+    
+    const listExistingCredsResponse = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists.json`,
+      {
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+        },
+      }
+    );
+    
+    const existingCredLists = await listExistingCredsResponse.json();
+    const existingList = existingCredLists.credential_lists?.find(
+      (list: any) => list.friendly_name === credListName
+    );
+    
+    if (existingList) {
+      console.log('⚠️ CredentialList already exists, deleting:', existingList.sid);
+      
+      // Deletar CredentialList existente
+      const deleteResponse = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${existingList.sid}.json`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+          },
+        }
+      );
+      
+      if (!deleteResponse.ok) {
+        console.error('Failed to delete existing CredentialList');
+      } else {
+        console.log('✓ Old CredentialList deleted successfully');
+      }
+    }
+
     // Create CredentialList
     const credListResponse = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists.json`,
@@ -108,7 +147,7 @@ serve(async (req) => {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          FriendlyName: `SIP User ${username}`,
+          FriendlyName: credListName,
         }),
       }
     );

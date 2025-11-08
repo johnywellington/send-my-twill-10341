@@ -1131,6 +1131,7 @@ export type Database = {
           sip_password: string
           sip_username: string
           twilio_credential_sid: string | null
+          twilio_credlist_sid: string | null
           updated_at: string
           user_id: string
           vonage_endpoint_id: string | null
@@ -1148,6 +1149,7 @@ export type Database = {
           sip_password: string
           sip_username: string
           twilio_credential_sid?: string | null
+          twilio_credlist_sid?: string | null
           updated_at?: string
           user_id: string
           vonage_endpoint_id?: string | null
@@ -1165,6 +1167,7 @@ export type Database = {
           sip_password?: string
           sip_username?: string
           twilio_credential_sid?: string | null
+          twilio_credlist_sid?: string | null
           updated_at?: string
           user_id?: string
           vonage_endpoint_id?: string | null

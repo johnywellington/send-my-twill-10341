@@ -133,7 +133,11 @@ serve(async (req) => {
 
     const credential = await credResponse.json();
 
-    console.log('✓ Twilio credentials created, inserting into database...');
+    console.log('✓ Twilio credentials created:', {
+      credlist_sid: credList.sid,
+      credential_sid: credential.sid
+    });
+    console.log('✓ Inserting into database...');
 
     // Insert into database
     const { data: sipUser, error: insertError } = await supabase
@@ -146,6 +150,7 @@ serve(async (req) => {
         sip_domain: sipDomain,
         extension,
         display_name,
+        twilio_credlist_sid: credList.sid,
         twilio_credential_sid: credential.sid,
         domain_group_id: domainGroupId || null,
         credential_id: credentialId || null,

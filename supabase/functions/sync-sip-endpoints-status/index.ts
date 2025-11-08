@@ -38,18 +38,27 @@ async function getCredentials(supabase: any, userId: string, credentialId?: stri
   };
 }
 
-// Verificar se usuário Twilio existe na API
-async function checkTwilioUser(sid: string, token: string, credentialSid: string) {
+// Verificar se credential Twilio existe na API
+async function checkTwilioCredential(accountSid: string, authToken: string, credListSid: string, credentialSid: string) {
   try {
-    const authHeader = `Basic ${btoa(`${sid}:${token}`)}`;
+    const authHeader = `Basic ${btoa(`${accountSid}:${authToken}`)}`;
     const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${sid}/SIP/CredentialLists/${credentialSid}.json`,
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/SIP/CredentialLists/${credListSid}/Credentials/${credentialSid}.json`,
       { headers: { 'Authorization': authHeader } }
     );
-    return response.status === 200;
+    
+    if (response.status === 200) {
+      return { exists: true };
+    } else if (response.status === 404) {
+      return { exists: false };
+    } else {
+      console.warn(`[Twilio Check] Unexpected status ${response.status} for credential ${credentialSid}`);
+      return { exists: false };
+    }
   } catch (error) {
     console.error('[Twilio Check] Error:', error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { exists: false, error: errorMessage };
   }
 }
 
@@ -64,10 +73,19 @@ async function checkVonageEndpoint(apiKey: string, apiSecret: string, endpointId
         },
       }
     );
-    return response.status === 200;
+    
+    if (response.status === 200) {
+      return { exists: true };
+    } else if (response.status === 404) {
+      return { exists: false };
+    } else {
+      console.warn(`[Vonage Check] Unexpected status ${response.status} for endpoint ${endpointId}`);
+      return { exists: false };
+    }
   } catch (error) {
     console.error('[Vonage Check] Error:', error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { exists: false, error: errorMessage };
   }
 }
 
@@ -101,7 +119,7 @@ serve(async (req) => {
 
     const { credentialId } = await req.json();
 
-    console.log('[SIP Endpoint Sync] Starting sync with orphan detection...');
+    console.log('[SIP Sync] Starting sync with orphan detection...');
 
     // Buscar todos os usuários SIP do usuário
     const { data: sipUsers, error: fetchError } = await supabase
@@ -110,44 +128,63 @@ serve(async (req) => {
       .eq('user_id', userId);
 
     if (fetchError) {
-      console.error('[SIP Endpoint Sync] Error fetching users:', fetchError);
+      console.error('[SIP Sync] Error fetching users:', fetchError);
       throw new Error('Erro ao buscar usuários');
     }
 
-    console.log(`[SIP Endpoint Sync] Found ${sipUsers?.length || 0} SIP users`);
+    console.log(`[SIP Sync] Found ${sipUsers?.length || 0} SIP users to check`);
 
     const credentials = await getCredentials(supabase, userId, credentialId);
     const orphanedUsers: any[] = [];
     let syncedCount = 0;
+    let skippedCount = 0;
 
     // Verificar cada usuário na API correspondente
     for (const user of sipUsers || []) {
-      let exists = false;
+      let checkResult = { exists: false };
 
-      if (user.provider === 'twilio' && user.twilio_credential_sid) {
+      if (user.provider === 'twilio') {
+        // Verificar se temos os dados necessários
+        if (!user.twilio_credlist_sid || !user.twilio_credential_sid) {
+          console.warn(`[SIP Sync] Twilio user ${user.sip_username} missing credlist_sid or credential_sid, skipping...`);
+          skippedCount++;
+          continue;
+        }
+
         const cred = credentials.twilio || (typeof credentials === 'object' && credentials.provider === 'twilio' ? credentials : null);
         if (cred) {
-          exists = await checkTwilioUser(cred.sid || cred.account_identifier, cred.token || cred.secret_key, user.twilio_credential_sid);
+          const accountSid = cred.sid || cred.account_identifier;
+          const authToken = cred.token || cred.secret_key;
+          checkResult = await checkTwilioCredential(accountSid, authToken, user.twilio_credlist_sid, user.twilio_credential_sid);
         }
-      } else if (user.provider === 'vonage' && user.vonage_endpoint_id) {
+      } else if (user.provider === 'vonage') {
+        // Verificar se temos o endpoint_id
+        if (!user.vonage_endpoint_id) {
+          console.warn(`[SIP Sync] Vonage user ${user.sip_username} missing endpoint_id, skipping...`);
+          skippedCount++;
+          continue;
+        }
+
         const cred = credentials.vonage || (typeof credentials === 'object' && credentials.provider === 'vonage' ? credentials : null);
         if (cred) {
-          // Precisamos buscar o application_id da config
+          // Buscar o application_id da config
           const { data: config } = await supabase
             .from('sip_provider_config')
             .select('config_value')
             .eq('provider', 'vonage')
-            .eq('config_key', 'application_id')
+            .eq('config_key', 'app_id')
             .eq('domain_group_id', user.domain_group_id)
             .single();
 
           if (config) {
-            exists = await checkVonageEndpoint(cred.key || cred.account_identifier, cred.secret || cred.secret_key, user.vonage_endpoint_id, config.config_value);
+            const apiKey = cred.key || cred.account_identifier;
+            const apiSecret = cred.secret || cred.secret_key;
+            checkResult = await checkVonageEndpoint(apiKey, apiSecret, user.vonage_endpoint_id, config.config_value);
           }
         }
       }
 
-      if (!exists) {
+      if (!checkResult.exists) {
         orphanedUsers.push({
           id: user.id,
           sip_username: user.sip_username,
@@ -155,12 +192,13 @@ serve(async (req) => {
           extension: user.extension,
           provider: user.provider,
         });
+        console.log(`[SIP Sync] Orphaned: ${user.provider} - ${user.sip_username} (${user.extension})`);
       } else {
         syncedCount++;
       }
     }
 
-    console.log(`[SIP Endpoint Sync] Found ${orphanedUsers.length} orphaned users`);
+    console.log(`[SIP Sync] Results: ${syncedCount} verified, ${orphanedUsers.length} orphaned, ${skippedCount} skipped`);
 
     // Log success
     await logSyncOperation({
@@ -173,6 +211,7 @@ serve(async (req) => {
         total_checked: sipUsers?.length || 0,
         orphaned_count: orphanedUsers.length,
         synced_count: syncedCount,
+        skipped_count: skippedCount,
       },
     });
 
@@ -181,12 +220,13 @@ serve(async (req) => {
         success: true, 
         synced: syncedCount,
         orphaned: orphanedUsers,
+        skipped: skippedCount,
       } as SyncResult),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('[SIP Endpoint Sync] Error:', error);
+    console.error('[SIP Sync] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     if (userId) {

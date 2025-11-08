@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, CheckCircle2, XCircle, AlertTriangle, Database, Cloud } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, AlertTriangle, Database, Cloud, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getProviderIcon } from "@/lib/sip-utils";
@@ -33,6 +33,7 @@ interface SyncResult {
 
 export function SyncDashboard() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
   const [syncResults, setSyncResults] = useState<SyncResult[]>([]);
 
   const handleSync = async () => {
@@ -53,6 +54,28 @@ export function SyncDashboard() {
     }
   };
 
+  const handleRecoverMissingIds = async () => {
+    setIsRecovering(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('recover-missing-sip-ids', {
+        body: {},
+      });
+
+      if (error) throw error;
+
+      toast.success(`Recuperação concluída! ${data.recovered || 0} usuário(s) recuperado(s)`);
+      
+      // Sincronizar novamente após recuperação
+      if (data.recovered > 0) {
+        await handleSync();
+      }
+    } catch (error: any) {
+      toast.error(`Erro ao recuperar dados: ${error.message}`);
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
   const twilioResults = syncResults.filter(r => r.provider === 'twilio');
   const vonageResults = syncResults.filter(r => r.provider === 'vonage');
 
@@ -61,6 +84,7 @@ export function SyncDashboard() {
     synced: syncResults.filter(r => r.status === 'synced').length,
     orphaned: syncResults.filter(r => r.status === 'orphaned').length,
     missing: syncResults.filter(r => r.status === 'missing').length,
+    not_checked: syncResults.filter(r => r.status === 'not_checked').length,
   };
 
   return (
@@ -343,6 +367,34 @@ export function SyncDashboard() {
             <p className="text-sm text-muted-foreground mb-4">
               Clique no botão "Sincronizar APIs" para buscar dados dos providers
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {stats.not_checked > 0 && (
+        <Card className="border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-900/10">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Dados Faltantes Detectados
+            </CardTitle>
+            <CardDescription>
+              Alguns usuários foram criados antes da atualização e não têm IDs necessários para verificação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-4">
+              {stats.not_checked} usuário(s) não puderam ser verificados porque faltam dados (Credential SID, CredList SID ou Endpoint ID).
+            </p>
+            <Button
+              onClick={handleRecoverMissingIds}
+              disabled={isRecovering}
+              variant="default"
+            >
+              {isRecovering && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRecovering ? '' : ''}`} />
+              {isRecovering ? 'Recuperando...' : 'Recuperar Dados Faltantes'}
+            </Button>
           </CardContent>
         </Card>
       )}

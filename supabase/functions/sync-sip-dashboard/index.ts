@@ -25,65 +25,33 @@ interface SyncResult {
   provider: 'twilio' | 'vonage';
   api_data: TwilioCredential | VonageEndpoint;
   db_data?: any;
-  status: 'synced' | 'orphaned' | 'missing';
+  status: 'synced' | 'orphaned' | 'not_checked';
 }
 
-// Buscar todos os credentials de um CredentialList no Twilio
-async function getTwilioCredentials(accountSid: string, authToken: string) {
+// Buscar credential específica do Twilio
+async function getTwilioCredential(accountSid: string, authToken: string, credListSid: string, credentialSid: string) {
   try {
     const authHeader = `Basic ${btoa(`${accountSid}:${authToken}`)}`;
-    
-    // Primeiro, buscar todas as CredentialLists
-    const listsResponse = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/SIP/CredentialLists.json`,
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/SIP/CredentialLists/${credListSid}/Credentials/${credentialSid}.json`,
       { headers: { 'Authorization': authHeader } }
     );
     
-    if (!listsResponse.ok) {
-      throw new Error(`Twilio API error: ${listsResponse.status}`);
+    if (response.ok) {
+      return await response.json();
     }
-    
-    const listsData = await listsResponse.json();
-    const credentialLists = listsData.credential_lists || [];
-    
-    console.log(`[Twilio] Found ${credentialLists.length} credential lists`);
-    
-    // Para cada CredentialList, buscar suas credentials
-    const allCredentials: TwilioCredential[] = [];
-    
-    for (const list of credentialLists) {
-      const credsResponse = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/SIP/CredentialLists/${list.sid}/Credentials.json`,
-        { headers: { 'Authorization': authHeader } }
-      );
-      
-      if (credsResponse.ok) {
-        const credsData = await credsResponse.json();
-        const credentials = (credsData.credentials || []).map((cred: any) => ({
-          sid: cred.sid,
-          username: cred.username,
-          account_sid: accountSid,
-          credential_list_sid: list.sid,
-          date_created: cred.date_created,
-        }));
-        
-        allCredentials.push(...credentials);
-      }
-    }
-    
-    console.log(`[Twilio] Total credentials found: ${allCredentials.length}`);
-    return allCredentials;
+    return null;
   } catch (error) {
-    console.error('[Twilio] Error fetching credentials:', error);
-    throw error;
+    console.error('[Twilio] Error fetching credential:', error);
+    return null;
   }
 }
 
-// Buscar todos os endpoints de uma aplicação Vonage
-async function getVonageEndpoints(apiKey: string, apiSecret: string, appId: string) {
+// Buscar endpoint específico da Vonage
+async function getVonageEndpoint(apiKey: string, apiSecret: string, appId: string, endpointId: string) {
   try {
     const response = await fetch(
-      `https://api.nexmo.com/v1/applications/${appId}/endpoints`,
+      `https://api.nexmo.com/v1/applications/${appId}/endpoints/${endpointId}`,
       {
         headers: {
           'Authorization': `Basic ${btoa(`${apiKey}:${apiSecret}`)}`,
@@ -91,23 +59,13 @@ async function getVonageEndpoints(apiKey: string, apiSecret: string, appId: stri
       }
     );
     
-    if (!response.ok) {
-      throw new Error(`Vonage API error: ${response.status}`);
+    if (response.ok) {
+      return await response.json();
     }
-    
-    const data = await response.json();
-    const endpoints = (data._embedded?.endpoints || []).map((ep: any) => ({
-      id: ep.id,
-      username: ep.username,
-      domain: ep.sip?.uri?.split('@')[1] || 'sip.nexmo.com',
-      application_id: appId,
-    }));
-    
-    console.log(`[Vonage] Found ${endpoints.length} endpoints`);
-    return endpoints;
+    return null;
   } catch (error) {
-    console.error('[Vonage] Error fetching endpoints:', error);
-    throw error;
+    console.error('[Vonage] Error fetching endpoint:', error);
+    return null;
   }
 }
 
@@ -129,7 +87,7 @@ serve(async (req) => {
     );
     if (authError || !user) throw new Error('Unauthorized');
 
-    console.log('[Dashboard Sync] Starting comprehensive sync...');
+    console.log('[Dashboard Sync] Starting verification of existing users...');
 
     // Buscar credenciais
     const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
@@ -145,117 +103,169 @@ serve(async (req) => {
 
     if (dbError) throw dbError;
 
+    console.log(`[Dashboard Sync] Found ${dbUsers?.length || 0} users in database`);
+
     const results: SyncResult[] = [];
 
-    // === TWILIO ===
+    // === VERIFICAR USUÁRIOS TWILIO ===
     if (twilioSid && twilioToken) {
-      try {
-        const twilioCredentials = await getTwilioCredentials(twilioSid, twilioToken);
-        
-        // Comparar com BD
-        for (const apiCred of twilioCredentials) {
-          const dbMatch = dbUsers?.find(
-            u => u.provider === 'twilio' && u.twilio_credential_sid === apiCred.sid
-          );
-          
+      const twilioUsers = dbUsers?.filter(u => u.provider === 'twilio') || [];
+      console.log(`[Dashboard Sync] Checking ${twilioUsers.length} Twilio users...`);
+      
+      for (const dbUser of twilioUsers) {
+        if (!dbUser.twilio_credlist_sid || !dbUser.twilio_credential_sid) {
+          console.warn(`[Twilio] User ${dbUser.sip_username} missing IDs, marking as not checked`);
           results.push({
             provider: 'twilio',
-            api_data: apiCred,
-            db_data: dbMatch || undefined,
-            status: dbMatch ? 'synced' : 'missing',
+            api_data: {
+              sid: dbUser.twilio_credential_sid || 'N/A',
+              username: dbUser.sip_username,
+              account_sid: twilioSid,
+              credential_list_sid: dbUser.twilio_credlist_sid || 'N/A',
+              date_created: dbUser.created_at,
+            },
+            db_data: dbUser,
+            status: 'not_checked',
+          });
+          continue;
+        }
+
+        const apiData = await getTwilioCredential(
+          twilioSid,
+          twilioToken,
+          dbUser.twilio_credlist_sid,
+          dbUser.twilio_credential_sid
+        );
+
+        if (apiData) {
+          results.push({
+            provider: 'twilio',
+            api_data: {
+              sid: apiData.sid,
+              username: apiData.username,
+              account_sid: twilioSid,
+              credential_list_sid: dbUser.twilio_credlist_sid,
+              date_created: apiData.date_created,
+            },
+            db_data: dbUser,
+            status: 'synced',
+          });
+        } else {
+          results.push({
+            provider: 'twilio',
+            api_data: {
+              sid: dbUser.twilio_credential_sid,
+              username: dbUser.sip_username,
+              account_sid: twilioSid,
+              credential_list_sid: dbUser.twilio_credlist_sid,
+              date_created: dbUser.created_at,
+            },
+            db_data: dbUser,
+            status: 'orphaned',
           });
         }
-        
-        // Buscar órfãos (só no BD)
-        const twilioDbUsers = dbUsers?.filter(u => u.provider === 'twilio') || [];
-        for (const dbUser of twilioDbUsers) {
-          const apiMatch = twilioCredentials.find(c => c.sid === dbUser.twilio_credential_sid);
-          
-          if (!apiMatch && dbUser.twilio_credential_sid) {
-            results.push({
-              provider: 'twilio',
-              api_data: {
-                sid: dbUser.twilio_credential_sid,
-                username: dbUser.sip_username,
-                account_sid: twilioSid,
-                credential_list_sid: dbUser.twilio_credlist_sid || 'N/A',
-                date_created: dbUser.created_at,
-              },
-              db_data: dbUser,
-              status: 'orphaned',
-            });
-          }
-        }
-      } catch (error) {
-        console.error('[Dashboard Sync] Twilio error:', error);
       }
     }
 
-    // === VONAGE ===
+    // === VERIFICAR USUÁRIOS VONAGE ===
     if (vonageKey && vonageSecret) {
-      try {
-        // Buscar todas as aplicações Vonage configuradas
-        const { data: vonageConfigs } = await supabase
-          .from('sip_provider_config')
-          .select('config_value, domain_group_id')
-          .eq('provider', 'vonage')
-          .eq('config_key', 'app_id');
-
-        for (const config of vonageConfigs || []) {
-          const vonageEndpoints = await getVonageEndpoints(vonageKey, vonageSecret, config.config_value);
-          
-          // Comparar com BD
-          for (const apiEndpoint of vonageEndpoints) {
-            const dbMatch = dbUsers?.find(
-              u => u.provider === 'vonage' && u.vonage_endpoint_id === apiEndpoint.id
-            );
-            
-            results.push({
-              provider: 'vonage',
-              api_data: apiEndpoint,
-              db_data: dbMatch || undefined,
-              status: dbMatch ? 'synced' : 'missing',
-            });
-          }
-          
-          // Buscar órfãos (só no BD)
-          const vonageDbUsers = dbUsers?.filter(
-            u => u.provider === 'vonage' && u.domain_group_id === config.domain_group_id
-          ) || [];
-          
-          for (const dbUser of vonageDbUsers) {
-            const apiMatch = vonageEndpoints.find((e: VonageEndpoint) => e.id === dbUser.vonage_endpoint_id);
-            
-            if (!apiMatch && dbUser.vonage_endpoint_id) {
-              results.push({
-                provider: 'vonage',
-                api_data: {
-                  id: dbUser.vonage_endpoint_id,
-                  username: dbUser.sip_username,
-                  domain: dbUser.sip_domain,
-                  application_id: config.config_value,
-                },
-                db_data: dbUser,
-                status: 'orphaned',
-              });
-            }
-          }
+      const vonageUsers = dbUsers?.filter(u => u.provider === 'vonage') || [];
+      console.log(`[Dashboard Sync] Checking ${vonageUsers.length} Vonage users...`);
+      
+      for (const dbUser of vonageUsers) {
+        if (!dbUser.vonage_endpoint_id) {
+          console.warn(`[Vonage] User ${dbUser.sip_username} missing endpoint ID, marking as not checked`);
+          results.push({
+            provider: 'vonage',
+            api_data: {
+              id: 'N/A',
+              username: dbUser.sip_username,
+              domain: dbUser.sip_domain,
+              application_id: 'N/A',
+            },
+            db_data: dbUser,
+            status: 'not_checked',
+          });
+          continue;
         }
-      } catch (error) {
-        console.error('[Dashboard Sync] Vonage error:', error);
+
+        // Buscar app_id da config
+        const { data: config } = await supabase
+          .from('sip_provider_config')
+          .select('config_value')
+          .eq('provider', 'vonage')
+          .eq('config_key', 'app_id')
+          .eq('domain_group_id', dbUser.domain_group_id)
+          .single();
+
+        if (!config) {
+          console.warn(`[Vonage] No app_id found for user ${dbUser.sip_username}`);
+          results.push({
+            provider: 'vonage',
+            api_data: {
+              id: dbUser.vonage_endpoint_id,
+              username: dbUser.sip_username,
+              domain: dbUser.sip_domain,
+              application_id: 'N/A',
+            },
+            db_data: dbUser,
+            status: 'not_checked',
+          });
+          continue;
+        }
+
+        const apiData = await getVonageEndpoint(
+          vonageKey,
+          vonageSecret,
+          config.config_value,
+          dbUser.vonage_endpoint_id
+        );
+
+        if (apiData) {
+          results.push({
+            provider: 'vonage',
+            api_data: {
+              id: apiData.id,
+              username: apiData.username,
+              domain: dbUser.sip_domain,
+              application_id: config.config_value,
+            },
+            db_data: dbUser,
+            status: 'synced',
+          });
+        } else {
+          results.push({
+            provider: 'vonage',
+            api_data: {
+              id: dbUser.vonage_endpoint_id,
+              username: dbUser.sip_username,
+              domain: dbUser.sip_domain,
+              application_id: config.config_value,
+            },
+            db_data: dbUser,
+            status: 'orphaned',
+          });
+        }
       }
     }
 
     console.log(`[Dashboard Sync] Complete: ${results.length} items processed`);
 
+    const stats = {
+      total: results.length,
+      synced: results.filter(r => r.status === 'synced').length,
+      orphaned: results.filter(r => r.status === 'orphaned').length,
+      not_checked: results.filter(r => r.status === 'not_checked').length,
+    };
+
     return new Response(
       JSON.stringify({
         success: true,
         results,
-        total_checked: results.length,
-        synced: results.filter(r => r.status === 'synced').length,
-        orphaned: results.filter(r => r.status === 'orphaned').length,
-        missing: results.filter(r => r.status === 'missing').length,
+        total_checked: stats.total,
+        synced: stats.synced,
+        orphaned: stats.orphaned,
+        not_checked: stats.not_checked,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

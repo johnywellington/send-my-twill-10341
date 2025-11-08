@@ -28,7 +28,7 @@ interface SyncResult {
   provider: 'twilio' | 'vonage';
   api_data: TwilioCredential | VonageEndpoint;
   db_data?: any;
-  status: 'synced' | 'orphaned' | 'missing';
+  status: 'synced' | 'orphaned' | 'missing' | 'not_checked';
 }
 
 export function SyncDashboard() {
@@ -104,22 +104,24 @@ export function SyncDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                  Órfãos (só no BD)
+                  Órfãos
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-yellow-600">{stats.orphaned}</div>
+                <p className="text-xs text-muted-foreground mt-1">Deletados da API</p>
               </CardContent>
             </Card>
-            <Card className="border-red-200 dark:border-red-900">
+            <Card className="border-gray-200 dark:border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  Faltando (só na API)
+                  <XCircle className="h-4 w-4 text-gray-600" />
+                  Não Verificados
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats.missing}</div>
+                <div className="text-2xl font-bold text-gray-600">{stats.missing}</div>
+                <p className="text-xs text-muted-foreground mt-1">Faltam dados</p>
               </CardContent>
             </Card>
           </div>
@@ -178,7 +180,13 @@ export function SyncDashboard() {
                                   {result.status === 'missing' && (
                                     <Badge variant="destructive" className="gap-1">
                                       <Cloud className="h-3 w-3" />
-                                      Só na API
+                                      Não Verificado
+                                    </Badge>
+                                  )}
+                                  {result.status === 'not_checked' && (
+                                    <Badge variant="outline" className="gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Sem Dados
                                     </Badge>
                                   )}
                                 </TableCell>
@@ -271,7 +279,13 @@ export function SyncDashboard() {
                                   {result.status === 'missing' && (
                                     <Badge variant="destructive" className="gap-1">
                                       <Cloud className="h-3 w-3" />
-                                      Só na API
+                                      Não Verificado
+                                    </Badge>
+                                  )}
+                                  {result.status === 'not_checked' && (
+                                    <Badge variant="outline" className="gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Sem Dados
                                     </Badge>
                                   )}
                                 </TableCell>

@@ -28,11 +28,6 @@ export function CredentialSelector({
   const activeCredentials = credentials?.filter(c => c.is_active) || [];
   const defaultCredential = activeCredentials.find(c => c.is_default);
 
-  // Se não tiver valor e tiver uma credencial padrão, usar ela
-  if (!value && defaultCredential && onChange) {
-    onChange(defaultCredential.id);
-  }
-
   if (isLoading) {
     return (
       <div className="space-y-2">

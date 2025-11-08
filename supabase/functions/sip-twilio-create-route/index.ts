@@ -27,7 +27,7 @@ serve(async (req) => {
       throw new Error('Não autorizado');
     }
 
-    const { name, route_type, from_pattern, to_pattern, forward_to, priority, domain_group_id } = await req.json();
+    const { name, route_type, from_pattern, to_pattern, forward_to, priority, domain_group_id, credentialId } = await req.json();
 
     console.log(`[Twilio Route] Creating route: ${name} (${route_type})`);
 
@@ -83,6 +83,7 @@ serve(async (req) => {
         priority: priority || 0,
         is_active: true,
         domain_group_id: domain_group_id || null,
+        credential_id: credentialId || null,
         metadata: { twiml },
       })
       .select()

@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProvider } from "@/contexts/ProviderContext";
+import { CredentialBadge } from "./CredentialBadge";
 
 export function ConfigContent() {
   const navigate = useNavigate();
@@ -231,6 +232,7 @@ export function ConfigContent() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Domínio</TableHead>
                   <TableHead>SID</TableHead>
+                  <TableHead>Credencial</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
@@ -245,6 +247,9 @@ export function ConfigContent() {
                     <TableCell className="font-mono text-sm">{domain.sip_domain}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {domain.sip_domain_sid}
+                    </TableCell>
+                    <TableCell>
+                      <CredentialBadge credential={domain.credential} size="sm" />
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -419,6 +424,7 @@ export function ConfigContent() {
                   <TableHead>Nome</TableHead>
                   <TableHead>App ID</TableHead>
                   <TableHead>App Name</TableHead>
+                  <TableHead>Credencial</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
@@ -432,6 +438,9 @@ export function ConfigContent() {
                     </TableCell>
                     <TableCell className="font-mono text-xs">{app.app_id}</TableCell>
                     <TableCell className="font-mono text-sm">{app.app_name}</TableCell>
+                    <TableCell>
+                      <CredentialBadge credential={app.credential} size="sm" />
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         <Badge variant={app.is_active ? "default" : "secondary"}>

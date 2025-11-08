@@ -8,6 +8,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useSIPRoutes } from "@/hooks/use-sip-routes";
 import { SIPRouteDialog } from "./SIPRouteDialog";
 import { useProvider } from "@/contexts/ProviderContext";
+import { CredentialBadge } from "./CredentialBadge";
 
 export function RoutesContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,6 +89,7 @@ export function RoutesContent() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Provider</TableHead>
+                  <TableHead>Credencial</TableHead>
                   <TableHead>De → Para</TableHead>
                   <TableHead>Prioridade</TableHead>
                   <TableHead>Ativa</TableHead>
@@ -102,6 +104,9 @@ export function RoutesContent() {
                       <TableCell>{getRouteTypeBadge(route.route_type)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{route.provider}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <CredentialBadge credential={route.credential} size="sm" />
                       </TableCell>
                       <TableCell className="text-sm">
                         {route.from_pattern} → {route.forward_to}
@@ -128,7 +133,7 @@ export function RoutesContent() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Nenhuma rota configurada
                     </TableCell>
                   </TableRow>

@@ -17,12 +17,25 @@ export function useSIPRoutes(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
-    queryKey: ['sip-routes'],
+    queryKey: ['sip-routes', credentialId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sip_routes')
-        .select('*')
+        .select(`
+          *,
+          credential:provider_credentials(
+            id,
+            credential_name,
+            provider
+          )
+        `)
         .order('priority', { ascending: false });
+
+      if (credentialId) {
+        query = query.eq('credential_id', credentialId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;

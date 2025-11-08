@@ -1008,6 +1008,7 @@ export type Database = {
           config_value: string
           created_at: string | null
           created_by: string | null
+          credential_id: string | null
           domain_group_id: string | null
           friendly_name: string | null
           id: string
@@ -1021,6 +1022,7 @@ export type Database = {
           config_value: string
           created_at?: string | null
           created_by?: string | null
+          credential_id?: string | null
           domain_group_id?: string | null
           friendly_name?: string | null
           id?: string
@@ -1034,6 +1036,7 @@ export type Database = {
           config_value?: string
           created_at?: string | null
           created_by?: string | null
+          credential_id?: string | null
           domain_group_id?: string | null
           friendly_name?: string | null
           id?: string
@@ -1042,11 +1045,20 @@ export type Database = {
           provider?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sip_provider_config_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sip_routes: {
         Row: {
           created_at: string
+          credential_id: string | null
           domain_group_id: string | null
           forward_to: string
           from_pattern: string
@@ -1063,6 +1075,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          credential_id?: string | null
           domain_group_id?: string | null
           forward_to: string
           from_pattern: string
@@ -1079,6 +1092,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          credential_id?: string | null
           domain_group_id?: string | null
           forward_to?: string
           from_pattern?: string
@@ -1093,11 +1107,20 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sip_routes_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sip_users: {
         Row: {
           created_at: string
+          credential_id: string | null
           display_name: string | null
           domain_group_id: string | null
           extension: string
@@ -1114,6 +1137,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          credential_id?: string | null
           display_name?: string | null
           domain_group_id?: string | null
           extension: string
@@ -1130,6 +1154,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          credential_id?: string | null
           display_name?: string | null
           domain_group_id?: string | null
           extension?: string
@@ -1144,7 +1169,15 @@ export type Database = {
           user_id?: string
           vonage_endpoint_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sip_users_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_logs: {
         Row: {

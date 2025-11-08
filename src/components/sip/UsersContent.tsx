@@ -9,6 +9,7 @@ import { SIPUserDialog } from "./SIPUserDialog";
 import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { toast } from "sonner";
 import { useProvider } from "@/contexts/ProviderContext";
+import { CredentialBadge } from "./CredentialBadge";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -140,6 +141,7 @@ export function UsersContent() {
                   <TableHead>Ramal</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Provider</TableHead>
+                  <TableHead>Credencial</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -159,6 +161,9 @@ export function UsersContent() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <CredentialBadge credential={user.credential} size="sm" />
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={user.is_active ? "default" : "secondary"}>
                           {user.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
@@ -176,7 +181,7 @@ export function UsersContent() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Nenhum usuário encontrado
                     </TableCell>
                   </TableRow>

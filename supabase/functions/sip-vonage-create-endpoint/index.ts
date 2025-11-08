@@ -24,7 +24,7 @@ serve(async (req) => {
     );
     if (authError || !user) throw new Error('Unauthorized');
 
-    const { username, password, extension, display_name, domain_group_id } = await req.json();
+    const { username, password, extension, display_name, domain_group_id, credentialId } = await req.json();
 
     console.log('Creating Vonage SIP endpoint:', {
       username,
@@ -131,6 +131,7 @@ serve(async (req) => {
         display_name,
         vonage_endpoint_id: endpoint.id,
         domain_group_id: domainGroupId || null,
+        credential_id: credentialId || null,
       })
       .select()
       .single();

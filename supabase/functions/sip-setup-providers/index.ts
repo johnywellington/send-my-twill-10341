@@ -135,7 +135,8 @@ serve(async (req) => {
           config_value: twilioData.domain_name,
           friendly_name: twilioConfig.displayName || twilioConfig.domainName,
           is_default: setAsDefault || false,
-          created_by: user.id 
+          created_by: user.id,
+          credential_id: credentialId || null
         },
         { 
           domain_group_id: domainGroupId,
@@ -144,7 +145,8 @@ serve(async (req) => {
           config_value: twilioData.sid,
           friendly_name: twilioConfig.displayName || twilioConfig.domainName,
           is_default: setAsDefault || false,
-          created_by: user.id 
+          created_by: user.id,
+          credential_id: credentialId || null
         },
       ]);
 
@@ -235,7 +237,8 @@ serve(async (req) => {
           config_value: vonageData.id,
           friendly_name: vonageConfig.displayName || vonageConfig.name,
           is_default: setAsDefault || false,
-          created_by: user.id 
+          created_by: user.id,
+          credential_id: credentialId || null
         },
         { 
           domain_group_id: domainGroupId,
@@ -244,7 +247,8 @@ serve(async (req) => {
           config_value: vonageData.name,
           friendly_name: vonageConfig.displayName || vonageConfig.name,
           is_default: setAsDefault || false,
-          created_by: user.id 
+          created_by: user.id,
+          credential_id: credentialId || null
         },
         { 
           domain_group_id: domainGroupId,
@@ -253,7 +257,8 @@ serve(async (req) => {
           config_value: 'sip.nexmo.com',
           friendly_name: vonageConfig.displayName || vonageConfig.name,
           is_default: setAsDefault || false,
-          created_by: user.id 
+          created_by: user.id,
+          credential_id: credentialId || null
         },
       ]);
 

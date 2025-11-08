@@ -31,12 +31,25 @@ export function useSIPConfig(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: configs, isLoading } = useQuery({
-    queryKey: ['sip-config'],
+    queryKey: ['sip-config', credentialId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sip_provider_config')
-        .select('*')
+        .select(`
+          *,
+          credential:provider_credentials(
+            id,
+            credential_name,
+            provider
+          )
+        `)
         .order('created_at', { ascending: false });
+
+      if (credentialId) {
+        query = query.eq('credential_id', credentialId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

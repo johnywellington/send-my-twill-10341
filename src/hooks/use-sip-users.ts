@@ -6,12 +6,25 @@ export function useSIPUsers(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['sip-users'],
+    queryKey: ['sip-users', credentialId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sip_users')
-        .select('*')
+        .select(`
+          *,
+          credential:provider_credentials(
+            id,
+            credential_name,
+            provider
+          )
+        `)
         .order('created_at', { ascending: false });
+
+      if (credentialId) {
+        query = query.eq('credential_id', credentialId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;

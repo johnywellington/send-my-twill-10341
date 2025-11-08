@@ -1,19 +1,12 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Users, Copy, Trash2, Scan } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Copy, Trash2, Plus, Search, Loader2, Users, Scan } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useSIPUsers } from "@/hooks/use-sip-users";
-import { useCleanupOrphanedResources } from "@/hooks/use-cleanup-orphaned-resources";
 import { SIPUserDialog } from "./SIPUserDialog";
-import { OrphanedResourcesDialog } from "./OrphanedResourcesDialog";
-import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { toast } from "sonner";
-import { useProvider } from "@/contexts/ProviderContext";
-import { CredentialBadge } from "./CredentialBadge";
-import { SyncEndpointsButton } from "./SyncEndpointsButton";
-import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
@@ -25,6 +18,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSIPConnectivityTest } from "@/hooks/use-sip-connectivity-test";
+import { Check, X, AlertCircle } from "lucide-react";
+import { OrphanedResourcesDialog } from "./OrphanedResourcesDialog";
+import { useCleanupOrphanedResources } from "@/hooks/use-cleanup-orphaned-resources";
+import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
+import { useProvider } from "@/contexts/ProviderContext";
+import { CredentialBadge } from "./CredentialBadge";
+import { SyncEndpointsButton } from "./SyncEndpointsButton";
+import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -34,9 +36,12 @@ export function UsersContent() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [selectedUserForTest, setSelectedUserForTest] = useState<any>(null);
   const { selectedCredentialId } = useProvider();
   const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
   const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
+  const { testConnectivity, lastTest, isTesting } = useSIPConnectivityTest();
 
   const handleOrphansDetected = (orphaned: any[]) => {
     setOrphanedUsers(orphaned);
@@ -103,6 +108,15 @@ export function UsersContent() {
   const handleCleanupOrphanedResources = (selectedIds: string[]) => {
     cleanupOrphans({ orphanedIds: selectedIds });
     setOrphanedResourcesDialogOpen(false);
+  };
+
+  const handleTestConnectivity = async (user: any) => {
+    setSelectedUserForTest(user);
+    await testConnectivity({
+      provider: user.provider as 'twilio' | 'vonage',
+      test_type: 'full'
+    });
+    setShowTestDialog(true);
   };
 
   if (isLoading) {
@@ -174,6 +188,128 @@ export function UsersContent() {
         onCleanup={handleCleanupOrphans}
         isLoading={isCleaningUp}
       />
+
+      {/* Test Dialog */}
+      <AlertDialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {lastTest?.status === 'passed' && <Check className="h-5 w-5 text-green-600" />}
+              {lastTest?.status === 'warning' && <AlertCircle className="h-5 w-5 text-yellow-600" />}
+              {lastTest?.status === 'failed' && <X className="h-5 w-5 text-red-600" />}
+              Teste de Conectividade - {selectedUserForTest?.sip_username}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Validação das credenciais SIP
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            {/* Status Badge */}
+            <div className={`p-4 rounded-lg ${
+              lastTest?.status === 'passed' ? 'bg-green-50 dark:bg-green-950/20' :
+              lastTest?.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+              'bg-red-50 dark:bg-red-950/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">
+                    Status: {
+                      lastTest?.status === 'passed' ? '✅ Aprovado' :
+                      lastTest?.status === 'warning' ? '⚠️ Aviso' :
+                      '❌ Falhou'
+                    }
+                  </p>
+                  {lastTest?.latency_ms && (
+                    <p className="text-sm text-muted-foreground">Latência: {lastTest.latency_ms}ms</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Checklist */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`p-3 rounded-lg border ${
+                lastTest?.credentials_valid ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-red-50 dark:bg-red-950/20 border-red-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {lastTest?.credentials_valid ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
+                  <span className="text-sm font-medium">Credenciais Válidas</span>
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-lg border ${
+                lastTest?.endpoint_registered ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-red-50 dark:bg-red-950/20 border-red-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {lastTest?.endpoint_registered ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
+                  <span className="text-sm font-medium">Endpoint Registrado</span>
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-lg border ${
+                lastTest?.api_reachable ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {lastTest?.api_reachable ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-yellow-600" />}
+                  <span className="text-sm font-medium">API Acessível</span>
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-lg border ${
+                lastTest?.account_status === 'active' ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {lastTest?.account_status === 'active' ? <Check className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-yellow-600" />}
+                  <span className="text-sm font-medium">Conta Ativa</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recomendações */}
+            {lastTest?.recommendations && Array.isArray(lastTest.recommendations) && lastTest.recommendations.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Recomendações:</h4>
+                <ul className="space-y-1">
+                  {lastTest.recommendations.map((rec, idx) => (
+                    <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-yellow-600 mt-0.5">•</span>
+                      <span>{String(rec)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Detalhes Técnicos */}
+            {(lastTest?.error_message || lastTest?.error_code) && (
+              <details className="text-sm">
+                <summary className="cursor-pointer font-medium">▶ Detalhes técnicos</summary>
+                <div className="mt-2 p-3 bg-muted/50 rounded-lg space-y-1">
+                  {lastTest.error_code && (
+                    <p><span className="font-medium">Código:</span> {lastTest.error_code}</p>
+                  )}
+                  {lastTest.error_message && (
+                    <p><span className="font-medium">Mensagem:</span> {lastTest.error_message}</p>
+                  )}
+                </div>
+              </details>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Entendi
+            </Button>
+            <Button 
+              onClick={() => handleTestConnectivity(selectedUserForTest)}
+              disabled={isTesting}
+            >
+              {isTesting ? 'Testando...' : 'Testar Novamente'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <OrphanedResourcesDialog
         open={orphanedResourcesDialogOpen}
@@ -293,6 +429,15 @@ export function UsersContent() {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            onClick={() => handleTestConnectivity(user)}
+                            disabled={isTesting}
+                            title="Testar Conectividade"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             onClick={() => copyToClipboard(formatSIPUri(user.sip_username, user.sip_domain), 'SIP URI')}
                           >
                             <Copy className="h-4 w-4" />
@@ -344,11 +489,11 @@ export function UsersContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir Permanentemente
+              Excluir Usuário
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

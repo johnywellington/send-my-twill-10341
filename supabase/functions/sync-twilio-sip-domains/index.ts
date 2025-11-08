@@ -95,30 +95,50 @@ serve(async (req) => {
       );
     }
 
-    // 2. Buscar domains existentes no banco (por SID)
+    // 2. Buscar domains existentes no banco (por SID e domain_name)
+    // Buscar tanto por SID quanto por domain_name para evitar duplicatas
     const existingSids = domains.map(d => d.sid);
+    const existingDomainNames = domains.map(d => d.domain_name);
     
-    const { data: existingConfigs, error: fetchError } = await supabase
+    const { data: existingConfigsBySid, error: fetchError } = await supabase
       .from('sip_provider_config')
       .select('config_value, domain_group_id')
       .eq('provider', 'twilio')
       .eq('config_key', 'sip_domain_sid')
+      .eq('is_active', true)
       .in('config_value', existingSids);
 
-    if (fetchError) {
-      console.error('[Twilio SIP Sync] Error fetching existing configs:', fetchError);
+    const { data: existingConfigsByDomain, error: fetchError2 } = await supabase
+      .from('sip_provider_config')
+      .select('config_value, domain_group_id')
+      .eq('provider', 'twilio')
+      .eq('config_key', 'sip_domain')
+      .eq('is_active', true)
+      .in('config_value', existingDomainNames);
+
+    if (fetchError || fetchError2) {
+      console.error('[Twilio SIP Sync] Error fetching existing configs:', fetchError || fetchError2);
       throw new Error('Erro ao buscar configurações existentes');
     }
 
+    // Criar mapa combinado de SIDs e domain_names existentes
     const existingSidMap = new Map(
-      existingConfigs?.map(c => [c.config_value, c.domain_group_id]) || []
+      existingConfigsBySid?.map(c => [c.config_value, c.domain_group_id]) || []
+    );
+    
+    const existingDomainMap = new Map(
+      existingConfigsByDomain?.map(c => [c.config_value, c.domain_group_id]) || []
     );
 
-    console.log(`[Twilio SIP Sync] Found ${existingSidMap.size} existing domains in DB`);
+    console.log(`[Twilio SIP Sync] Found ${existingSidMap.size} existing SIDs and ${existingDomainMap.size} existing domains in DB`);
 
-    // 3. Separar novos e existentes
-    const newDomains = domains.filter(d => !existingSidMap.has(d.sid));
-    const existingDomains = domains.filter(d => existingSidMap.has(d.sid));
+    // 3. Separar novos e existentes (verificar tanto SID quanto domain_name)
+    const newDomains = domains.filter(d => 
+      !existingSidMap.has(d.sid) && !existingDomainMap.has(d.domain_name)
+    );
+    const existingDomains = domains.filter(d => 
+      existingSidMap.has(d.sid) || existingDomainMap.has(d.domain_name)
+    );
 
     console.log(`[Twilio SIP Sync] New: ${newDomains.length}, Existing: ${existingDomains.length}`);
 
@@ -168,17 +188,23 @@ serve(async (req) => {
 
     // 5. Atualizar domains existentes (friendly_name pode ter mudado)
     for (const domain of existingDomains) {
-      const domainGroupId = existingSidMap.get(domain.sid)!;
+      // Buscar domain_group_id pelo SID ou pelo domain_name
+      const domainGroupId = existingSidMap.get(domain.sid) || existingDomainMap.get(domain.domain_name);
+      
+      if (!domainGroupId) {
+        console.warn(`[Twilio SIP Sync] Could not find domain_group_id for ${domain.sid}`);
+        continue;
+      }
       
       const { error: updateError } = await supabase
         .from('sip_provider_config')
         .update({
           friendly_name: domain.friendly_name,
-          config_value: domain.domain_name,
           updated_at: new Date().toISOString(),
         })
         .eq('domain_group_id', domainGroupId)
-        .eq('provider', 'twilio');
+        .eq('provider', 'twilio')
+        .eq('is_active', true);
 
       if (updateError) {
         console.error(`[Twilio SIP Sync] Error updating domain ${domain.sid}:`, updateError);

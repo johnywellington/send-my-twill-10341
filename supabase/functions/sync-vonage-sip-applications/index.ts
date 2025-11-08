@@ -98,30 +98,50 @@ serve(async (req) => {
       );
     }
 
-    // 2. Buscar applications existentes no banco (por app_id)
+    // 2. Buscar applications existentes no banco (por app_id e app_name)
+    // Buscar tanto por app_id quanto por app_name para evitar duplicatas
     const existingAppIds = voiceApps.map(app => app.id);
+    const existingAppNames = voiceApps.map(app => app.name);
     
-    const { data: existingConfigs, error: fetchError } = await supabase
+    const { data: existingConfigsById, error: fetchError } = await supabase
       .from('sip_provider_config')
       .select('config_value, domain_group_id')
       .eq('provider', 'vonage')
       .eq('config_key', 'app_id')
+      .eq('is_active', true)
       .in('config_value', existingAppIds);
 
-    if (fetchError) {
-      console.error('[Vonage SIP Sync] Error fetching existing configs:', fetchError);
+    const { data: existingConfigsByName, error: fetchError2 } = await supabase
+      .from('sip_provider_config')
+      .select('config_value, domain_group_id')
+      .eq('provider', 'vonage')
+      .eq('config_key', 'app_name')
+      .eq('is_active', true)
+      .in('config_value', existingAppNames);
+
+    if (fetchError || fetchError2) {
+      console.error('[Vonage SIP Sync] Error fetching existing configs:', fetchError || fetchError2);
       throw new Error('Erro ao buscar configurações existentes');
     }
 
+    // Criar mapa combinado de app_ids e app_names existentes
     const existingAppIdMap = new Map(
-      existingConfigs?.map(c => [c.config_value, c.domain_group_id]) || []
+      existingConfigsById?.map(c => [c.config_value, c.domain_group_id]) || []
+    );
+    
+    const existingAppNameMap = new Map(
+      existingConfigsByName?.map(c => [c.config_value, c.domain_group_id]) || []
     );
 
-    console.log(`[Vonage SIP Sync] Found ${existingAppIdMap.size} existing apps in DB`);
+    console.log(`[Vonage SIP Sync] Found ${existingAppIdMap.size} existing app IDs and ${existingAppNameMap.size} existing app names in DB`);
 
-    // 3. Separar novos e existentes
-    const newApps = voiceApps.filter(app => !existingAppIdMap.has(app.id));
-    const existingApps = voiceApps.filter(app => existingAppIdMap.has(app.id));
+    // 3. Separar novos e existentes (verificar tanto app_id quanto app_name)
+    const newApps = voiceApps.filter(app => 
+      !existingAppIdMap.has(app.id) && !existingAppNameMap.has(app.name)
+    );
+    const existingApps = voiceApps.filter(app => 
+      existingAppIdMap.has(app.id) || existingAppNameMap.has(app.name)
+    );
 
     console.log(`[Vonage SIP Sync] New: ${newApps.length}, Existing: ${existingApps.length}`);
 
@@ -181,7 +201,13 @@ serve(async (req) => {
 
     // 5. Atualizar applications existentes
     for (const app of existingApps) {
-      const domainGroupId = existingAppIdMap.get(app.id)!;
+      // Buscar domain_group_id pelo app_id ou pelo app_name
+      const domainGroupId = existingAppIdMap.get(app.id) || existingAppNameMap.get(app.name);
+      
+      if (!domainGroupId) {
+        console.warn(`[Vonage SIP Sync] Could not find domain_group_id for ${app.id}`);
+        continue;
+      }
       
       const { error: updateError } = await supabase
         .from('sip_provider_config')
@@ -190,7 +216,8 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq('domain_group_id', domainGroupId)
-        .eq('provider', 'vonage');
+        .eq('provider', 'vonage')
+        .eq('is_active', true);
 
       if (updateError) {
         console.error(`[Vonage SIP Sync] Error updating app ${app.id}:`, updateError);

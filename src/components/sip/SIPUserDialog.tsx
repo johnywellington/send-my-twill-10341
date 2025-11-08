@@ -45,17 +45,17 @@ function generatePassword(length = 16): string {
 }
 
 function validatePassword(password: string): { valid: boolean; message?: string } {
-  if (password.length < 12) {
-    return { valid: false, message: 'Senha deve ter no mínimo 12 caracteres' };
+  if (password.length < 12 || password.length > 64) {
+    return { valid: false, message: 'Senha deve ter entre 12 e 64 caracteres' };
   }
   if (!/[A-Z]/.test(password)) {
-    return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' };
+    return { valid: false, message: 'Senha deve conter pelo menos uma letra MAIÚSCULA' };
   }
   if (!/[a-z]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' };
   }
   if (!/[0-9]/.test(password)) {
-    return { valid: false, message: 'Senha deve conter pelo menos um número' };
+    return { valid: false, message: 'Senha deve conter pelo menos um número (0-9)' };
   }
   return { valid: true };
 }
@@ -88,11 +88,10 @@ function getPasswordStrength(password: string): { strength: number; label: strin
 
 function getPasswordRequirements(password: string) {
   return [
-    { label: '12+ caracteres', met: password.length >= 12 },
-    { label: 'Letra maiúscula (A-Z)', met: /[A-Z]/.test(password) },
+    { label: '12-64 caracteres', met: password.length >= 12 && password.length <= 64 },
+    { label: 'Letra MAIÚSCULA (A-Z)', met: /[A-Z]/.test(password) },
     { label: 'Letra minúscula (a-z)', met: /[a-z]/.test(password) },
     { label: 'Número (0-9)', met: /[0-9]/.test(password) },
-    { label: 'Caractere especial (!@#$%^&*)', met: /[!@#$%^&*]/.test(password) },
   ];
 }
 

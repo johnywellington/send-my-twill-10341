@@ -26,6 +26,20 @@ serve(async (req) => {
 
     const { username, password, extension, display_name, domain_group_id, credentialId } = await req.json();
 
+    // ✅ VALIDAÇÃO DE SENHA (Vonage PSIP requer: 12-64 chars, 1 digit, 1 lower, 1 upper)
+    if (!password || password.length < 12 || password.length > 64) {
+      throw new Error('Senha deve ter entre 12 e 64 caracteres');
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new Error('Senha deve conter pelo menos 1 número');
+    }
+    if (!/[a-z]/.test(password)) {
+      throw new Error('Senha deve conter pelo menos 1 letra minúscula');
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new Error('Senha deve conter pelo menos 1 letra MAIÚSCULA');
+    }
+
     console.log('Creating Vonage SIP endpoint:', {
       username,
       extension,
@@ -176,7 +190,25 @@ serve(async (req) => {
     if (!endpointResponse.ok) {
       const errorText = await endpointResponse.text();
       console.error('Vonage API error:', errorText);
-      throw new Error(`Vonage call failed: ${errorText}`);
+      
+      let errorObj;
+      try {
+        errorObj = JSON.parse(errorText);
+      } catch {
+        throw new Error(`Vonage API error: ${errorText}`);
+      }
+      
+      // Mapear erros comuns da Vonage
+      if (errorObj.error_code === '5') {
+        if (errorObj.detail?.includes('Secret is case sensitive')) {
+          throw new Error('Senha não atende aos requisitos: 12-64 caracteres, com pelo menos 1 número, 1 maiúscula e 1 minúscula');
+        }
+        if (errorObj.detail?.includes('User key may not be empty')) {
+          throw new Error('Username não pode estar vazio');
+        }
+      }
+      
+      throw new Error(errorObj.detail || errorObj.title || `Erro na API Vonage: ${errorText}`);
     }
 
     const vonageUser = await endpointResponse.json();

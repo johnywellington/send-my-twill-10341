@@ -8,6 +8,7 @@ import { RefreshCw, Star, Lightbulb } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useExtensionAvailability } from "@/hooks/use-extension-availability";
+import { useProvider } from "@/contexts/ProviderContext";
 import { ExtensionAvailability } from "./ExtensionAvailability";
 import { toast } from "sonner";
 
@@ -33,7 +34,8 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   const [extension, setExtension] = useState('');
   const [displayName, setDisplayName] = useState('');
 
-  const { createUser, isCreating } = useSIPUsers();
+  const { selectedCredentialId } = useProvider();
+  const { createUser, isCreating } = useSIPUsers(selectedCredentialId);
   const { configs } = useSIPConfig();
   const { analysis, isExtensionAvailable } = useExtensionAvailability(provider);
 
@@ -79,6 +81,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
       extension,
       display_name: displayName || undefined,
       domain_group_id: domainGroupId || undefined,
+      credentialId: selectedCredentialId || undefined,
     });
 
     onOpenChange(false);

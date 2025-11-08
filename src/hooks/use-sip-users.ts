@@ -46,14 +46,31 @@ export function useSIPUsers(credentialId?: string) {
         ? 'sip-twilio-create-user' 
         : 'sip-vonage-create-endpoint';
 
+      console.log(`[SIP User Creation] Calling ${functionName} with:`, {
+        provider: params.provider,
+        username: params.username,
+        extension: params.extension,
+        credentialId: params.credentialId || credentialId,
+        domain_group_id: params.domain_group_id
+      });
+
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
-          ...params,
+          username: params.username,
+          password: params.password,
+          extension: params.extension,
+          display_name: params.display_name,
+          domain_group_id: params.domain_group_id,
           credentialId: params.credentialId || credentialId,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`[SIP User Creation] Error from ${functionName}:`, error);
+        throw error;
+      }
+      
+      console.log(`[SIP User Creation] Success from ${functionName}:`, data);
       return data;
     },
     onSuccess: () => {

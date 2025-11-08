@@ -20,8 +20,9 @@ export function useSIPUsers(credentialId?: string) {
         `)
         .order('created_at', { ascending: false });
 
+      // Se credentialId for fornecido, filtrar por ele OU registros legacy (NULL)
       if (credentialId) {
-        query = query.eq('credential_id', credentialId);
+        query = query.or(`credential_id.eq.${credentialId},credential_id.is.null`);
       }
 
       const { data, error } = await query;

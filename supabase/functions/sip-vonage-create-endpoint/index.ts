@@ -96,29 +96,93 @@ serve(async (req) => {
       }
     }
 
-    const vonageKey = Deno.env.get('VONAGE_API_KEY');
-    const vonageSecret = Deno.env.get('VONAGE_API_SECRET');
+    // Gerar JWT para autenticação com Vonage Programmable SIP API
+    const vonagePrivateKey = Deno.env.get('VONAGE_PRIVATE_KEY');
+    const vonageAppId = Deno.env.get('VONAGE_APPLICATION_ID');
 
-    // Create SIP endpoint
+    if (!vonagePrivateKey || !vonageAppId) {
+      throw new Error('Vonage credentials not configured');
+    }
+
+    // Helpers para JWT RS256
+    const pemToArrayBuffer = (pem: string): ArrayBuffer => {
+      const clean = pem
+        .replace(/\\n/g, '\n')
+        .replace('-----BEGIN PRIVATE KEY-----', '')
+        .replace('-----END PRIVATE KEY-----', '')
+        .replace(/\r?\n|\s/g, '');
+      const binary = atob(clean);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes.buffer;
+    };
+
+    const base64UrlEncode = (input: Uint8Array) =>
+      btoa(String.fromCharCode(...input))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+    const base64UrlEncodeString = (str: string) =>
+      base64UrlEncode(new TextEncoder().encode(str));
+
+    // Montar JWT
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const payload = {
+      application_id: vonageAppId,
+      iat: now,
+      exp: now + 15 * 60,
+      jti: crypto.randomUUID(),
+    };
+
+    const encodedHeader = base64UrlEncodeString(JSON.stringify(header));
+    const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
+    const toSign = `${encodedHeader}.${encodedPayload}`;
+
+    const privateKey = await crypto.subtle.importKey(
+      'pkcs8',
+      pemToArrayBuffer(vonagePrivateKey),
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      privateKey,
+      new TextEncoder().encode(toSign)
+    );
+    const jwt = `${toSign}.${base64UrlEncode(new Uint8Array(signature))}`;
+
+    console.log(`Creating Vonage PSIP user at domain: ${configMap.sip_domain}`);
+
+    // Create SIP user via Vonage Programmable SIP API
     const endpointResponse = await fetch(
-      `https://api.nexmo.com/v1/applications/${configMap.app_id}/endpoints`,
+      `https://api.nexmo.com/v1/psip/${configMap.sip_domain}/users`,
       {
         method: 'POST',
         headers: {
-          'Authorization': 'Basic ' + btoa(`${vonageKey}:${vonageSecret}`),
+          'Authorization': `Bearer ${jwt}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           username,
           password,
-          extension,
+          authType: 'digest',
         }),
       }
     );
 
-    const endpoint = await endpointResponse.json();
+    if (!endpointResponse.ok) {
+      const errorText = await endpointResponse.text();
+      console.error('Vonage API error:', errorText);
+      throw new Error(`Vonage call failed: ${errorText}`);
+    }
 
-    // Insert into database
+    const vonageUser = await endpointResponse.json();
+    console.log('Vonage user created:', vonageUser);
+
+    // Insert into database with correct Vonage user ID
     const { data: sipUser, error: insertError } = await supabase
       .from('sip_users')
       .insert({
@@ -129,7 +193,7 @@ serve(async (req) => {
         sip_domain: configMap.sip_domain,
         extension,
         display_name,
-        vonage_endpoint_id: endpoint.id,
+        vonage_endpoint_id: vonageUser.id,  // ✅ ID correto da API
         domain_group_id: domainGroupId || null,
         credential_id: credentialId || null,
       })

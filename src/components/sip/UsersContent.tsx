@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode, PhoneCall } from "lucide-react";
+import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode, PhoneCall, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
@@ -29,6 +29,7 @@ import { CredentialBadge } from "./CredentialBadge";
 import { SyncEndpointsButton } from "./SyncEndpointsButton";
 import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
 import { useSIPTestCall } from "@/hooks/use-sip-test-call";
+import { useRecoverVonageEndpoints } from "@/hooks/use-recover-vonage-endpoints";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -47,6 +48,7 @@ export function UsersContent() {
   const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
   const { testConnectivity, lastTest, isTesting } = useSIPConnectivityTest();
   const { startTestCall, isTestingCall } = useSIPTestCall();
+  const { recoverEndpoints, isRecovering } = useRecoverVonageEndpoints();
 
   const handleOrphansDetected = (orphaned: any[]) => {
     setOrphanedUsers(orphaned);
@@ -147,6 +149,7 @@ export function UsersContent() {
   const totalUsers = users?.length || 0;
   const twilioUsers = users?.filter(u => u.provider === 'twilio').length || 0;
   const vonageUsers = users?.filter(u => u.provider === 'vonage').length || 0;
+  const vonageUsersMissingId = users?.filter(u => u.provider === 'vonage' && !u.vonage_endpoint_id).length || 0;
 
   // Estatísticas de extensões
   const extensionsByProvider = {
@@ -171,6 +174,26 @@ export function UsersContent() {
           <h2 className="text-2xl font-bold">Usuários SIP</h2>
         </div>
         <div className="flex gap-2">
+          {vonageUsersMissingId > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={() => recoverEndpoints()}
+              disabled={isRecovering}
+              className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+            >
+              {isRecovering ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Recuperando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Recuperar {vonageUsersMissingId} ID{vonageUsersMissingId > 1 ? 's' : ''} Faltante{vonageUsersMissingId > 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          )}
           <SyncEndpointsButton onOrphansDetected={handleOrphansDetected} />
           <Button 
             variant="outline" 
@@ -437,9 +460,20 @@ export function UsersContent() {
                         <CredentialBadge credential={user.credential} size="sm" />
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.is_active ? "default" : "secondary"}>
-                          {user.is_active ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={user.is_active ? "default" : "secondary"}>
+                            {user.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                          {user.provider === 'vonage' && !user.vonage_endpoint_id && (
+                            <Badge 
+                              variant="destructive" 
+                              className="text-xs"
+                              title="ID da API Vonage não configurado. Clique em 'Recuperar IDs Faltantes'"
+                            >
+                              ID Faltando
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">

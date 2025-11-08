@@ -114,6 +114,13 @@ serve(async (req) => {
     );
 
     const credList = await credListResponse.json();
+    
+    if (!credList.sid) {
+      console.error('Twilio CredList creation failed:', credList);
+      throw new Error(`Failed to create CredentialList: ${credList.message || 'Unknown error'}`);
+    }
+
+    console.log('✓ CredentialList created:', credList.sid);
 
     // Add Credential to list
     const credResponse = await fetch(
@@ -132,6 +139,11 @@ serve(async (req) => {
     );
 
     const credential = await credResponse.json();
+    
+    if (!credential.sid) {
+      console.error('Twilio Credential creation failed:', credential);
+      throw new Error(`Failed to create Credential: ${credential.message || 'Unknown error'}`);
+    }
 
     console.log('✓ Twilio credentials created:', {
       credlist_sid: credList.sid,

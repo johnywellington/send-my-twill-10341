@@ -123,7 +123,17 @@ serve(async (req) => {
         status: 'success',
         itemsUpdated: endpointIds.length,
         executionTimeMs: Date.now() - startTime,
-        metadata: { total_checked: expiredEndpoints.length },
+        metadata: {
+          total_checked: expiredEndpoints.length,
+          items_updated: expiredEndpoints.slice(0, 100).map(e => ({
+            extension: e.sip_users.extension,
+            display_name: e.sip_users.display_name,
+            status: 'unregistered',
+            last_seen: e.last_seen,
+            expired_at: e.expires_at,
+            user_agent: e.user_agent,
+          })),
+        },
       });
     }
 

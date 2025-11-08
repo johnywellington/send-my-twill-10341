@@ -196,6 +196,18 @@ serve(async (req) => {
       itemsAdded: results.length,
       itemsUpdated: existingDomains.length,
       executionTimeMs: Date.now() - startTime,
+      metadata: {
+        items_added: results.slice(0, 100).map(d => ({
+          domain_name: d.sip_domain,
+          friendly_name: d.friendly_name,
+          domain_sid: d.sip_domain_sid,
+        })),
+        items_updated: existingDomains.slice(0, 100).map(d => ({
+          domain_name: d.domain_name,
+          friendly_name: d.friendly_name,
+          domain_sid: d.sid,
+        })),
+      },
     });
 
     return new Response(

@@ -208,6 +208,16 @@ serve(async (req) => {
       itemsAdded: results.length,
       itemsUpdated: existingApps.length,
       executionTimeMs: Date.now() - startTime,
+      metadata: {
+        items_added: results.slice(0, 100).map(app => ({
+          application_id: app.app_id,
+          name: app.app_name,
+        })),
+        items_updated: existingApps.slice(0, 100).map(app => ({
+          application_id: app.id,
+          name: app.name,
+        })),
+      },
     });
 
     return new Response(

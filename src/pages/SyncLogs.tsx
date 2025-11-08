@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, Activity, Loader2, Eye, AlertCircle } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, Activity, Loader2, Eye, AlertCircle, Phone, Globe, Smartphone, Database as DatabaseIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Database } from "@/integrations/supabase/types";
@@ -476,6 +477,44 @@ export default function SyncLogs() {
                 </div>
               </div>
 
+              {/* Itens Adicionados */}
+              {selectedLog.metadata && 
+               (selectedLog.metadata as any).items_added && 
+               Array.isArray((selectedLog.metadata as any).items_added) &&
+               (selectedLog.metadata as any).items_added.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2 text-green-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Itens Adicionados ({(selectedLog.metadata as any).items_added.length})
+                    </h4>
+                    <ScrollArea className="h-[250px] w-full rounded-md border p-4">
+                      {renderSyncItems(selectedLog.sync_type, (selectedLog.metadata as any).items_added, 'added')}
+                    </ScrollArea>
+                  </div>
+                </>
+              )}
+
+              {/* Itens Atualizados */}
+              {selectedLog.metadata && 
+               (selectedLog.metadata as any).items_updated && 
+               Array.isArray((selectedLog.metadata as any).items_updated) &&
+               (selectedLog.metadata as any).items_updated.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2 text-blue-600">
+                      <RefreshCw className="h-4 w-4" />
+                      Itens Atualizados ({(selectedLog.metadata as any).items_updated.length})
+                    </h4>
+                    <ScrollArea className="h-[250px] w-full rounded-md border p-4">
+                      {renderSyncItems(selectedLog.sync_type, (selectedLog.metadata as any).items_updated, 'updated')}
+                    </ScrollArea>
+                  </div>
+                </>
+              )}
+
               {/* Mensagem de Erro */}
               {selectedLog.error_message && (
                 <>
@@ -527,3 +566,111 @@ export default function SyncLogs() {
     </div>
   );
 }
+
+// Função auxiliar para renderizar itens sincronizados
+const renderSyncItems = (syncType: string, items: any[], type: 'added' | 'updated') => {
+  switch(syncType) {
+    case 'phone_numbers':
+      return items.map((item, idx) => (
+        <Card key={idx} className="p-3 mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="font-medium">{item.phone_number}</p>
+                {item.friendly_name && (
+                  <p className="text-sm text-muted-foreground">
+                    {item.friendly_name}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {item.country_code}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-1 flex-wrap justify-end">
+              {item.supports_sms && <Badge variant="secondary" className="text-xs">SMS</Badge>}
+              {item.supports_voice && <Badge variant="secondary" className="text-xs">Voice</Badge>}
+              {item.supports_mms && <Badge variant="secondary" className="text-xs">MMS</Badge>}
+            </div>
+          </div>
+        </Card>
+      ));
+    
+    case 'sip_domains':
+      return items.map((item, idx) => (
+        <Card key={idx} className="p-3 mb-2">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <p className="font-medium">{item.domain_name}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.friendly_name}
+              </p>
+              {item.domain_sid && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  SID: {item.domain_sid}
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      ));
+    
+    case 'sip_applications':
+      return items.map((item, idx) => (
+        <Card key={idx} className="p-3 mb-2">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1">
+              <p className="font-medium">{item.name}</p>
+              <p className="text-xs text-muted-foreground">
+                ID: {item.application_id}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ));
+    
+    case 'sip_endpoints':
+      return items.map((item, idx) => (
+        <Card key={idx} className="p-3 mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DatabaseIcon className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Extension: {item.extension}</p>
+                {item.display_name && (
+                  <p className="text-sm text-muted-foreground">
+                    {item.display_name}
+                  </p>
+                )}
+                {item.user_agent && (
+                  <p className="text-xs text-muted-foreground">
+                    {item.user_agent}
+                  </p>
+                )}
+                {item.expired_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Expirou: {format(new Date(item.expired_at), 'dd/MM/yyyy HH:mm')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Badge variant={
+              item.status === 'registered' ? 'default' : 'secondary'
+            }>
+              {item.status}
+            </Badge>
+          </div>
+        </Card>
+      ));
+    
+    default:
+      return (
+        <pre className="text-xs overflow-auto">
+          {JSON.stringify(items, null, 2)}
+        </pre>
+      );
+  }
+};

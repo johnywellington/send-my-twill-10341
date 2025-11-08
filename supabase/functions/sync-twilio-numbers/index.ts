@@ -127,6 +127,16 @@ serve(async (req) => {
         status: 'success',
         itemsAdded: formattedNumbers.length,
         executionTimeMs: Date.now() - startTime,
+        metadata: {
+          items_added: formattedNumbers.slice(0, 100).map(n => ({
+            phone_number: n.phone_number,
+            friendly_name: n.friendly_name,
+            supports_sms: n.supports_sms,
+            supports_voice: n.supports_voice,
+            supports_mms: n.supports_mms,
+            country_code: n.country_code,
+          })),
+        },
       });
     }
 

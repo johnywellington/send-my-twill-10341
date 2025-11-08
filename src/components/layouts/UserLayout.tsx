@@ -25,21 +25,22 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-10">
+          <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-50">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="text-green-700 dark:text-green-300" />
               <h1 className="text-lg font-semibold text-foreground">SMS Sender</h1>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <ProviderSelector />
               
-              <div className="w-64">
+              <div className="w-56">
                 <CredentialSelector
                   provider={provider}
                   value={selectedCredentialId}
                   onChange={setSelectedCredentialId}
                   showLegacyOption={true}
+                  compact={true}
                 />
               </div>
               

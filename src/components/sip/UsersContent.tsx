@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode } from "lucide-react";
+import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode, PhoneCall } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
@@ -28,6 +28,7 @@ import { useProvider } from "@/contexts/ProviderContext";
 import { CredentialBadge } from "./CredentialBadge";
 import { SyncEndpointsButton } from "./SyncEndpointsButton";
 import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
+import { useSIPTestCall } from "@/hooks/use-sip-test-call";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -45,6 +46,7 @@ export function UsersContent() {
   const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
   const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
   const { testConnectivity, lastTest, isTesting } = useSIPConnectivityTest();
+  const { startTestCall, isTestingCall } = useSIPTestCall();
 
   const handleOrphansDetected = (orphaned: any[]) => {
     setOrphanedUsers(orphaned);
@@ -125,6 +127,13 @@ export function UsersContent() {
   const handleShowQRCode = (user: any) => {
     setSelectedUserForQR(user);
     setShowQRCodeDialog(true);
+  };
+
+  const handleTestCall = async (user: any) => {
+    await startTestCall({
+      sip_user_id: user.id,
+      provider: user.provider as 'twilio' | 'vonage',
+    });
   };
 
   if (isLoading) {
@@ -434,6 +443,16 @@ export function UsersContent() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleTestCall(user)}
+                            disabled={isTestingCall}
+                            title="Testar Áudio (1 min)"
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <PhoneCall className="h-4 w-4" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="sm"

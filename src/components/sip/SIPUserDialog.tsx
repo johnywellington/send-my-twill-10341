@@ -21,26 +21,25 @@ interface SIPUserDialogProps {
 }
 
 function generatePassword(length = 16): string {
-  // Twilio requires: min 12 chars, at least 1 number, 1 uppercase, 1 lowercase
+  // Senha compatível com Vonage/Twilio: 12-64 chars, 1 número, 1 maiúscula, 1 minúscula
+  // Importante: evitamos caracteres especiais para máxima compatibilidade com PSIP
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
-  const special = '!@#$%^&*';
-  
-  // Ensure minimum requirements are met
+
+  // Garantir requisitos mínimos
   let password = '';
-  password += uppercase[Math.floor(Math.random() * uppercase.length)]; // At least 1 uppercase
-  password += lowercase[Math.floor(Math.random() * lowercase.length)]; // At least 1 lowercase
-  password += numbers[Math.floor(Math.random() * numbers.length)];     // At least 1 number
-  password += special[Math.floor(Math.random() * special.length)];     // At least 1 special
-  
-  // Fill the rest with random characters
-  const allChars = lowercase + uppercase + numbers + special;
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]; // 1 maiúscula
+  password += lowercase[Math.floor(Math.random() * lowercase.length)]; // 1 minúscula
+  password += numbers[Math.floor(Math.random() * numbers.length)];     // 1 número
+
+  // Completar com alfanuméricos
+  const allChars = lowercase + uppercase + numbers;
   for (let i = password.length; i < Math.max(length, 12); i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
-  
-  // Shuffle to avoid predictable pattern
+
+  // Embaralhar
   return password.split('').sort(() => Math.random() - 0.5).join('');
 }
 
@@ -370,6 +369,11 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
                         </span>
                       </div>
                     ))}
+                    {provider === 'vonage' && (
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        Dica: para Vonage, use apenas letras e números (sem caracteres especiais).
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

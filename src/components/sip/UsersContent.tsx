@@ -10,11 +10,47 @@ import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { toast } from "sonner";
 import { useProvider } from "@/contexts/ProviderContext";
 import { CredentialBadge } from "./CredentialBadge";
+import { SyncEndpointsButton } from "./SyncEndpointsButton";
+import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [orphanedDialogOpen, setOrphanedDialogOpen] = useState(false);
+  const [orphanedUsers, setOrphanedUsers] = useState<any[]>([]);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const { selectedCredentialId } = useProvider();
   const { users, isLoading } = useSIPUsers(selectedCredentialId);
+
+  const handleOrphansDetected = (orphaned: any[]) => {
+    setOrphanedUsers(orphaned);
+    setOrphanedDialogOpen(true);
+  };
+
+  const handleCleanupOrphans = async (selectedIds: string[]) => {
+    setIsCleaningUp(true);
+    try {
+      for (const id of selectedIds) {
+        const { error } = await supabase
+          .from('sip_users')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+      }
+      
+      toast.success(`${selectedIds.length} usuário(s) órfão(s) removido(s)`);
+      setOrphanedDialogOpen(false);
+      setOrphanedUsers([]);
+      
+      // Refresh the list
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(`Erro ao limpar órfãos: ${error.message}`);
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -55,13 +91,23 @@ export function UsersContent() {
           <Users className="h-6 w-6" />
           <h2 className="text-2xl font-bold">Usuários SIP</h2>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Criar Usuário SIP
-        </Button>
+        <div className="flex gap-2">
+          <SyncEndpointsButton onOrphansDetected={handleOrphansDetected} />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Usuário SIP
+          </Button>
+        </div>
       </div>
 
       <SIPUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <OrphanedUsersDialog 
+        open={orphanedDialogOpen}
+        onOpenChange={setOrphanedDialogOpen}
+        orphanedUsers={orphanedUsers}
+        onCleanup={handleCleanupOrphans}
+        isLoading={isCleaningUp}
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>

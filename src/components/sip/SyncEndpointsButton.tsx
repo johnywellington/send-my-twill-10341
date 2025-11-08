@@ -2,8 +2,20 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useSyncSIPEndpoints } from "@/hooks/use-sync-sip-endpoints";
 
-export const SyncEndpointsButton = () => {
-  const { mutate: syncEndpoints, isPending } = useSyncSIPEndpoints();
+interface OrphanedUser {
+  id: string;
+  sip_username: string;
+  display_name: string | null;
+  extension: string;
+  provider: string;
+}
+
+interface SyncEndpointsButtonProps {
+  onOrphansDetected?: (orphaned: OrphanedUser[]) => void;
+}
+
+export const SyncEndpointsButton = ({ onOrphansDetected }: SyncEndpointsButtonProps) => {
+  const { mutate: syncEndpoints, isPending } = useSyncSIPEndpoints(onOrphansDetected);
 
   return (
     <Button
@@ -13,7 +25,7 @@ export const SyncEndpointsButton = () => {
       size="sm"
     >
       <RefreshCw className={`h-4 w-4 mr-2 ${isPending ? 'animate-spin' : ''}`} />
-      {isPending ? 'Sincronizando...' : 'Atualizar Status'}
+      {isPending ? 'Sincronizando...' : 'Sincronizar com API'}
     </Button>
   );
 };

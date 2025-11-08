@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export function useSIPUsers() {
+export function useSIPUsers(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
@@ -26,13 +26,17 @@ export function useSIPUsers() {
       extension: string;
       display_name?: string;
       domain_group_id?: string;
+      credentialId?: string;
     }) => {
       const functionName = params.provider === 'twilio' 
         ? 'sip-twilio-create-user' 
         : 'sip-vonage-create-endpoint';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: params,
+        body: {
+          ...params,
+          credentialId: params.credentialId || credentialId,
+        },
       });
 
       if (error) throw error;

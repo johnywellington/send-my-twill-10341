@@ -7,10 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useSIPRoutes } from "@/hooks/use-sip-routes";
 import { SIPRouteDialog } from "./SIPRouteDialog";
+import { useProvider } from "@/contexts/ProviderContext";
 
 export function RoutesContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { routes, isLoading, toggleActive, deleteRoute } = useSIPRoutes();
+  const { selectedCredentialId } = useProvider();
+  const { routes, isLoading, toggleActive, deleteRoute } = useSIPRoutes(selectedCredentialId);
 
   if (isLoading) {
     return (

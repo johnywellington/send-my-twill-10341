@@ -5,6 +5,7 @@ import { toast } from "sonner";
 interface SetupRequest {
   provider: 'twilio' | 'vonage' | 'both';
   setAsDefault?: boolean;
+  credentialId?: string;
   twilioConfig?: {
     friendlyName: string;
     domainName: string;
@@ -26,7 +27,7 @@ interface DomainConfig {
   [key: string]: any;
 }
 
-export function useSIPConfig() {
+export function useSIPConfig(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: configs, isLoading } = useQuery({
@@ -87,7 +88,10 @@ export function useSIPConfig() {
   const createDomain = useMutation({
     mutationFn: async (params: SetupRequest) => {
       const { data, error } = await supabase.functions.invoke('sip-setup-providers', {
-        body: params,
+        body: {
+          ...params,
+          credentialId: params.credentialId || credentialId,
+        },
       });
       if (error) throw error;
       return data;

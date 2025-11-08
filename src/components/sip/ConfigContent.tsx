@@ -21,10 +21,12 @@ import { OrphanedDomainsDialog } from "./OrphanedDomainsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useProvider } from "@/contexts/ProviderContext";
 
 export function ConfigContent() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { selectedCredentialId } = useProvider();
   const { 
     configs, 
     isLoading, 
@@ -37,7 +39,7 @@ export function ConfigContent() {
     updateDomain,
     isCreating,
     isUpdating,
-  } = useSIPConfig();
+  } = useSIPConfig(selectedCredentialId);
   
   const { data: orphanedData } = useOrphanedDomains();
   const orphanedIds = orphanedData?.orphanedIds || new Set();
@@ -87,6 +89,7 @@ export function ConfigContent() {
     createDomain({
       provider: 'twilio',
       setAsDefault: !hasTwilioConfigs,
+      credentialId: selectedCredentialId,
       twilioConfig: {
         friendlyName: twilioFriendlyName,
         domainName: twilioDomainName,
@@ -103,6 +106,7 @@ export function ConfigContent() {
     createDomain({
       provider: 'vonage',
       setAsDefault: !hasVonageConfigs,
+      credentialId: selectedCredentialId,
       vonageConfig: {
         name: vonageAppName,
         displayName: vonageDisplayName || vonageAppName,
@@ -121,6 +125,7 @@ export function ConfigContent() {
     createDomain({
       provider: 'twilio',
       setAsDefault: !hasTwilioConfigs,
+      credentialId: selectedCredentialId,
       twilioConfig: {
         friendlyName: generated.friendlyName,
         domainName: generated.domainName,
@@ -135,6 +140,7 @@ export function ConfigContent() {
     createDomain({
       provider: 'vonage',
       setAsDefault: !hasVonageConfigs,
+      credentialId: selectedCredentialId,
       vonageConfig: {
         name: generated.appName,
         displayName: generated.displayName,

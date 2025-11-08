@@ -8,10 +8,12 @@ import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
 import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { toast } from "sonner";
+import { useProvider } from "@/contexts/ProviderContext";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { users, isLoading } = useSIPUsers();
+  const { selectedCredentialId } = useProvider();
+  const { users, isLoading } = useSIPUsers(selectedCredentialId);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);

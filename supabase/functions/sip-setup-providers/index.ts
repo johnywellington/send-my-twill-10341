@@ -9,6 +9,7 @@ const corsHeaders = {
 interface SetupRequest {
   provider: 'twilio' | 'vonage' | 'both';
   setAsDefault?: boolean;
+  credentialId?: string;
   twilioConfig?: {
     friendlyName: string;
     domainName: string;
@@ -45,13 +46,36 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { provider, twilioConfig, vonageConfig, setAsDefault }: SetupRequest = await req.json();
+    const { provider, twilioConfig, vonageConfig, setAsDefault, credentialId }: SetupRequest = await req.json();
     const results: any = {};
+
+    // Get credentials based on credentialId or use global
+    let twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    let twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    let vonageApiKey = Deno.env.get('VONAGE_API_KEY');
+    let vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
+
+    if (credentialId) {
+      const { data: credential } = await supabase
+        .from('provider_credentials')
+        .select('*')
+        .eq('id', credentialId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (credential) {
+        if (credential.provider === 'twilio') {
+          twilioSid = credential.account_identifier;
+          twilioToken = credential.secret_key;
+        } else if (credential.provider === 'vonage') {
+          vonageApiKey = credential.account_identifier;
+          vonageApiSecret = credential.secret_key;
+        }
+      }
+    }
 
     // Setup Twilio
     if (provider === 'twilio' || provider === 'both') {
-      const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
 
       if (!twilioSid || !twilioToken) {
         throw new Error('Twilio credentials not configured');

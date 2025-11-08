@@ -13,7 +13,7 @@ interface CreateRouteParams {
   domain_group_id?: string;
 }
 
-export function useSIPRoutes() {
+export function useSIPRoutes(credentialId?: string) {
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
@@ -30,13 +30,16 @@ export function useSIPRoutes() {
   });
 
   const createRoute = useMutation({
-    mutationFn: async (params: CreateRouteParams) => {
+    mutationFn: async (params: CreateRouteParams & { credentialId?: string }) => {
       const functionName = params.provider === 'twilio' 
         ? 'sip-twilio-create-route' 
         : 'sip-vonage-create-route';
 
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: params,
+        body: {
+          ...params,
+          credentialId: params.credentialId || credentialId,
+        },
       });
 
       if (error) throw error;

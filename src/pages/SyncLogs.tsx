@@ -8,14 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, Activity, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, Activity, Loader2, Eye, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type { Database } from "@/integrations/supabase/types";
+
+type SyncLog = Database["public"]["Tables"]["sync_logs"]["Row"];
 
 export default function SyncLogs() {
   const [syncTypeFilter, setSyncTypeFilter] = useState<string>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedLog, setSelectedLog] = useState<SyncLog | null>(null);
 
   const { data: logs, isLoading, refetch } = useSyncLogs({
     syncType: syncTypeFilter === "all" ? undefined : syncTypeFilter,
@@ -293,6 +298,7 @@ export default function SyncLogs() {
                   <TableHead className="text-right">Atualizados</TableHead>
                   <TableHead className="text-right">Tempo</TableHead>
                   <TableHead>Erro</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -346,6 +352,16 @@ export default function SyncLogs() {
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                       {log.error_message || '-'}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedLog(log)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -361,6 +377,153 @@ export default function SyncLogs() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Detalhes do Log */}
+      <Dialog open={selectedLog !== null} onOpenChange={() => setSelectedLog(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Detalhes da Sincronização
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas sobre a operação de sincronização
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedLog && (
+            <div className="space-y-6">
+              {/* Cabeçalho com Status */}
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">
+                    {getSyncTypeLabel(selectedLog.sync_type)}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                  </p>
+                </div>
+                {selectedLog.status === 'success' ? (
+                  <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Sucesso
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Erro
+                  </Badge>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Informações Básicas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Provedor</p>
+                  {selectedLog.provider ? (
+                    <Badge variant="outline" className="capitalize">
+                      {selectedLog.provider}
+                    </Badge>
+                  ) : (
+                    <p className="text-sm">-</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Tempo de Execução</p>
+                  <p className="text-sm font-mono">
+                    {selectedLog.execution_time_ms ? `${selectedLog.execution_time_ms}ms` : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Estatísticas de Itens */}
+              <div className="space-y-3">
+                <h4 className="font-medium flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Estatísticas
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                          {selectedLog.items_added || 0}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Itens Adicionados
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                          {selectedLog.items_updated || 0}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Itens Atualizados
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Mensagem de Erro */}
+              {selectedLog.error_message && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      Mensagem de Erro
+                    </h4>
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                      <p className="text-sm font-mono text-destructive break-words">
+                        {selectedLog.error_message}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Metadata */}
+              {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Metadados Adicionais
+                    </h4>
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <pre className="text-xs font-mono overflow-x-auto">
+                        {JSON.stringify(selectedLog.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ID do Log */}
+              <Separator />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">ID do Log</p>
+                <p className="text-xs font-mono text-muted-foreground break-all">
+                  {selectedLog.id}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

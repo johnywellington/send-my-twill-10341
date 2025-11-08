@@ -576,6 +576,7 @@ export type Database = {
           is_active: boolean
           is_default: boolean
           provider: string
+          secret_key: string | null
           updated_at: string
           user_id: string
         }
@@ -587,6 +588,7 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean
           provider: string
+          secret_key?: string | null
           updated_at?: string
           user_id: string
         }
@@ -598,6 +600,7 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean
           provider?: string
+          secret_key?: string | null
           updated_at?: string
           user_id?: string
         }

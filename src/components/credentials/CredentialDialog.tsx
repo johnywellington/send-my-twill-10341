@@ -4,8 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { useState } from "react";
 import { ProviderCredential } from "@/hooks/use-provider-credentials";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CredentialDialogProps {
   open: boolean;
@@ -24,6 +27,8 @@ export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoa
     is_active: credential?.is_active ?? true,
   });
 
+  const [showSecrets, setShowSecrets] = useState(false);
+
   const handleSave = () => {
     onSave(formData);
   };
@@ -41,6 +46,15 @@ export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoa
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {!credential && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Após salvar, você precisará adicionar os secrets (Account SID/Auth Token ou API Key/Secret) manualmente no Lovable Cloud.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="grid gap-2">
             <Label htmlFor="provider">Provedor</Label>
             <Select

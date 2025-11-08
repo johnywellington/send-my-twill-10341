@@ -11,6 +11,7 @@ interface SmsRequest {
   from: string;
   body: string;
   provider?: "twilio" | "vonage";
+  credentialId?: string;
   dryRun?: boolean;
 }
 
@@ -59,9 +60,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Authenticated user:', user.id);
 
-    const { to, from, body, provider = "twilio", dryRun = false }: SmsRequest = await req.json();
+    const { to, from, body, provider = "twilio", credentialId, dryRun = false }: SmsRequest = await req.json();
 
-    console.log('SMS details:', { to, from, bodyLength: body.length, provider, dryRun });
+    console.log('SMS details:', { to, from, bodyLength: body.length, provider, credentialId, dryRun });
 
     // ✅ VALIDAÇÃO DE INPUTS
     if (!to || !from || !body) {
@@ -120,6 +121,68 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = user.id;
     let response;
     
+    // 🔑 CARREGAR CREDENCIAIS DINAMICAMENTE
+    let accountSid: string | undefined;
+    let authToken: string | undefined;
+    let apiKey: string | undefined;
+    let apiSecret: string | undefined;
+
+    if (credentialId) {
+      // Buscar credencial específica
+      const { data: credential, error: credError } = await supabase
+        .from('provider_credentials')
+        .select('*')
+        .eq('id', credentialId)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+
+      if (credError || !credential) {
+        console.error('Credential not found:', credentialId);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Credencial não encontrada ou inativa' }),
+          { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      console.log('Using credential:', credential.credential_name, 'Secret key:', credential.secret_key);
+
+      const secretKey = credential.secret_key;
+      
+      if (secretKey && secretKey !== 'legacy_twilio' && secretKey !== 'legacy_vonage') {
+        // Usar secrets específicos da credencial
+        if (provider === 'twilio') {
+          accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
+          authToken = Deno.env.get(`CRED_${secretKey}_token`);
+          console.log('Loading Twilio secrets:', `CRED_${secretKey}_sid`, `CRED_${secretKey}_token`);
+        } else {
+          apiKey = Deno.env.get(`CRED_${secretKey}_key`);
+          apiSecret = Deno.env.get(`CRED_${secretKey}_secret`);
+          console.log('Loading Vonage secrets:', `CRED_${secretKey}_key`, `CRED_${secretKey}_secret`);
+        }
+      } else {
+        // Fallback para secrets legacy
+        console.log('Using legacy secrets for:', provider);
+        if (provider === 'twilio') {
+          accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+          authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+        } else {
+          apiKey = Deno.env.get('VONAGE_API_KEY');
+          apiSecret = Deno.env.get('VONAGE_API_SECRET');
+        }
+      }
+    } else {
+      // Sem credentialId - usar secrets globais/legacy
+      console.log('No credentialId provided, using legacy secrets');
+      if (provider === 'twilio') {
+        accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      } else {
+        apiKey = Deno.env.get('VONAGE_API_KEY');
+        apiSecret = Deno.env.get('VONAGE_API_SECRET');
+      }
+    }
+    
     // 🧪 MODO DRY-RUN: Simular envio sem chamar API
     if (dryRun) {
       console.log('🧪 DRY-RUN MODE: Skipping actual SMS send');
@@ -156,10 +219,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     if (provider === "vonage") {
-      // Get Vonage credentials from environment
-      const apiKey = Deno.env.get('VONAGE_API_KEY');
-      const apiSecret = Deno.env.get('VONAGE_API_SECRET');
-
+      // Validar credenciais Vonage
       if (!apiKey || !apiSecret) {
         console.error('Missing Vonage credentials');
         return new Response(
@@ -209,14 +269,11 @@ const handler = async (req: Request): Promise<Response> => {
         provider: 'vonage'
       };
     } else {
-      // Get Twilio credentials from environment
-      const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-      const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-
+      // Validar credenciais Twilio
       if (!accountSid || !authToken) {
         console.error('Missing Twilio credentials');
         return new Response(
-          JSON.stringify({ success: false, error: 'Credenciais Twilio não configuradas. Por favor, configure TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN.' }),
+          JSON.stringify({ success: false, error: 'Credenciais Twilio não configuradas. Por favor, configure as credenciais da API.' }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }

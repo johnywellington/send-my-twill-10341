@@ -8,6 +8,7 @@ export interface ProviderCredential {
   provider: 'twilio' | 'vonage';
   credential_name: string;
   account_identifier: string;
+  secret_key?: string | null;
   is_default: boolean;
   is_active: boolean;
   created_at: string;

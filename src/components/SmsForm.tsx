@@ -23,6 +23,7 @@ import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
 import { useTwilioAccountType } from "@/hooks/use-twilio-account-type";
+import { CredentialSelector } from "@/components/credentials/CredentialSelector";
 
 interface SmsFormProps {
   onSmsSent?: () => void;
@@ -40,6 +41,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [dryRun, setDryRun] = useState(false);
   const [useSenderId, setUseSenderId] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | undefined>();
   const createTemplate = useCreateTemplate();
   
   // Estados para progresso de envio em lote
@@ -150,6 +152,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             from: useSenderId ? senderId : from,
             body: message,
             provider: providerToUse,
+            credentialId: selectedCredentialId,
             dryRun
           }
         });
@@ -337,6 +340,23 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             </CardContent>
           </Card>
 
+          {/* Seletor de Conta/Credencial */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Conta {provider === 'twilio' ? 'Twilio' : 'Vonage'}</CardTitle>
+              <CardDescription>
+                Escolha qual conta usar para enviar esta mensagem
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CredentialSelector
+                provider={provider}
+                value={selectedCredentialId}
+                onChange={setSelectedCredentialId}
+                showLegacyOption={true}
+              />
+            </CardContent>
+          </Card>
 
           {!useSenderId && (
             <PhoneNumberSelector

@@ -126,11 +126,14 @@ serve(async (req) => {
 
     const basicAuth = 'Basic ' + btoa(`${vonageApiKey}:${vonageApiSecret}`);
 
-    console.log(`Creating Vonage PSIP user at domain: ${configMap.sip_domain}`, { key });
+    // Extract base domain from SIP domain (e.g., "sip.nexmo.com" -> "nexmo.com")
+    const baseDomain = configMap.sip_domain.replace(/^sip\./, '');
+
+    console.log(`Creating Vonage PSIP user at domain: ${baseDomain}`, { key });
 
     // Create/Update SIP user via Vonage Programmable SIP API (PUT upsert)
     const endpointResponse = await fetch(
-      `https://api.nexmo.com/v1/psip/${configMap.sip_domain}/users/${key}`,
+      `https://api.nexmo.com/v1/psip/${baseDomain}/users/${key}`,
       {
         method: 'PUT',
         headers: {

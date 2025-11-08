@@ -5,6 +5,9 @@ import { LogOut, Shield, Home } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { ProviderSelector } from "@/components/ProviderSelector";
+import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { useProvider } from "@/contexts/ProviderContext";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -12,6 +15,7 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { signOut, user } = useAuth();
+  const { provider, selectedCredentialId, setSelectedCredentialId } = useProvider();
   const navigate = useNavigate();
 
   return (
@@ -21,7 +25,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-10">
+          <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-50">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="text-red-700 dark:text-red-300" />
               <div className="flex items-center gap-3">
@@ -33,7 +37,19 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <ProviderSelector />
+              
+              <div className="w-72">
+                <CredentialSelector
+                  provider={provider}
+                  value={selectedCredentialId}
+                  onChange={setSelectedCredentialId}
+                  showLegacyOption={true}
+                  compact={true}
+                />
+              </div>
+              
               <Button
                 variant="outline"
                 size="sm"

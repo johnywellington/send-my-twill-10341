@@ -74,6 +74,9 @@ export const PhoneNumberList = () => {
     phone.friendly_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const twilioNumbers = filteredNumbers?.filter(phone => phone.provider === 'twilio') || [];
+  const vonageNumbers = filteredNumbers?.filter(phone => phone.provider === 'vonage') || [];
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -95,9 +98,207 @@ export const PhoneNumberList = () => {
     );
   }
 
+  const renderPhoneCard = (phone: PhoneNumber) => {
+    const webhooks = getWebhookUrls(phone.phone_number, phone.provider);
+    
+    return (
+      <Card key={phone.id} className={phone.is_active ? '' : 'opacity-60'}>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg">{phone.phone_number}</CardTitle>
+              {phone.friendly_name && (
+                <CardDescription>{phone.friendly_name}</CardDescription>
+              )}
+            </div>
+            <Badge variant={phone.provider === 'vonage' ? 'default' : 'secondary'}>
+              {phone.provider.toUpperCase()}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {phone.supports_sms && <Badge variant="outline">📱 SMS</Badge>}
+            {phone.supports_voice && <Badge variant="outline">📞 Voice</Badge>}
+            {phone.supports_mms && <Badge variant="outline">🖼️ MMS</Badge>}
+            {phone.webhook_configured ? (
+              <Badge variant="default">✅ Webhooks OK</Badge>
+            ) : (
+              <Badge variant="destructive">⚠️ Configure Webhooks</Badge>
+            )}
+            {phone.sync_source === 'twilio' && (
+              <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                🔄 Twilio
+              </Badge>
+            )}
+            {phone.sync_source === 'vonage' && (
+              <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                🔄 Vonage
+              </Badge>
+            )}
+            
+            {isOrphan(phone.id) && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge 
+                      variant="destructive" 
+                      className="cursor-help animate-pulse"
+                    >
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Órfão
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <div className="space-y-2">
+                      <p className="font-semibold text-sm">⚠️ Número Órfão Detectado</p>
+                      <p className="text-xs">
+                        Este número foi deletado do {phone.provider === 'twilio' ? 'Twilio' : 'Vonage'} mas ainda existe no banco de dados local.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Detectado em: {getOrphanDetails(phone.id) 
+                          ? new Date(getOrphanDetails(phone.id)!.detected_at).toLocaleString('pt-BR')
+                          : 'N/A'
+                        }
+                      </p>
+                      <p className="text-xs text-destructive font-medium">
+                        💡 Sincronize novamente para ver a opção de remover
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full">
+                <Link className="h-4 w-4 mr-2" />
+                Ver URLs de Webhook
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-2 mt-2 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label className="text-xs">SMS Inbound (Receber SMS)</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      readOnly 
+                      value={webhooks.smsInbound.url}
+                      className="font-mono text-xs"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="outline"
+                      onClick={() => handleCopyUrl(webhooks.smsInbound.url)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Método: {webhooks.smsInbound.method}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Voice Inbound (Receber Chamadas)</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      readOnly 
+                      value={webhooks.voiceInbound.url}
+                      className="font-mono text-xs"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="outline"
+                      onClick={() => handleCopyUrl(webhooks.voiceInbound.url)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Método: {webhooks.voiceInbound.method}
+                  </p>
+                </div>
+
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => handleCopyAll(phone)}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Todas as URLs
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {!phone.webhook_configured && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Configure os Webhooks</AlertTitle>
+              <AlertDescription className="text-xs">
+                <ol className="list-decimal list-inside space-y-1 mt-2">
+                  <li>Copie as URLs acima</li>
+                  <li>
+                    Acesse o {phone.provider === 'vonage' ? 'Vonage Dashboard' : 'Twilio Console'}
+                  </li>
+                  <li>Configure cada webhook no número</li>
+                  <li>Clique em "Testar" abaixo para verificar</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={() => setValidationDialogPhone(phone)}
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Validar
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleEdit(phone)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleToggleActive(phone)}
+              disabled={updateMutation.isPending}
+            >
+              {phone.is_active ? (
+                <><EyeOff className="h-4 w-4 mr-2" />Desativar</>
+              ) : (
+                <><Eye className="h-4 w-4 mr-2" />Ativar</>
+              )}
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => setDeleteId(phone.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex gap-4">
           <Input
             placeholder="Pesquisar por número ou nome..."
@@ -107,205 +308,66 @@ export const PhoneNumberList = () => {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredNumbers?.map((phone) => {
-            const webhooks = getWebhookUrls(phone.phone_number, phone.provider);
-            
-            return (
-              <Card key={phone.id} className={phone.is_active ? '' : 'opacity-60'}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{phone.phone_number}</CardTitle>
-                      {phone.friendly_name && (
-                        <CardDescription>{phone.friendly_name}</CardDescription>
-                      )}
-                    </div>
-                    <Badge variant={phone.provider === 'vonage' ? 'default' : 'secondary'}>
-                      {phone.provider.toUpperCase()}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {phone.supports_sms && <Badge variant="outline">📱 SMS</Badge>}
-                    {phone.supports_voice && <Badge variant="outline">📞 Voice</Badge>}
-                    {phone.supports_mms && <Badge variant="outline">🖼️ MMS</Badge>}
-                    {phone.webhook_configured ? (
-                      <Badge variant="default">✅ Webhooks OK</Badge>
-                    ) : (
-                      <Badge variant="destructive">⚠️ Configure Webhooks</Badge>
-                    )}
-                    {phone.sync_source === 'twilio' && (
-                      <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                        🔄 Twilio
-                      </Badge>
-                    )}
-                    {phone.sync_source === 'vonage' && (
-                      <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                        🔄 Vonage
-                      </Badge>
-                    )}
-                    
-                    {isOrphan(phone.id) && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge 
-                              variant="destructive" 
-                              className="cursor-help animate-pulse"
-                            >
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Órfão
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            <div className="space-y-2">
-                              <p className="font-semibold text-sm">⚠️ Número Órfão Detectado</p>
-                              <p className="text-xs">
-                                Este número foi deletado do {phone.provider === 'twilio' ? 'Twilio' : 'Vonage'} mas ainda existe no banco de dados local.
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Detectado em: {getOrphanDetails(phone.id) 
-                                  ? new Date(getOrphanDetails(phone.id)!.detected_at).toLocaleString('pt-BR')
-                                  : 'N/A'
-                                }
-                              </p>
-                              <p className="text-xs text-destructive font-medium">
-                                💡 Sincronize novamente para ver a opção de remover
-                              </p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
+        {/* Números Twilio */}
+        {twilioNumbers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    📱 Números Twilio
+                  </CardTitle>
+                  <CardDescription>
+                    {twilioNumbers.length} número(s) configurado(s)
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  TWILIO
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {twilioNumbers.map(renderPhoneCard)}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                  <Collapsible>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="w-full">
-                        <Link className="h-4 w-4 mr-2" />
-                        Ver URLs de Webhook
-                        <ChevronDown className="h-4 w-4 ml-auto" />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="space-y-2 mt-2 p-4 bg-muted/50 rounded-lg">
-                        <div>
-                          <Label className="text-xs">SMS Inbound (Receber SMS)</Label>
-                          <div className="flex gap-2">
-                            <Input 
-                              readOnly 
-                              value={webhooks.smsInbound.url}
-                              className="font-mono text-xs"
-                            />
-                            <Button 
-                              size="icon" 
-                              variant="outline"
-                              onClick={() => handleCopyUrl(webhooks.smsInbound.url)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Método: {webhooks.smsInbound.method}
-                          </p>
-                        </div>
+        {/* Números Vonage */}
+        {vonageNumbers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    📞 Números Vonage
+                  </CardTitle>
+                  <CardDescription>
+                    {vonageNumbers.length} número(s) configurado(s)
+                  </CardDescription>
+                </div>
+                <Badge variant="default" className="bg-green-600">
+                  VONAGE
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {vonageNumbers.map(renderPhoneCard)}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                        <div>
-                          <Label className="text-xs">Voice Inbound (Receber Chamadas)</Label>
-                          <div className="flex gap-2">
-                            <Input 
-                              readOnly 
-                              value={webhooks.voiceInbound.url}
-                              className="font-mono text-xs"
-                            />
-                            <Button 
-                              size="icon" 
-                              variant="outline"
-                              onClick={() => handleCopyUrl(webhooks.voiceInbound.url)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Método: {webhooks.voiceInbound.method}
-                          </p>
-                        </div>
-
-                        <Button 
-                          variant="default" 
-                          size="sm" 
-                          className="w-full mt-2"
-                          onClick={() => handleCopyAll(phone)}
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copiar Todas as URLs
-                        </Button>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {!phone.webhook_configured && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Configure os Webhooks</AlertTitle>
-                      <AlertDescription className="text-xs">
-                        <ol className="list-decimal list-inside space-y-1 mt-2">
-                          <li>Copie as URLs acima</li>
-                          <li>
-                            Acesse o {phone.provider === 'vonage' ? 'Vonage Dashboard' : 'Twilio Console'}
-                          </li>
-                          <li>Configure cada webhook no número</li>
-                          <li>Clique em "Testar" abaixo para verificar</li>
-                        </ol>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setValidationDialogPhone(phone)}
-                    >
-                      <Activity className="h-4 w-4 mr-2" />
-                      Validar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEdit(phone)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleToggleActive(phone)}
-                      disabled={updateMutation.isPending}
-                    >
-                      {phone.is_active ? (
-                        <><EyeOff className="h-4 w-4 mr-2" />Desativar</>
-                      ) : (
-                        <><Eye className="h-4 w-4 mr-2" />Ativar</>
-                      )}
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => setDeleteId(phone.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        {/* Mensagem quando não há números */}
+        {twilioNumbers.length === 0 && vonageNumbers.length === 0 && searchTerm && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">Nenhum número encontrado com o termo "{searchTerm}".</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <PhoneNumberDialog 

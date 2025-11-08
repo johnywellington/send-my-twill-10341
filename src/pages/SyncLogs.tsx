@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useSyncLogs } from "@/hooks/use-sync-logs";
+import { useSyncAll } from "@/hooks/use-sync-all";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Clock, CheckCircle2, XCircle, Filter, RefreshCw, TrendingUp, Activity, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -19,6 +22,16 @@ export default function SyncLogs() {
     provider: providerFilter === "all" ? undefined : providerFilter,
     status: statusFilter === "all" ? undefined : (statusFilter as "success" | "error" | undefined),
   });
+
+  const { syncAll, isLoading: isSyncing, progress } = useSyncAll();
+
+  const handleSyncAll = async () => {
+    await syncAll();
+    // Aguardar um pouco e recarregar os logs
+    setTimeout(() => {
+      refetch();
+    }, 1000);
+  };
 
   // Estatísticas
   const totalSyncs = logs?.length || 0;
@@ -54,11 +67,107 @@ export default function SyncLogs() {
             Histórico completo de todas as operações de sincronização
           </p>
         </div>
-        <Button onClick={() => refetch()} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
+        <Button 
+          onClick={handleSyncAll} 
+          variant="outline" 
+          size="sm"
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
           Atualizar
         </Button>
       </div>
+
+      {/* Dialog de Progresso */}
+      <Dialog open={progress !== null} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Sincronizando APIs
+            </DialogTitle>
+            <DialogDescription>
+              Consultando todas as operações de sincronização...
+            </DialogDescription>
+          </DialogHeader>
+          
+          {progress && (
+            <div className="space-y-4">
+              {/* Barra de Progresso */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {progress.completed} de {progress.total} concluídas
+                  </span>
+                  <span className="font-medium">
+                    {Math.round((progress.completed / progress.total) * 100)}%
+                  </span>
+                </div>
+                <Progress value={(progress.completed / progress.total) * 100} />
+              </div>
+
+              {/* Lista de Operações */}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {progress.results.map((result, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                  >
+                    <div className="flex items-center gap-3">
+                      {result.status === "pending" && (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted" />
+                      )}
+                      {result.status === "running" && (
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                      )}
+                      {result.status === "success" && (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      )}
+                      {result.status === "error" && (
+                        <XCircle className="h-5 w-5 text-destructive" />
+                      )}
+                      
+                      <div>
+                        <p className="font-medium text-sm">{result.name}</p>
+                        {result.message && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[300px]">
+                            {result.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {result.status === "pending" && (
+                      <Badge variant="secondary" className="text-xs">
+                        Pendente
+                      </Badge>
+                    )}
+                    {result.status === "running" && (
+                      <Badge variant="default" className="text-xs bg-blue-500">
+                        Em execução
+                      </Badge>
+                    )}
+                    {result.status === "success" && (
+                      <Badge variant="default" className="text-xs bg-green-500">
+                        Sucesso
+                      </Badge>
+                    )}
+                    {result.status === "error" && (
+                      <Badge variant="destructive" className="text-xs">
+                        Erro
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Estatísticas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

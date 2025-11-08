@@ -6,13 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye, Pencil, Trash2 } from "lucide-react";
 import { useSIPConfig } from "@/hooks/use-sip-config";
+import { useDomainValidation } from "@/hooks/use-domain-validation";
 import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
 import { useNavigate } from "react-router-dom";
 import { SyncTwilioDomainsButton } from "./SyncTwilioDomainsButton";
 import { SyncVonageApplicationsButton } from "./SyncVonageApplicationsButton";
+import { EditDomainDialog } from "./EditDomainDialog";
+import { DeleteDomainDialog } from "./DeleteDomainDialog";
 
 export function ConfigContent() {
   const navigate = useNavigate();
@@ -25,7 +28,9 @@ export function ConfigContent() {
     deleteDomain, 
     setAsDefault, 
     toggleActive,
+    updateDomain,
     isCreating,
+    isUpdating,
   } = useSIPConfig();
   
   const [twilioDialogOpen, setTwilioDialogOpen] = useState(false);
@@ -37,6 +42,23 @@ export function ConfigContent() {
   
   const [vonageAppName, setVonageAppName] = useState('');
   const [vonageDisplayName, setVonageDisplayName] = useState('');
+
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean;
+    domainGroupId: string;
+    currentName: string;
+    provider: 'twilio' | 'vonage';
+  } | null>(null);
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    domainGroupId: string;
+    domainName: string;
+    provider: 'twilio' | 'vonage';
+    isDefault: boolean;
+  } | null>(null);
+
+  const { data: validationData } = useDomainValidation(deleteDialog?.domainGroupId || null);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const baseUrl = `https://${projectId}.supabase.co/functions/v1`;
@@ -186,6 +208,17 @@ export function ConfigContent() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => setEditDialog({
+                                open: true,
+                                domainGroupId: domain.domain_group_id,
+                                currentName: domain.friendly_name,
+                                provider: 'twilio',
+                              })}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Editar Nome
+                            </DropdownMenuItem>
                             {!domain.is_default && (
                               <DropdownMenuItem 
                                 onClick={() => setAsDefault({ 
@@ -205,15 +238,19 @@ export function ConfigContent() {
                             >
                               {domain.is_active ? '🔴 Desativar' : '🟢 Ativar'}
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja deletar este domínio?')) {
-                                  deleteDomain(domain.domain_group_id);
-                                }
-                              }}
+                              onClick={() => setDeleteDialog({
+                                open: true,
+                                domainGroupId: domain.domain_group_id,
+                                domainName: domain.friendly_name,
+                                provider: 'twilio',
+                                isDefault: domain.is_default,
+                              })}
                             >
-                              🗑️ Deletar
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Deletar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -303,6 +340,17 @@ export function ConfigContent() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => setEditDialog({
+                                open: true,
+                                domainGroupId: app.domain_group_id,
+                                currentName: app.friendly_name,
+                                provider: 'vonage',
+                              })}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Editar Nome
+                            </DropdownMenuItem>
                             {!app.is_default && (
                               <DropdownMenuItem 
                                 onClick={() => setAsDefault({ 
@@ -322,15 +370,19 @@ export function ConfigContent() {
                             >
                               {app.is_active ? '🔴 Desativar' : '🟢 Ativar'}
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja deletar esta aplicação?')) {
-                                  deleteDomain(app.domain_group_id);
-                                }
-                              }}
+                              onClick={() => setDeleteDialog({
+                                open: true,
+                                domainGroupId: app.domain_group_id,
+                                domainName: app.friendly_name,
+                                provider: 'vonage',
+                                isDefault: app.is_default,
+                              })}
                             >
-                              🗑️ Deletar
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Deletar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -448,6 +500,38 @@ export function ConfigContent() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Edição */}
+      {editDialog && (
+        <EditDomainDialog
+          open={editDialog.open}
+          onOpenChange={(open) => !open && setEditDialog(null)}
+          domainGroupId={editDialog.domainGroupId}
+          currentName={editDialog.currentName}
+          provider={editDialog.provider}
+          onSave={updateDomain}
+          isLoading={isUpdating}
+        />
+      )}
+
+      {/* Dialog de Deleção */}
+      {deleteDialog && (
+        <DeleteDomainDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => !open && setDeleteDialog(null)}
+          domainName={deleteDialog.domainName}
+          provider={deleteDialog.provider}
+          isDefault={deleteDialog.isDefault}
+          hasUsers={validationData?.hasUsers || false}
+          hasRoutes={validationData?.hasRoutes || false}
+          userCount={validationData?.userCount}
+          routeCount={validationData?.routeCount}
+          onConfirm={() => {
+            deleteDomain(deleteDialog.domainGroupId);
+            setDeleteDialog(null);
+          }}
+        />
+      )}
     </div>
   );
 }

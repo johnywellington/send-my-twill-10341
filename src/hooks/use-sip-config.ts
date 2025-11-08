@@ -160,6 +160,23 @@ export function useSIPConfig() {
     },
   });
 
+  const updateDomain = useMutation({
+    mutationFn: async ({ domainGroupId, friendlyName }: { domainGroupId: string, friendlyName: string }) => {
+      const { error } = await supabase
+        .from('sip_provider_config')
+        .update({ friendly_name: friendlyName })
+        .eq('domain_group_id', domainGroupId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sip-config'] });
+      toast.success('Domínio atualizado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar: ${error.message}`);
+    },
+  });
+
   return {
     configs,
     isLoading,
@@ -169,6 +186,8 @@ export function useSIPConfig() {
     deleteDomain: deleteDomain.mutate,
     setAsDefault: setAsDefault.mutate,
     toggleActive: toggleActive.mutate,
+    updateDomain: updateDomain.mutate,
     isCreating: createDomain.isPending,
+    isUpdating: updateDomain.isPending,
   };
 }

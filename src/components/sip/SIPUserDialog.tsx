@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Star, Lightbulb, Eye, EyeOff } from "lucide-react";
+import { RefreshCw, Star, Lightbulb, Eye, EyeOff, Copy, Check, X } from "lucide-react";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useExtensionAvailability } from "@/hooks/use-extension-availability";
@@ -84,6 +84,16 @@ function getPasswordStrength(password: string): { strength: number; label: strin
   return { strength, label: 'Muito Forte', color: 'bg-green-600' };
 }
 
+function getPasswordRequirements(password: string) {
+  return [
+    { label: '12+ caracteres', met: password.length >= 12 },
+    { label: 'Letra maiúscula (A-Z)', met: /[A-Z]/.test(password) },
+    { label: 'Letra minúscula (a-z)', met: /[a-z]/.test(password) },
+    { label: 'Número (0-9)', met: /[0-9]/.test(password) },
+    { label: 'Caractere especial (!@#$%^&*)', met: /[!@#$%^&*]/.test(password) },
+  ];
+}
+
 export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   const [provider, setProvider] = useState<'twilio' | 'vonage'>('twilio');
   const [domainGroupId, setDomainGroupId] = useState('');
@@ -92,6 +102,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
   const [extension, setExtension] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const { selectedCredentialId } = useProvider();
   const { createUser, isCreating } = useSIPUsers(selectedCredentialId);
@@ -159,6 +170,14 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
     setExtension('');
     setDisplayName('');
     setDomainGroupId('');
+    setPasswordCopied(false);
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(password);
+    setPasswordCopied(true);
+    toast.success('Senha copiada!');
+    setTimeout(() => setPasswordCopied(false), 2000);
   };
 
   return (
@@ -229,7 +248,7 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
           <div className="space-y-2">
             <Label htmlFor="password">Password *</Label>
             <div className="flex gap-2">
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                 <div className="relative">
                   <Input
                     id="password"
@@ -239,25 +258,40 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
                     required
                     className={
                       password && !validatePassword(password).valid
-                        ? "border-red-500 pr-10"
+                        ? "border-red-500 pr-20"
                         : password && validatePassword(password).valid
-                        ? "border-green-500 pr-10"
-                        : "pr-10"
+                        ? "border-green-500 pr-20"
+                        : "pr-20"
                     }
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
+                  <div className="absolute right-0 top-0 h-full flex items-center gap-1 pr-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopyPassword}
+                      className="h-8 w-8 p-0 hover:bg-transparent"
+                    >
+                      {passwordCopied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="h-8 w-8 p-0 hover:bg-transparent"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Password Strength Indicator */}
@@ -284,10 +318,23 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
                   </div>
                 )}
 
-                {password && !validatePassword(password).valid && (
-                  <p className="text-xs text-red-600 dark:text-red-400">
-                    {validatePassword(password).message}
-                  </p>
+                {/* Requirements Checklist */}
+                {password && (
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Requisitos:</p>
+                    {getPasswordRequirements(password).map((req, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs">
+                        {req.met ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        )}
+                        <span className={req.met ? 'text-foreground' : 'text-muted-foreground'}>
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
               <Button
@@ -300,9 +347,6 @@ export function SIPUserDialog({ open, onOpenChange }: SIPUserDialogProps) {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Mínimo 12 caracteres, com letra maiúscula, minúscula e número
-            </p>
           </div>
 
           <div className="space-y-2">

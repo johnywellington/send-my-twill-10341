@@ -24,15 +24,23 @@ import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
 import { useTwilioAccountType } from "@/hooks/use-twilio-account-type";
 import { CredentialSelector } from "@/components/credentials/CredentialSelector";
-
 interface SmsFormProps {
   onSmsSent?: () => void;
 }
-
-export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
-  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
+export const SmsForm = ({
+  onSmsSent
+}: SmsFormProps) => {
+  const {
+    provider,
+    autoFallback,
+    getAlternativeProvider,
+    selectedCredentialId
+  } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
-  const { isTrial, isLoading: loadingAccountType } = useTwilioAccountType();
+  const {
+    isTrial,
+    isLoading: loadingAccountType
+  } = useTwilioAccountType();
   const [destinations, setDestinations] = useState<string[]>([""]);
   const [from, setFrom] = useState("");
   const [senderId, setSenderId] = useState("");
@@ -42,44 +50,42 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
   const [useSenderId, setUseSenderId] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const createTemplate = useCreateTemplate();
-  
+
   // Estados para progresso de envio em lote
   const [showProgress, setShowProgress] = useState(false);
   const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [throttle, setThrottle] = useState(1.0); // 100% por padrão
-  
+
   const maxLength = 160;
   const messageLength = message.length;
   const isNearLimit = messageLength > maxLength * 0.8;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const validDestinations = destinations.filter(d => d.trim() !== "");
-    
     if (validDestinations.length === 0) {
       toast.error("Adicione pelo menos um número de destino");
       return;
     }
-
     setLoading(true);
     setCancelRequested(false);
 
     // Inicializar status de todos os números como 'pending'
     const initialStatuses: PhoneStatus[] = validDestinations.map(number => ({
       number,
-      status: 'pending' as const,
+      status: 'pending' as const
     }));
     setPhoneStatuses(initialStatuses);
     setCurrentIndex(0);
     setShowProgress(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
@@ -96,7 +102,7 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
         const senderValidation = adapter.validateSenderId(senderId);
         if (!senderValidation.valid) {
           toast.error("Sender ID inválido", {
-            description: senderValidation.error,
+            description: senderValidation.error
           });
           setLoading(false);
           setShowProgress(false);
@@ -114,17 +120,15 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
 
       // Normalizar e validar números
       const normalizedDestinations: string[] = [];
-
       for (let to of validDestinations) {
         // Tentar adicionar + automaticamente se faltar
         let normalizedNumber = to.trim();
-        
+
         // Se não tem + e parece ser um número internacional, adicionar +
         if (!normalizedNumber.startsWith('+') && /^\d{10,15}$/.test(normalizedNumber)) {
           normalizedNumber = '+' + normalizedNumber;
           console.log(`Auto-normalizando: ${to} → ${normalizedNumber}`);
         }
-        
         const phoneValidation = adapter.validatePhoneNumber(normalizedNumber, 'sms');
         if (!phoneValidation.valid) {
           errors.push(`${to}: ${phoneValidation.error}`);
@@ -133,17 +137,15 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           normalizedDestinations.push(normalizedNumber);
         }
       }
-
       if (errors.length > 0) {
         toast.error("Números inválidos encontrados", {
           description: errors.slice(0, 3).join("\n") + (errors.length > 3 ? `\n... e mais ${errors.length - 3}` : ""),
-          duration: 6000,
+          duration: 6000
         });
         setLoading(false);
         setShowProgress(false);
         return;
       }
-
       const trySend = async (to: string, providerToUse: 'twilio' | 'vonage') => {
         return await supabase.functions.invoke('send-sms', {
           body: {
@@ -163,19 +165,21 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
           toast.info("Envio cancelado pelo usuário");
           break;
         }
-
         const to = normalizedDestinations[i];
-        
-        // Atualizar status para 'sending'
-        setPhoneStatuses(prev => prev.map((p, idx) => 
-          idx === i ? { ...p, status: 'sending', timestamp: new Date() } : p
-        ));
-        setCurrentIndex(i + 1);
 
+        // Atualizar status para 'sending'
+        setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
+          ...p,
+          status: 'sending',
+          timestamp: new Date()
+        } : p));
+        setCurrentIndex(i + 1);
         try {
           console.log(`[SMS] Enviando para ${to} via ${provider}`);
-          let { data, error } = await trySend(to, provider);
-
+          let {
+            data,
+            error
+          } = await trySend(to, provider);
           if (error && autoFallback) {
             const alternativeProvider = getAlternativeProvider();
             console.log(`[SMS] Fallback para ${to}: tentando com ${alternativeProvider}`);
@@ -183,47 +187,37 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             data = fallbackResult.data;
             error = fallbackResult.error;
           }
-
           if (error || !data?.success) {
             const errorMsg = data?.error || error?.message || "Erro desconhecido";
             console.error(`Error sending to ${to}:`, errorMsg);
             errorCount++;
             errors.push(`${to}: ${errorMsg}`);
-            
-            setPhoneStatuses(prev => prev.map((p, idx) => 
-              idx === i ? { 
-                ...p, 
-                status: 'error', 
-                message: errorMsg,
-                timestamp: new Date() 
-              } : p
-            ));
+            setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
+              ...p,
+              status: 'error',
+              message: errorMsg,
+              timestamp: new Date()
+            } : p));
           } else {
             successCount++;
-            
-            setPhoneStatuses(prev => prev.map((p, idx) => 
-              idx === i ? { 
-                ...p, 
-                status: 'success', 
-                message: 'Enviado com sucesso',
-                timestamp: new Date() 
-              } : p
-            ));
+            setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
+              ...p,
+              status: 'success',
+              message: 'Enviado com sucesso',
+              timestamp: new Date()
+            } : p));
           }
         } catch (err: any) {
           console.error(`Error sending to ${to}:`, err);
           errorCount++;
           const errorMsg = err.message || "Erro inesperado";
           errors.push(`${to}: ${errorMsg}`);
-          
-          setPhoneStatuses(prev => prev.map((p, idx) => 
-            idx === i ? { 
-              ...p, 
-              status: 'error', 
-              message: errorMsg,
-              timestamp: new Date() 
-            } : p
-          ));
+          setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
+            ...p,
+            status: 'error',
+            message: errorMsg,
+            timestamp: new Date()
+          } : p));
         }
 
         // Delay dinâmico baseado no throttle configurado
@@ -248,15 +242,13 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
       console.error("Erro ao enviar SMS:", error);
       toast.error("Erro inesperado", {
         description: error.message,
-        duration: 6000,
+        duration: 6000
       });
     } finally {
       setLoading(false);
     }
   };
-
-  return (
-    <Card className="w-full max-w-md mx-auto glass-effect shadow-xl border border-border/50">
+  return <Card className="w-full max-w-md mx-auto glass-effect shadow-xl border border-border/50">
       <CardHeader className="space-y-3 pb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
@@ -277,130 +269,74 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1 flex-1">
-                  <Label 
-                    htmlFor="useSenderId" 
-                    className={`text-sm font-medium ${
-                      provider === 'twilio' && isTrial ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
-                  >
+                  <Label htmlFor="useSenderId" className={`text-sm font-medium ${provider === 'twilio' && isTrial ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                     Usar Sender ID Personalizado
-                    {provider === 'twilio' && isTrial && (
-                      <Badge variant="destructive" className="ml-2 text-xs">
+                    {provider === 'twilio' && isTrial && <Badge variant="destructive" className="ml-2 text-xs">
                         Indisponível em Trial
-                      </Badge>
-                    )}
+                      </Badge>}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    {provider === 'twilio' && isTrial ? (
-                      <>
+                    {provider === 'twilio' && isTrial ? <>
                         Contas trial não podem usar Sender IDs alfanuméricos.
                         Use um número real ou{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            toast.info("💡 Dica: Vonage permite Sender IDs em contas normais!", {
-                              description: "Troque o provider para Vonage no seletor acima.",
-                              duration: 5000,
-                            });
-                          }}
-                          className="underline text-primary hover:text-primary/80 font-medium"
-                        >
+                        <button type="button" onClick={() => {
+                      toast.info("💡 Dica: Vonage permite Sender IDs em contas normais!", {
+                        description: "Troque o provider para Vonage no seletor acima.",
+                        duration: 5000
+                      });
+                    }} className="underline text-primary hover:text-primary/80 font-medium">
                           use Vonage
                         </button>
-                      </>
-                    ) : (
-                      "Envie com nome personalizado (ex: EMPRESA) ao invés de número"
-                    )}
+                      </> : "Envie com nome personalizado (ex: EMPRESA) ao invés de número"}
                   </p>
                 </div>
-                <Switch
-                  id="useSenderId"
-                  checked={useSenderId}
-                  disabled={provider === 'twilio' && isTrial}
-                  onCheckedChange={(checked) => {
-                    // Prevenir ativação em trial Twilio
-                    if (checked && provider === 'twilio' && isTrial) {
-                      toast.error("Sender ID não disponível em conta trial Twilio", {
-                        description: "Faça upgrade da sua conta ou use Vonage.",
-                        duration: 6000,
-                      });
-                      return;
-                    }
-                    
-                    setUseSenderId(checked);
-                    if (checked) {
-                      setFrom("");
-                    } else {
-                      setSenderId("");
-                    }
-                  }}
-                />
+                <Switch id="useSenderId" checked={useSenderId} disabled={provider === 'twilio' && isTrial} onCheckedChange={checked => {
+                // Prevenir ativação em trial Twilio
+                if (checked && provider === 'twilio' && isTrial) {
+                  toast.error("Sender ID não disponível em conta trial Twilio", {
+                    description: "Faça upgrade da sua conta ou use Vonage.",
+                    duration: 6000
+                  });
+                  return;
+                }
+                setUseSenderId(checked);
+                if (checked) {
+                  setFrom("");
+                } else {
+                  setSenderId("");
+                }
+              }} />
               </div>
             </CardContent>
           </Card>
 
           {/* Seletor de Conta/Credencial */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Conta {provider === 'twilio' ? 'Twilio' : 'Vonage'}</CardTitle>
-              <CardDescription>
-                Escolha qual conta usar para enviar esta mensagem
-              </CardDescription>
-            </CardHeader>
+            
           </Card>
 
-          {!useSenderId && (
-            <PhoneNumberSelector
-              value={from}
-              onChange={setFrom}
-              filterType="sms"
-              label="Número de Origem"
-              description="Escolha um número cadastrado ou adicione novos em 'Números'"
-            />
-          )}
+          {!useSenderId && <PhoneNumberSelector value={from} onChange={setFrom} filterType="sms" label="Número de Origem" description="Escolha um número cadastrado ou adicione novos em 'Números'" />}
 
-          {useSenderId && (
-            <div className="space-y-2.5">
+          {useSenderId && <div className="space-y-2.5">
               <Label htmlFor="senderId" className="text-sm font-medium text-foreground flex items-center gap-2">
                 Sender ID <span className="text-destructive">*</span>
                 <SenderIdTooltip />
               </Label>
-              <Input
-                id="senderId"
-                type="text"
-                placeholder="Ex: EMPRESA, LOJA, ALERT"
-                value={senderId}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                  if (value.length <= 11) {
-                    setSenderId(value);
-                  }
-                }}
-                maxLength={11}
-                required={useSenderId}
-                className="h-11 font-mono transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              />
+              <Input id="senderId" type="text" placeholder="Ex: EMPRESA, LOJA, ALERT" value={senderId} onChange={e => {
+            const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (value.length <= 11) {
+              setSenderId(value);
+            }
+          }} maxLength={11} required={useSenderId} className="h-11 font-mono transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20" />
               <p className="text-xs text-muted-foreground">
-                {senderId ? (
-                  <>
+                {senderId ? <>
                     <span className="text-primary font-medium">{senderId.length}/11</span> caracteres
                     {senderId.length >= 3 && <span className="text-green-500 ml-2">✓ Válido</span>}
-                  </>
-                ) : (
-                  <span className="text-amber-600">Digite 3-11 caracteres alfanuméricos</span>
-                )}
+                  </> : <span className="text-amber-600">Digite 3-11 caracteres alfanuméricos</span>}
               </p>
-            </div>
-          )}
+            </div>}
 
-          <DestinationNumbersInput
-            value={destinations}
-            onChange={setDestinations}
-            maxNumbers={1000}
-            label="Números de Destino"
-            placeholder="351911019866"
-            description="Digite o número com código do país (ex: 351911019866 ou +351911019866). Sistema adiciona + automaticamente se necessário."
-          />
+          <DestinationNumbersInput value={destinations} onChange={setDestinations} maxNumbers={1000} label="Números de Destino" placeholder="351911019866" description="Digite o número com código do país (ex: 351911019866 ou +351911019866). Sistema adiciona + automaticamente se necessário." />
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -408,30 +344,16 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
                 Mensagem
               </Label>
               <div className="flex items-center gap-2">
-                <TemplateSelector 
-                  type="sms"
-                  onSelect={(template) => {
-                    setMessage(template.content);
-                    toast.success("Template carregado!");
-                  }}
-                />
-                <span className={`text-xs font-medium transition-colors ${
-                  isNearLimit ? 'text-destructive' : 'text-muted-foreground'
-                }`}>
+                <TemplateSelector type="sms" onSelect={template => {
+                setMessage(template.content);
+                toast.success("Template carregado!");
+              }} />
+                <span className={`text-xs font-medium transition-colors ${isNearLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {messageLength}/{maxLength}
                 </span>
               </div>
             </div>
-            <Textarea
-              id="message"
-              placeholder="Digite sua mensagem aqui..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              required
-              rows={5}
-              maxLength={maxLength}
-              className="resize-none transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20"
-            />
+            <Textarea id="message" placeholder="Digite sua mensagem aqui..." value={message} onChange={e => setMessage(e.target.value)} required rows={5} maxLength={maxLength} className="resize-none transition-all duration-200 hover:border-primary/50 focus:ring-2 focus:ring-primary/20" />
           </div>
 
           <div className="flex items-center space-x-2 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -440,72 +362,32 @@ export const SmsForm = ({ onSmsSent }: SmsFormProps) => {
               <Label htmlFor="dryRun" className="font-medium cursor-pointer">Modo Teste</Label>
               <p className="text-xs text-muted-foreground">Teste sem enviar de verdade</p>
             </div>
-            <Switch
-              id="dryRun"
-              checked={dryRun}
-              onCheckedChange={setDryRun}
-            />
+            <Switch id="dryRun" checked={dryRun} onCheckedChange={setDryRun} />
           </div>
 
           {/* Controle de Velocidade de Envio - mostra apenas quando há múltiplos destinos */}
-          {destinations.filter(d => d.trim()).length > 1 && (
-            <RateLimitSelector
-              provider={provider}
-              type="sms"
-              value={throttle}
-              onChange={setThrottle}
-            />
-          )}
+          {destinations.filter(d => d.trim()).length > 1 && <RateLimitSelector provider={provider} type="sms" value={throttle} onChange={setThrottle} />}
 
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => message && setSaveDialogOpen(true)}
-              disabled={!message || loading}
-              className="h-12"
-            >
+            <Button type="button" variant="outline" onClick={() => message && setSaveDialogOpen(true)} disabled={!message || loading} className="h-12">
               <Save className="mr-2 h-4 w-4" />
               Salvar Template
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold"
-            >
-              {loading ? (
-                <>
+            <Button type="submit" disabled={loading} className="flex-1 h-12 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[var(--shadow-glow)] text-base font-semibold">
+              {loading ? <>
                   <Loader2 className="mr-2.5 h-5 w-5 animate-spin" />
                   Enviando...
-                </>
-              ) : (
-                <>
+                </> : <>
                   <Send className="mr-2.5 h-5 w-5" />
                   Enviar SMS
-                </>
-              )}
+                </>}
             </Button>
           </div>
         </form>
       </CardContent>
       
-      <TemplateDialog
-        open={saveDialogOpen}
-        onOpenChange={setSaveDialogOpen}
-        onSave={(template) => createTemplate.mutate(template)}
-        defaultType="sms"
-        defaultContent={message}
-      />
+      <TemplateDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} onSave={template => createTemplate.mutate(template)} defaultType="sms" defaultContent={message} />
       
-      <BatchSendProgress
-        open={showProgress}
-        onOpenChange={setShowProgress}
-        phoneStatuses={phoneStatuses}
-        currentIndex={currentIndex}
-        total={phoneStatuses.length}
-        onCancel={() => setCancelRequested(true)}
-        title="Enviando SMS em Lote"
-      />
-    </Card>
-  );
+      <BatchSendProgress open={showProgress} onOpenChange={setShowProgress} phoneStatuses={phoneStatuses} currentIndex={currentIndex} total={phoneStatuses.length} onCancel={() => setCancelRequested(true)} title="Enviando SMS em Lote" />
+    </Card>;
 };

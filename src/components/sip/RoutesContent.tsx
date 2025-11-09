@@ -4,16 +4,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { useSIPRoutes } from "@/hooks/use-sip-routes";
+import { useSyncSIPRoutes } from "@/hooks/use-sync-sip-routes";
 import { SIPRouteDialog } from "./SIPRouteDialog";
 import { useProvider } from "@/contexts/ProviderContext";
 import { CredentialBadge } from "./CredentialBadge";
 
 export function RoutesContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false);
+  const [syncLogs, setSyncLogs] = useState<string>("");
   const { selectedCredentialId } = useProvider();
   const { routes, isLoading, toggleActive, deleteRoute } = useSIPRoutes(selectedCredentialId);
+  const syncRoutes = useSyncSIPRoutes(selectedCredentialId);
+
+  const handleSyncRoutes = async () => {
+    try {
+      const result = await syncRoutes.mutateAsync();
+      setSyncLogs(result.logs);
+      setLogsDialogOpen(true);
+    } catch (error) {
+      console.error('Sync error:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -41,13 +57,41 @@ export function RoutesContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Rotas SIP</h2>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Criar Rota
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncRoutes}
+            disabled={syncRoutes.isPending}
+          >
+            {syncRoutes.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Consultar Rotas API
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Rota
+          </Button>
+        </div>
       </div>
 
       <SIPRouteDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      <Dialog open={logsDialogOpen} onOpenChange={setLogsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Logs da Consulta de Rotas</DialogTitle>
+            <DialogDescription>
+              Detalhes da consulta nas APIs dos provedores
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[500px] w-full rounded-md border p-4">
+            <pre className="text-sm whitespace-pre-wrap font-mono">{syncLogs}</pre>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

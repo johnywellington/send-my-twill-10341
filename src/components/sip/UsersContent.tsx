@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode, PhoneCall, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Copy, Trash2, Plus, Search, Loader2, Users, Scan, QrCode, PhoneCall, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSIPUsers } from "@/hooks/use-sip-users";
 import { SIPUserDialog } from "./SIPUserDialog";
@@ -43,6 +46,8 @@ export function UsersContent() {
   const [selectedUserForTest, setSelectedUserForTest] = useState<any>(null);
   const [showQRCodeDialog, setShowQRCodeDialog] = useState(false);
   const [selectedUserForQR, setSelectedUserForQR] = useState<any>(null);
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  const [selectedUserForCredentials, setSelectedUserForCredentials] = useState<any>(null);
   const { selectedCredentialId } = useProvider();
   const { users, isLoading, deleteUser, isDeleting } = useSIPUsers(selectedCredentialId);
   const { detectOrphansAsync, cleanupOrphans, isDetecting, isCleaning, lastDetection } = useCleanupOrphanedResources();
@@ -129,6 +134,11 @@ export function UsersContent() {
   const handleShowQRCode = (user: any) => {
     setSelectedUserForQR(user);
     setShowQRCodeDialog(true);
+  };
+
+  const handleShowCredentials = (user: any) => {
+    setSelectedUserForCredentials(user);
+    setShowCredentialsDialog(true);
   };
 
   const handleTestCall = async (user: any) => {
@@ -480,6 +490,15 @@ export function UsersContent() {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            onClick={() => handleShowCredentials(user)}
+                            title="Ver Credenciais (Username e Senha)"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             onClick={() => handleTestCall(user)}
                             disabled={isTestingCall}
                             title="Testar Áudio (1 min)"
@@ -541,6 +560,143 @@ export function UsersContent() {
         </CardContent>
       </Card>
 
+      {/* Credentials Dialog */}
+      <AlertDialog open={showCredentialsDialog} onOpenChange={setShowCredentialsDialog}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Credenciais SIP - {selectedUserForCredentials?.display_name || selectedUserForCredentials?.sip_username}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Use estas credenciais para configurar seu softphone/dispositivo SIP
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {selectedUserForCredentials && (
+            <div className="space-y-4">
+              {/* Ramal */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Ramal (Extension)</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={selectedUserForCredentials.extension} 
+                    readOnly 
+                    className="font-mono font-bold text-lg"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(selectedUserForCredentials.extension, 'Ramal')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Usuário SIP (Username)</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={selectedUserForCredentials.sip_username} 
+                    readOnly 
+                    className="font-mono"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(selectedUserForCredentials.sip_username, 'Username')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Senha (Password)</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={selectedUserForCredentials.sip_password} 
+                    readOnly 
+                    className="font-mono bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-800"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(selectedUserForCredentials.sip_password, 'Senha')}
+                    className="border-yellow-300 dark:border-yellow-800"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Domain */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Domínio SIP (Domain)</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={selectedUserForCredentials.sip_domain} 
+                    readOnly 
+                    className="font-mono text-sm"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(selectedUserForCredentials.sip_domain, 'Domínio')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* SIP URI Completa */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">SIP URI Completa</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={formatSIPUri(selectedUserForCredentials.sip_username, selectedUserForCredentials.sip_domain)} 
+                    readOnly 
+                    className="font-mono text-sm"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(formatSIPUri(selectedUserForCredentials.sip_username, selectedUserForCredentials.sip_domain), 'SIP URI')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Provider */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Provider</Label>
+                <Badge variant="outline" className="font-mono">
+                  {getProviderIcon(selectedUserForCredentials.provider as 'twilio' | 'vonage')} {selectedUserForCredentials.provider}
+                </Badge>
+              </div>
+
+              {/* Alerta de Segurança */}
+              <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>⚠️ Importante:</strong> Guarde estas credenciais em local seguro. A senha não pode ser recuperada depois.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <Button onClick={() => setShowCredentialsDialog(false)}>
+              Fechar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* QR Code Dialog */}
       <AlertDialog open={showQRCodeDialog} onOpenChange={setShowQRCodeDialog}>
         <AlertDialogContent className="max-w-md">
@@ -575,6 +731,10 @@ export function UsersContent() {
                   <div>
                     <p className="text-xs text-muted-foreground">Usuário SIP</p>
                     <p className="font-mono text-sm">{selectedUserForQR.sip_username}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Senha</p>
+                    <p className="font-mono text-sm font-bold">{selectedUserForQR.sip_password}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Domínio</p>

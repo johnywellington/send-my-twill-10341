@@ -15,46 +15,45 @@ const Index = () => {
 
   const tabConfig = {
     sms: {
-      title: "SMS Sender",
+      title: "SMS",
       short: "SMS",
       icon: MessageSquare,
-      description: "Envie mensagens SMS de forma simples e segura"
+      description: "Envie mensagens SMS de forma simples e segura",
     },
     voice: {
       title: "Voice Call",
       short: "Voice",
       icon: Phone,
-      description: "Faça chamadas de voz usando a API do Vonage"
+      description: "Faça chamadas de voz usando a API do Vonage",
     },
     ivr: {
       title: "Menu URA",
       short: "URA",
       icon: PhoneForwarded,
-      description: "Sistema URA com redirecionamento de chamadas e suporte multi-provider"
+      description: "Sistema URA com redirecionamento de chamadas e suporte multi-provider",
     },
     "receive-sms": {
       title: "Receber SMS",
       short: "Rec. SMS",
       icon: Inbox,
-      description: "Visualize e gerencie SMS recebidos em seus números"
+      description: "Visualize e gerencie SMS recebidos em seus números",
     },
     "receive-calls": {
       title: "Receber Chamadas",
       short: "Rec. Calls",
       icon: PhoneIncoming,
-      description: "Monitore e grave chamadas recebidas em tempo real"
-    }
+      description: "Monitore e grave chamadas recebidas em tempo real",
+    },
   };
 
-  const titles = Object.fromEntries(
-    Object.entries(tabConfig).map(([key, config]) => [key, config.title])
-  ) as Record<string, string>;
+  const titles = Object.fromEntries(Object.entries(tabConfig).map(([key, config]) => [key, config.title])) as Record<
+    string,
+    string
+  >;
 
   const descriptions = Object.fromEntries(
-    Object.entries(tabConfig).map(([key, config]) => [key, config.description])
+    Object.entries(tabConfig).map(([key, config]) => [key, config.description]),
   ) as Record<string, string>;
-
-  
 
   return (
     <div className="space-y-6">
@@ -63,18 +62,18 @@ const Index = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">{titles[activeTab]}</h2>
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant={viewMode === "desktop" ? "default" : "outline"}
-              size="sm" 
+              size="sm"
               onClick={() => setViewMode("desktop")}
               className="gap-2"
             >
               <Monitor className="w-4 h-4" />
               <span className="hidden sm:inline">Desktop</span>
             </Button>
-            <Button 
+            <Button
               variant={viewMode === "mobile" ? "default" : "outline"}
-              size="sm" 
+              size="sm"
               onClick={() => setViewMode("mobile")}
               className="gap-2"
             >
@@ -121,7 +120,7 @@ const Index = () => {
                 {Object.entries(tabConfig).map(([key, config]) => {
                   const TabIcon = config.icon;
                   return (
-                    <TabsTrigger 
+                    <TabsTrigger
                       key={key}
                       value={key}
                       className="h-9 flex items-center justify-center gap-2 px-4
@@ -141,9 +140,7 @@ const Index = () => {
 
         {/* Content Description */}
         <div className="text-center space-y-2 mb-6">
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            {descriptions[activeTab]}
-          </p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">{descriptions[activeTab]}</p>
         </div>
 
         {/* Tab Content */}
@@ -151,19 +148,19 @@ const Index = () => {
           <TabsContent value="sms">
             <SmsForm />
           </TabsContent>
-          
+
           <TabsContent value="voice">
             <VoiceCallForm />
           </TabsContent>
-          
+
           <TabsContent value="ivr">
             <IVRMenuFormV2 />
           </TabsContent>
-          
+
           <TabsContent value="receive-sms">
             <ReceivedSmsViewer />
           </TabsContent>
-          
+
           <TabsContent value="receive-calls">
             <ReceivedCallsViewer />
           </TabsContent>

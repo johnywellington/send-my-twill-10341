@@ -58,7 +58,6 @@ import { UserDialog } from "@/components/admin/UserDialog";
 import { SuspendUserDialog } from "@/components/admin/SuspendUserDialog";
 import { ChangeRoleDialog } from "@/components/admin/ChangeRoleDialog";
 import { UserActivityDialog } from "@/components/admin/UserActivityDialog";
-import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 
 const AdminUsers = () => {
   const { user: currentUser } = useAuth();
@@ -70,7 +69,6 @@ const AdminUsers = () => {
 
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
@@ -162,10 +160,6 @@ const AdminUsers = () => {
             Gerencie usuários, roles e permissões do sistema
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Users className="h-4 w-4 mr-2" />
-          Criar Novo Usuário
-        </Button>
       </div>
 
       {/* Estatísticas */}
@@ -400,12 +394,6 @@ const AdminUsers = () => {
       </Card>
 
       {/* Diálogos */}
-      <CreateUserDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onSuccess={() => fetchUsers()}
-      />
-
       <UserDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}

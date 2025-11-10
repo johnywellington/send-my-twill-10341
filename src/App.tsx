@@ -37,6 +37,7 @@ const ActiveCalls = lazy(() => import("./features/admin/pages/ActiveCalls"));
 const ProviderCredentials = lazy(() => import("./features/admin/pages/ProviderCredentials"));
 const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
 const AdminUsers = lazy(() => import("./features/admin/pages/AdminUsers"));
+const CreateUser = lazy(() => import("./features/admin/pages/CreateUser"));
 const AdminSIP = lazy(() => import("./features/admin/pages/SIP"));
 const SIPDomainDetails = lazy(() => import("./features/admin/pages/SIPDomainDetails"));
 const SyncLogs = lazy(() => import("./features/admin/pages/SyncLogs"));
@@ -159,6 +160,13 @@ const App = () => (
             <AdminRoute>
               <AdminLayout>
                 <AdminUsers />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/create-user" element={
+            <AdminRoute>
+              <AdminLayout>
+                <CreateUser />
               </AdminLayout>
             </AdminRoute>
           } />

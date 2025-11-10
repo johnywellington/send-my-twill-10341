@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validateTwilioSignature, formDataToObject } from "../_shared/webhook-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,31 @@ serve(async (req) => {
 
   try {
     const formData = await req.formData();
+    
+    // ✅ VALIDAÇÃO DE ASSINATURA TWILIO
+    const twilioSignature = req.headers.get('X-Twilio-Signature');
+    const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    
+    if (!twilioSignature || !twilioAuthToken) {
+      console.error('[Twilio SIP Registration] Missing signature or auth token');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const url = new URL(req.url).href;
+    const params = formDataToObject(formData);
+    
+    const isValid = validateTwilioSignature(twilioAuthToken, twilioSignature, url, params);
+    
+    if (!isValid) {
+      console.error('[Twilio SIP Registration] Invalid signature - potential spoofing attempt');
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     const registrationData = {
       AccountSid: formData.get('AccountSid') as string,

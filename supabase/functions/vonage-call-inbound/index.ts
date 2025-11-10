@@ -33,6 +33,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // ℹ️ Vonage Call Inbound não usa JWT por padrão
+    // A validação seria pela origem/IP ou assinatura customizada
+    
     logWithTimestamp('info', '🔔 === CHAMADA RECEBIDA ===');
     logWithTimestamp('info', `Método: ${req.method}`);
     logWithTimestamp('info', `URL: ${req.url}`);

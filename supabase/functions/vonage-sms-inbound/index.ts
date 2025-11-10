@@ -22,6 +22,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // ℹ️ Vonage SMS Inbound usa GET com query params, não tem JWT
+    // A validação seria feita pela origem/IP, mas não é prático para webhooks
+    
     const url = new URL(req.url);
     const inboundData: VonageInboundSms = {
       messageId: url.searchParams.get('messageId') || '',

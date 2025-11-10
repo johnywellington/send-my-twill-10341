@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.77.0";
+import { validateVonageJWT } from "../_shared/webhook-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,10 +50,30 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // ✅ VALIDAÇÃO JWT VONAGE (para POST/JSON)
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/json') && req.method === 'POST') {
+      const authHeader = req.headers.get('Authorization');
+      const vonageApiSecret = Deno.env.get('VONAGE_API_SECRET');
+      
+      if (authHeader && vonageApiSecret) {
+        const token = authHeader.replace('Bearer ', '');
+        const isValid = await validateVonageJWT(token, vonageApiSecret);
+        
+        if (!isValid) {
+          console.error('[Vonage SMS Webhook] Invalid JWT - potential spoofing attempt');
+          return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
+    
     let webhookData: VonageSmsWebhook;
 
     // Accept multiple formats: JSON, GET params, or form-urlencoded
-    const contentType = req.headers.get('content-type') || '';
 
     if (contentType.includes('application/json') && req.method === 'POST') {
       // JSON format

@@ -12,6 +12,9 @@ serve(async (req) => {
   }
 
   try {
+    // ℹ️ Vonage SIP Registration webhooks não usam JWT padrão
+    // A validação seria pela origem/IP configurada no Vonage Dashboard
+    
     const registrationData = await req.json();
     
     console.log('[Vonage SIP Registration]:', registrationData);

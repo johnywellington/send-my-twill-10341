@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.77.0";
+import { validateTwilioSignature, formDataToObject } from "../_shared/webhook-validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,37 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const formData = await req.formData();
+    
+    // Detect if this is a test webhook
+    const isTest = req.headers.get('X-Test-Webhook') === 'true';
+    
+    if (!isTest) {
+      // ✅ VALIDAÇÃO DE ASSINATURA TWILIO
+      const twilioSignature = req.headers.get('X-Twilio-Signature');
+      const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+      
+      if (!twilioSignature || !twilioAuthToken) {
+        console.error('[Twilio Inbound Call] Missing signature or auth token');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const url = new URL(req.url).href;
+      const params = formDataToObject(formData);
+      
+      const isValid = validateTwilioSignature(twilioAuthToken, twilioSignature, url, params);
+      
+      if (!isValid) {
+        console.error('[Twilio Inbound Call] Invalid signature - potential spoofing attempt');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    
     const callData: TwilioInboundCall = {
       CallSid: formData.get('CallSid') as string,
       From: formData.get('From') as string,
@@ -29,11 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
       Direction: formData.get('Direction') as string,
     };
 
-    // Detect if this is a test webhook
-    const isTest = req.headers.get('X-Test-Webhook') === 'true' ||
-      callData.CallSid?.startsWith('TEST_');
-    
-    if (isTest) {
+    if (callData.CallSid?.startsWith('TEST_')) {
       console.log('🧪 Test webhook detected - returning test TwiML');
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

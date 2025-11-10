@@ -54,9 +54,17 @@ export const useSyncTwilioNumbers = (
       console.log('Twilio numbers fetched:', data.numbers.length);
 
       // 2. Buscar números existentes do usuário
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user.user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       const { data: existingNumbers, error: fetchError } = await supabase
         .from('phone_numbers')
-        .select('phone_number');
+        .select('phone_number, id')
+        .eq('user_id', user.user.id)
+        .eq('provider', 'twilio');
 
       if (fetchError) {
         throw new Error('Erro ao buscar números existentes');
@@ -73,28 +81,19 @@ export const useSyncTwilioNumbers = (
 
       console.log(`New numbers to insert: ${newNumbers.length}`);
 
-      // 4. Inserir ou atualizar números novos em lote (UPSERT)
+      // 4. Inserir apenas números novos em lote
       if (newNumbers.length > 0) {
-        const { data: user } = await supabase.auth.getUser();
-        
-        if (!user.user) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        const numbersToUpsert = newNumbers.map(num => ({
+        const numbersToInsert = newNumbers.map(num => ({
           ...num,
           user_id: user.user.id,
         }));
 
-        const { error: upsertError } = await supabase
+        const { error: insertError } = await supabase
           .from('phone_numbers')
-          .upsert(numbersToUpsert, {
-            onConflict: 'phone_number,provider',
-            ignoreDuplicates: false
-          });
+          .insert(numbersToInsert);
 
-        if (upsertError) {
-          console.error('Upsert error:', upsertError);
+        if (insertError) {
+          console.error('Insert error:', insertError);
           throw new Error('Erro ao salvar números no banco de dados');
         }
       }

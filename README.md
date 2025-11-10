@@ -34,15 +34,53 @@ npm run dev
 
 ## Deploy em Produção
 
-### Deploy Completo (Lovable)
+### 🚀 Deploy Automatizado (Recomendado)
+
+Este projeto inclui scripts automatizados para facilitar o deploy:
+
+#### Deploy Completo (Frontend + Backend)
+```sh
+# Dar permissão de execução (primeira vez)
+chmod +x scripts/deploy.sh
+
+# Executar deploy completo
+./scripts/deploy.sh
+```
+
+#### Deploy Frontend apenas
+```sh
+chmod +x scripts/deploy-frontend.sh
+./scripts/deploy-frontend.sh
+```
+
+#### Deploy Backend apenas
+```sh
+chmod +x scripts/deploy-backend.sh
+./scripts/deploy-backend.sh
+```
+
+📖 **Guia completo de deploy:** Veja [DEPLOY.md](./DEPLOY.md) para instruções detalhadas.
+
+### Deploy via Lovable
 
 Este projeto está conectado ao Lovable e faz deploy automático ao fazer push para o repositório.
 
 **URL do Projeto:** https://lovable.dev/projects/405d80af-70a5-475e-aac7-d2625490d887
 
-### Deploy Separado
+### CI/CD com GitHub Actions
 
-Se desejar fazer deploy do frontend e backend em plataformas diferentes:
+O projeto inclui workflow GitHub Actions (`.github/workflows/deploy.yml`) para deploy automático:
+- ✅ Deploy automático ao fazer push na branch `main`
+- ✅ Deploy das Edge Functions no Supabase
+- ✅ Deploy do frontend na plataforma escolhida (Vercel/Netlify/Cloudflare)
+
+**Configure os secrets no GitHub:**
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_PROJECT_ID`
+- `VERCEL_TOKEN` (ou tokens da plataforma escolhida)
+- Veja [DEPLOY.md](./DEPLOY.md) para detalhes
+
+### Deploy Manual
 
 #### Frontend (Vercel, Netlify, Cloudflare Pages)
 
@@ -53,25 +91,23 @@ Se desejar fazer deploy do frontend e backend em plataformas diferentes:
 - **Node Version:** 18+
 
 **Variáveis de Ambiente:**
-```
+```bash
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-chave-publica
 ```
 
 #### Backend (Supabase)
 
-As Edge Functions em `supabase/functions/` são deployadas automaticamente quando conectadas ao projeto Supabase.
-
-**Para deploy manual:**
 ```sh
 # Login no Supabase
-npx supabase login
+supabase login
 
 # Link ao projeto
-npx supabase link --project-ref seu-projeto-id
+supabase link --project-ref seu-projeto-id
 
-# Deploy das functions
-npx supabase functions deploy
+# Deploy das Edge Functions
+cd supabase
+supabase functions deploy --all
 ```
 
 ## Sobre a Estrutura

@@ -22,21 +22,37 @@ serve(async (req) => {
   try {
     console.log('[Test Connection] Request received');
 
+    // Verificar se há token de autorização
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[Test Connection] No authorization header');
+      throw new Error('Token de autorização não fornecido');
+    }
+
+    console.log('[Test Connection] Creating Supabase client');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
 
+    console.log('[Test Connection] Getting user');
     const {
       data: { user },
+      error: authError,
     } = await supabaseClient.auth.getUser();
 
+    if (authError) {
+      console.error('[Test Connection] Auth error:', authError);
+      throw new Error(`Erro de autenticação: ${authError.message}`);
+    }
+
     if (!user) {
+      console.error('[Test Connection] No user found');
       throw new Error('Usuário não autenticado');
     }
 
@@ -56,11 +72,16 @@ serve(async (req) => {
       .select('*')
       .eq('id', credentialId)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (credError || !credential) {
-      console.error('[Test Connection] Credential not found:', credError);
-      throw new Error('Credencial não encontrada');
+    if (credError) {
+      console.error('[Test Connection] Database error:', credError);
+      throw new Error(`Erro ao buscar credencial: ${credError.message}`);
+    }
+
+    if (!credential) {
+      console.error('[Test Connection] Credential not found for id:', credentialId);
+      throw new Error('Credencial não encontrada ou você não tem permissão para acessá-la');
     }
 
     console.log('[Test Connection] Credential found:', credential.provider, credential.account_name);

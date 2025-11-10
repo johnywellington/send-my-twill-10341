@@ -139,7 +139,7 @@ export function PhoneNumberSelector({
         <div className="relative">
 
           {/* Dropdown Content */}
-          {isOpen && phoneNumbers && phoneNumbers.length > 0 && (
+          {isOpen && (
             <>
               <div 
                 className="fixed inset-0 z-40" 
@@ -147,61 +147,67 @@ export function PhoneNumberSelector({
               />
               <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg animate-in fade-in-80 slide-in-from-top-2">
                 <div className="p-1 max-h-[300px] overflow-y-auto">
-                  {phoneNumbers.map((phone) => (
-                    <div
-                      key={phone.id}
-                      onClick={() => handleSelect(phone.phone_number)}
-                      className={cn(
-                        "relative flex items-center gap-2 rounded-sm px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-accent",
-                        phone.phone_number === value && "bg-accent"
-                      )}
-                    >
-                      {/* Indicador de seleção */}
-                      <div className="w-4 flex-shrink-0">
-                        {phone.phone_number === value && (
-                          <div className="w-2 h-2 rounded-full bg-primary" />
+                  {phoneNumbers && phoneNumbers.length > 0 ? (
+                    phoneNumbers.map((phone) => (
+                      <div
+                        key={phone.id}
+                        onClick={() => handleSelect(phone.phone_number)}
+                        className={cn(
+                          "relative flex items-center gap-2 rounded-sm px-3 py-2.5 text-sm cursor-pointer transition-colors hover:bg-accent",
+                          phone.phone_number === value && "bg-accent"
                         )}
-                      </div>
+                      >
+                        {/* Indicador de seleção */}
+                        <div className="w-4 flex-shrink-0">
+                          {phone.phone_number === value && (
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                          )}
+                        </div>
 
-                      {/* Conteúdo */}
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Badge 
-                          variant={phone.provider === 'vonage' ? 'default' : 'secondary'} 
-                          className="text-xs flex-shrink-0"
-                        >
-                          {phone.provider}
-                        </Badge>
-                        <span className="truncate">{phone.phone_number}</span>
-                        {phone.friendly_name && (
-                          <span className="text-muted-foreground text-xs truncate">
-                            ({phone.friendly_name})
-                          </span>
-                        )}
-                      </div>
+                        {/* Conteúdo */}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Badge 
+                            variant={phone.provider === 'vonage' ? 'default' : 'secondary'} 
+                            className="text-xs flex-shrink-0"
+                          >
+                            {phone.provider}
+                          </Badge>
+                          <span className="truncate">{phone.phone_number}</span>
+                          {phone.friendly_name && (
+                            <span className="text-muted-foreground text-xs truncate">
+                              ({phone.friendly_name})
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Botões de ação */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          onClick={(e) => handleEdit(phone, e)}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={(e) => handleDeleteClick(phone.id, e)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {/* Botões de ação */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => handleEdit(phone, e)}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => handleDeleteClick(phone.id, e)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+                      Nenhum número salvo ainda.
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* Botão adicionar */}

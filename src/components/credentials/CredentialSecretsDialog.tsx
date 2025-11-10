@@ -78,18 +78,37 @@ export function CredentialSecretsDialog({ open, onOpenChange, credential }: Cred
   };
 
   const handleAddSecretsToLovable = () => {
-    setResultDialogOpen(false);
-    
-    if (secretsResult?.secrets && secretsResult.secrets.length > 0) {
+    if (!secretsResult?.secrets || secretsResult.secrets.length === 0) {
       toast({
-        title: "🔐 Próximo Passo",
-        description: `Clique no botão abaixo para adicionar ${secretsResult.secrets.length} secret(s) no Lovable.`,
-        duration: 5000,
+        title: "⚠️ Nenhum Secret",
+        description: "Não há secrets para adicionar.",
+        variant: "destructive",
       });
-      
-      // TODO: Aqui seria o lugar para chamar o tool secrets--add_secret
-      // mas por enquanto só mostramos o toast
+      return;
     }
+
+    // Extrair apenas os NOMES dos secrets
+    const secretNames = secretsResult.secrets.map(s => s.name);
+    
+    // Criar mensagem para copiar
+    const message = `Adicionar os seguintes secrets no Lovable:\n${secretNames.join('\n')}`;
+    
+    // Copiar para clipboard
+    navigator.clipboard.writeText(message).then(() => {
+      setResultDialogOpen(false);
+      
+      toast({
+        title: "✅ Mensagem Copiada!",
+        description: "Cole no chat abaixo e envie para adicionar os secrets automaticamente. O Lovable vai abrir o formulário seguro para você inserir os valores.",
+        duration: 8000,
+      });
+    }).catch(() => {
+      toast({
+        title: "⚠️ Erro ao Copiar",
+        description: "Não foi possível copiar. Envie esta mensagem no chat: Adicionar secrets críticos",
+        variant: "destructive",
+      });
+    });
   };
 
   const isFormValid = () => {

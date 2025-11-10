@@ -98,14 +98,15 @@ export function SecretsResultDialog({
             </div>
           </div>
 
-          <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+          <Alert className="border-blue-500/50 bg-blue-500/10">
             <AlertTriangle className="h-4 w-4 text-blue-500" />
             <AlertDescription className="text-sm">
-              <p className="font-semibold mb-2">💡 Por que isso é necessário?</p>
+              <p className="font-semibold mb-2">🔐 Próximo Passo: Adicionar Secrets no Lovable</p>
               <ul className="space-y-1 text-xs">
-                <li>🔒 <strong>Auth Tokens/Secrets</strong> ficam protegidos no Lovable</li>
-                <li>📊 <strong>Account IDs</strong> ficam no banco para acesso rápido</li>
-                <li>⚡ Melhor segurança + Melhor experiência!</li>
+                <li>✅ Os dados foram preparados e salvos no banco</li>
+                <li>🔐 Agora você precisa adicionar os secrets sensíveis</li>
+                <li>⚡ Clique no botão abaixo para começar o processo</li>
+                <li>📝 Os nomes já estão corretos e prontos!</li>
               </ul>
             </AlertDescription>
           </Alert>
@@ -115,8 +116,8 @@ export function SecretsResultDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-          <Button onClick={onAddSecretsClick} className="gap-2">
-            🔐 Adicionar Secrets no Lovable
+          <Button onClick={onAddSecretsClick} className="gap-2 bg-primary hover:bg-primary/90">
+            ⚡ Adicionar Secrets Automaticamente
           </Button>
         </DialogFooter>
       </DialogContent>

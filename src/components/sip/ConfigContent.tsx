@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useDomainValidation } from "@/hooks/use-domain-validation";
 import { useOrphanedDomains } from "@/hooks/use-orphaned-domains";
@@ -187,6 +188,28 @@ export function ConfigContent() {
 
   return (
     <div className="space-y-6">
+      {/* Alerta Informativo sobre Hierarquia Twilio SIP */}
+      <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+        <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <div className="ml-2">
+          <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            📋 Como funciona a hierarquia SIP no Twilio
+          </h4>
+          <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+            <p className="font-medium">Estrutura correta:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li><strong>SIP Domain</strong> - O domínio SIP principal (ex: example.sip.us1.twilio.com)</li>
+              <li><strong>Credential List</strong> - Lista de autenticação criada para cada usuário</li>
+              <li><strong>Credential (usuário)</strong> - Username e password dentro da Credential List</li>
+              <li><strong>Mapping</strong> - A Credential List é associada ao Domain via "SIP Registration Authentication"</li>
+            </ol>
+            <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+              ✅ Nossa aplicação gerencia esta hierarquia automaticamente ao criar usuários SIP
+            </p>
+          </div>
+        </div>
+      </Alert>
+
       {/* Twilio Domains Table */}
       <Card>
         <CardHeader>

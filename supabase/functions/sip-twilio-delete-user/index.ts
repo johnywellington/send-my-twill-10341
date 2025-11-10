@@ -51,7 +51,40 @@ serve(async (req) => {
 
     // Delete from Twilio API if we have the IDs
     if (sipUser.twilio_credential_sid && sipUser.twilio_credlist_sid) {
-      // Delete Credential
+      // 1. Buscar Domain SID para remover o mapeamento
+      if (sipUser.domain_group_id) {
+        const { data: domainSidConfig } = await supabase
+          .from('sip_provider_config')
+          .select('config_value')
+          .eq('domain_group_id', sipUser.domain_group_id)
+          .eq('config_key', 'sip_domain_sid')
+          .maybeSingle();
+
+        if (domainSidConfig) {
+          const domainSid = domainSidConfig.config_value;
+          
+          // Remover mapeamento CredentialList do Domain
+          console.log('[Twilio Delete] Removing CredentialList mapping from Domain...');
+          const unmapResponse = await fetch(
+            `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/Domains/${domainSid}/Auth/Registrations/CredentialListMappings/${sipUser.twilio_credlist_sid}.json`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+              },
+            }
+          );
+
+          if (!unmapResponse.ok && unmapResponse.status !== 404) {
+            const error = await unmapResponse.text();
+            console.warn('[Twilio Delete] Failed to unmap CredentialList from Domain:', error);
+          } else {
+            console.log('[Twilio Delete] ✓ CredentialList unmapped from Domain');
+          }
+        }
+      }
+
+      // 2. Delete Credential
       const credDeleteResponse = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${sipUser.twilio_credlist_sid}/Credentials/${sipUser.twilio_credential_sid}.json`,
         {
@@ -69,7 +102,7 @@ serve(async (req) => {
         console.log('[Twilio Delete] ✓ Credential deleted');
       }
 
-      // Delete CredentialList
+      // 3. Delete CredentialList
       const listDeleteResponse = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${sipUser.twilio_credlist_sid}.json`,
         {

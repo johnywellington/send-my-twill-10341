@@ -188,6 +188,55 @@ serve(async (req) => {
       credlist_sid: credList.sid,
       credential_sid: credential.sid
     });
+
+    // 🔥 CORREÇÃO CRÍTICA: Associar CredentialList ao SIP Domain
+    // Isso permite que o domínio autentique este usuário durante o registro SIP
+    console.log('Associating CredentialList to SIP Domain...');
+    
+    // Buscar o Domain SID
+    const { data: domainSidConfig } = await supabase
+      .from('sip_provider_config')
+      .select('config_value')
+      .eq('domain_group_id', domainGroupId)
+      .eq('config_key', 'sip_domain_sid')
+      .single();
+
+    if (!domainSidConfig) {
+      throw new Error('Could not find SIP Domain SID for authentication mapping');
+    }
+
+    const domainSid = domainSidConfig.config_value;
+
+    // Mapear CredentialList para SIP Registration Authentication
+    const mappingResponse = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/Domains/${domainSid}/Auth/Registrations/CredentialListMappings.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          CredentialListSid: credList.sid,
+        }),
+      }
+    );
+
+    const mapping = await mappingResponse.json();
+    
+    if (!mappingResponse.ok) {
+      console.error('❌ Failed to map CredentialList to Domain:', mapping);
+      
+      // Se o erro for "já existe", não é crítico (podemos prosseguir)
+      if (mapping.code !== 20403) {
+        throw new Error(`Failed to map CredentialList to Domain: ${mapping.message || 'Unknown error'}`);
+      } else {
+        console.log('⚠️ Mapping already exists, continuing...');
+      }
+    } else {
+      console.log('✓ CredentialList mapped to Domain for Registration Authentication');
+    }
+
     console.log('✓ Inserting into database...');
 
     // Insert into database

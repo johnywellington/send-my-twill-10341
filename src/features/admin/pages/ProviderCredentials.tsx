@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen, RefreshCw, Key, Lock } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen, RefreshCw, Key, Lock, Wifi } from "lucide-react";
+import { TestConnectionButton } from "@/components/credentials/TestConnectionButton";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useImportCredentials } from "@/hooks/use-import-credentials";
@@ -225,6 +226,14 @@ export default function ProviderCredentials() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            {cred.secret_key && (
+                              <TestConnectionButton 
+                                credentialId={cred.id} 
+                                variant="ghost"
+                                size="icon"
+                                showLabel={false}
+                              />
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -404,6 +413,14 @@ export default function ProviderCredentials() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            {cred.secret_key && (
+                              <TestConnectionButton 
+                                credentialId={cred.id} 
+                                variant="ghost"
+                                size="icon"
+                                showLabel={false}
+                              />
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"

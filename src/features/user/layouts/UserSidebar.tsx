@@ -1,4 +1,4 @@
-import { Home, Radio, Phone, Users, FileText, BarChart3, Activity, PhoneCall, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Key } from "lucide-react";
+import { Home, Radio, Phone, Users, FileText, BarChart3, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Key } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -32,8 +32,6 @@ const userGroups = [
   {
     label: "Monitoramento & Analytics",
     routes: [
-      { title: "Monitoramento", url: "/monitoring", icon: Activity },
-      { title: "Chamadas Ativas", url: "/active-calls", icon: PhoneCall },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Relatório Custos", url: "/relatorio-custos", icon: DollarSign },
     ]

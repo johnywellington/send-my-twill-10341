@@ -7,6 +7,9 @@ import {
   BookOpen,
   UserCheck,
   Key,
+  Phone,
+  Activity,
+  PhoneCall,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -33,6 +36,14 @@ const adminGroups = [
     ]
   },
   {
+    label: "Monitoramento & Recursos",
+    routes: [
+      { title: "Números", url: "/admin/numbers", icon: Phone },
+      { title: "Monitoramento", url: "/admin/monitoring", icon: Activity },
+      { title: "Chamadas Ativas", url: "/admin/active-calls", icon: PhoneCall },
+    ]
+  },
+  {
     label: "Configurações & Logs",
     routes: [
       { title: "Credenciais", url: "/admin/credentials", icon: Key },
@@ -42,7 +53,7 @@ const adminGroups = [
   {
     label: "API Testing & Debug",
     routes: [
-      { title: "API Test", url: "/api-test", icon: FlaskConical },
+      { title: "API Test", url: "/admin/api-test", icon: FlaskConical },
       { title: "Documentação", url: "/docs", icon: BookOpen },
     ]
   },

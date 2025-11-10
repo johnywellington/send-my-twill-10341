@@ -23,7 +23,7 @@ const userGroups = [
   {
     label: "Comunicação",
     routes: [
-      { title: "Central de Comunicação", url: "/dashboard", icon: Radio },
+      { title: "Central de Comunicação", url: "/api-test", icon: Radio },
       { title: "Histórico SMS", url: "/historico-sms", icon: History },
       { title: "Chamadas URA", url: "/chamadas-ura", icon: PhoneForwarded },
       { title: "Chamadas Recebidas", url: "/chamadas-recebidas", icon: PhoneIncoming },

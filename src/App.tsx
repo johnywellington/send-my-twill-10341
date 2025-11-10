@@ -147,6 +147,13 @@ const App = () => (
             </UserLayout>
           </UserRoute>
         } />
+        <Route path="/api-test" element={
+          <UserRoute>
+            <UserLayout>
+              <ApiTest />
+            </UserLayout>
+          </UserRoute>
+        } />
           
           {/* Admin Routes - Red Sidebar */}
           <Route path="/admin" element={

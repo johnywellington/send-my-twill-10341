@@ -6,6 +6,7 @@ import {
   FlaskConical,
   BookOpen,
   UserCheck,
+  Key,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -34,6 +35,7 @@ const adminGroups = [
   {
     label: "Configurações & Logs",
     routes: [
+      { title: "Credenciais", url: "/admin/credentials", icon: Key },
       { title: "Logs de Sincronização", url: "/admin/sync-logs", icon: Database },
     ]
   },

@@ -79,7 +79,50 @@ Deno.serve(async (req) => {
 
     const { data: { user: targetAuthUser } } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
 
-    // Delete user from auth (cascade will handle profile and user_roles)
+    // Delete all user-related data manually before deleting auth user
+    console.log('Deleting user data for:', targetUserId);
+    
+    // Delete in order of dependencies
+    await supabaseAdmin.from('webhook_health_checks').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('voice_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('user_activity_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('usage_analytics').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sync_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sms_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sip_users').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sip_routes').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sip_connectivity_tests').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('sip_call_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('received_sms').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('received_calls').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('provider_credentials').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('phone_numbers').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('message_templates').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('ivr_transfer_params').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('ivr_responses').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('ivr_logs').delete().eq('user_id', targetUserId);
+    
+    // Delete contact group members (need to get group IDs first)
+    const { data: userGroups } = await supabaseAdmin
+      .from('contact_groups')
+      .select('id')
+      .eq('user_id', targetUserId);
+    
+    if (userGroups && userGroups.length > 0) {
+      const groupIds = userGroups.map(g => g.id);
+      await supabaseAdmin.from('contact_group_members').delete().in('group_id', groupIds);
+    }
+    
+    await supabaseAdmin.from('contacts').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('contact_groups').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('bulk_send_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('api_validation_logs').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', targetUserId);
+    await supabaseAdmin.from('profiles').delete().eq('user_id', targetUserId);
+
+    console.log('User data deleted, now deleting auth user');
+
+    // Delete user from auth
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
 
     if (deleteError) {

@@ -60,61 +60,63 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Authenticated user:', user.id);
 
-    const { to, from, body, provider = "twilio", credentialId, dryRun = false }: SmsRequest = await req.json();
+    const requestBody = await req.json();
 
-    console.log('SMS details:', { to, from, bodyLength: body.length, provider, credentialId, dryRun });
-
-    // ✅ VALIDAÇÃO DE INPUTS
-    if (!to || !from || !body) {
-      console.error('Missing required fields');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Campos obrigatórios faltando: destinatário, remetente ou mensagem' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
+    // ✅ VALIDAÇÃO ROBUSTA DE INPUTS
+    const validationErrors: string[] = [];
+    
+    // Validate provider
+    const provider = requestBody.provider || 'twilio';
+    if (!['twilio', 'vonage'].includes(provider)) {
+      validationErrors.push('Provider must be either "twilio" or "vonage"');
     }
-
-    // Validar formato de telefone de destino (E.164: +[país][número])
-    // Exige mínimo de 10 dígitos totais para evitar números muito curtos
-    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
     
-    // Validar Sender ID alfanumérico (3-11 caracteres, apenas letras e números)
-    const senderIdRegex = /^[A-Za-z0-9]{3,11}$/;
+    // Validate to (destination number)
+    const to = requestBody.to?.toString().trim();
+    if (!to || to.length < 8 || to.length > 20) {
+      validationErrors.push('Destination number must be 8-20 characters');
+    } else if (!/^\+?[0-9\s\-\(\)]+$/.test(to)) {
+      validationErrors.push('Destination number contains invalid characters');
+    }
     
-    // Função para validar "from" (aceita número E.164 OU Sender ID alfanumérico)
-    const isValidFrom = (from: string): boolean => {
-      const cleanFrom = from.replace(/\s/g, '');
-      // Para números, usar regex mais permissivo (mínimo 7 dígitos para alguns países)
-      const fromPhoneRegex = /^\+?[1-9]\d{6,14}$/;
-      return fromPhoneRegex.test(cleanFrom) || senderIdRegex.test(cleanFrom);
-    };
-
-    // Validar "to" (destino sempre deve ser número E.164 completo)
-    const cleanTo = to.replace(/\s/g, '');
-    if (!phoneRegex.test(cleanTo)) {
+    // Validate from (sender)
+    const from = requestBody.from?.toString().trim();
+    if (!from || from.length < 3 || from.length > 20) {
+      validationErrors.push('Sender must be 3-20 characters');
+    } else if (!/^[A-Za-z0-9\s\+\-\(\)]+$/.test(from)) {
+      validationErrors.push('Sender contains invalid characters');
+    }
+    
+    // Validate message body
+    const body = requestBody.body?.toString().trim();
+    if (!body || body.length === 0) {
+      validationErrors.push('Message cannot be empty');
+    } else if (body.length > 1600) {
+      validationErrors.push('Message must be less than 1600 characters');
+    }
+    
+    // Validate credentialId if provided
+    const credentialId = requestBody.credentialId?.toString().trim();
+    if (credentialId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credentialId)) {
+      validationErrors.push('Invalid credential ID format');
+    }
+    
+    const dryRun = requestBody.dryRun === true;
+    
+    // Return validation errors
+    if (validationErrors.length > 0) {
+      console.error('Validation errors:', validationErrors);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Número de destino inválido. Use formato internacional completo com código do país (ex: +351911019866 para Portugal, +5511999999999 para Brasil). Mínimo 10 dígitos.' 
+          error: 'Validation failed', 
+          details: validationErrors 
         }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
-    
-    // Validar "from" (aceita número E.164 OU Sender ID alfanumérico)
-    if (!isValidFrom(from)) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Formato de origem inválido. Use um Sender ID (3-11 caracteres alfanuméricos) ou número internacional (+351911019860)' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
 
-    // Validar tamanho da mensagem (máximo 1600 caracteres = 10 SMS)
-    if (body.length > 1600) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Mensagem muito longa. Máximo: 1600 caracteres' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
+    console.log('SMS details:', { to, from, bodyLength: body.length, provider, credentialId, dryRun });
 
     console.log('✅ Validation passed - User:', user.id, 'Provider:', provider);
     

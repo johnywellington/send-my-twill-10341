@@ -17,10 +17,43 @@ serve(async (req: Request) => {
       throw new Error('No authorization header');
     }
 
-    const { phoneNumber, level = 'standard' } = await req.json() as ValidationRequest;
-
-    if (!phoneNumber) {
-      throw new Error('Phone number is required');
+    const requestBody = await req.json();
+    
+    // ✅ VALIDAÇÃO ROBUSTA DE INPUTS
+    const phoneNumber = requestBody.phoneNumber?.toString().trim();
+    if (!phoneNumber || phoneNumber.length < 8 || phoneNumber.length > 20) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          valid: false,
+          error: 'Phone number must be 8-20 characters' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!/^\+?[0-9\s\-\(\)]+$/.test(phoneNumber)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          valid: false,
+          error: 'Phone number contains invalid characters' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate level
+    const level = (requestBody.level || 'standard').toString().trim().toLowerCase();
+    if (!['basic', 'standard', 'advanced'].includes(level)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          valid: false,
+          error: 'Level must be "basic", "standard", or "advanced"' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const apiKey = Deno.env.get('VONAGE_API_KEY');

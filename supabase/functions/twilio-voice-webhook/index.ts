@@ -61,14 +61,32 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Validate and sanitize webhook data
+    const callSid = formData.get('CallSid')?.toString().trim().substring(0, 100) || '';
+    const callStatus = formData.get('CallStatus')?.toString().trim().toLowerCase().substring(0, 50) || '';
+    const to = formData.get('To')?.toString().trim().substring(0, 50) || '';
+    const from = formData.get('From')?.toString().trim().substring(0, 50) || '';
+    const callDuration = formData.get('CallDuration')?.toString().trim() || undefined;
+    const errorCode = formData.get('ErrorCode')?.toString().trim().substring(0, 20) || undefined;
+    const errorMessage = formData.get('ErrorMessage')?.toString().trim().substring(0, 500) || undefined;
+    
+    // Validate CallSid format (Twilio format: CA + 32 hex chars)
+    if (!callSid || !/^CA[0-9a-f]{32}$/i.test(callSid)) {
+      console.error('Invalid CallSid format:', callSid);
+      return new Response(JSON.stringify({ error: 'Invalid CallSid' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     const webhookData: TwilioVoiceWebhook = {
-      CallSid: formData.get('CallSid') as string,
-      CallStatus: formData.get('CallStatus') as string,
-      To: formData.get('To') as string,
-      From: formData.get('From') as string,
-      CallDuration: formData.get('CallDuration') as string || undefined,
-      ErrorCode: formData.get('ErrorCode') as string || undefined,
-      ErrorMessage: formData.get('ErrorMessage') as string || undefined,
+      CallSid: callSid,
+      CallStatus: callStatus,
+      To: to,
+      From: from,
+      CallDuration: callDuration,
+      ErrorCode: errorCode,
+      ErrorMessage: errorMessage,
     };
 
     console.log('Twilio Voice Webhook received:', webhookData);

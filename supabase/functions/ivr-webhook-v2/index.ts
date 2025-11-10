@@ -36,8 +36,14 @@ serve(async (req: Request) => {
     // Extrair parâmetros da URL se disponíveis
     const url = new URL(req.url);
     const assistantNumber = url.searchParams.get('assistant_number') || event.assistant_number;
-    const transferTimeout = parseInt(url.searchParams.get('transfer_timeout') || '30');
+    const transferTimeoutParam = url.searchParams.get('transfer_timeout') || '30';
+    const transferTimeout = Math.min(Math.max(parseInt(transferTimeoutParam), 1), 600); // 1-600 seconds
     const fromNumber = url.searchParams.get('from_number') || event.from_number;
+    
+    // Validate assistant_number if provided (for option 2)
+    if (assistantNumber && !/^\+?[0-9]{8,20}$/.test(assistantNumber.replace(/[^0-9]/g, ''))) {
+      console.error('Invalid assistant number format:', assistantNumber);
+    }
 
     // Se houver DTMF, processar e armazenar
     if (event.dtmf) {

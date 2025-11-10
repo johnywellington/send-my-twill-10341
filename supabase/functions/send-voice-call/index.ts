@@ -101,10 +101,78 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id);
 
     const userId = user.id;
-    const { to, from, text, language = "en-US", style = 0, premium = false, voiceName, provider = 'vonage', dryRun = false, credentialId }: VoiceCallRequest = await req.json();
+    const requestBody = await req.json();
+    
+    // ✅ VALIDAÇÃO ROBUSTA DE INPUTS
+    const validationErrors: string[] = [];
+    
+    // Validate provider
+    const provider = (requestBody.provider || 'vonage').toString().trim().toLowerCase();
+    if (!['twilio', 'vonage'].includes(provider)) {
+      validationErrors.push('Provider must be either "twilio" or "vonage"');
+    }
+    
+    // Validate to (destination number)
+    const to = requestBody.to?.toString().trim();
+    if (!to || to.length < 8 || to.length > 20) {
+      validationErrors.push('Destination number must be 8-20 characters');
+    } else if (!/^\+?[0-9\s\-\(\)]+$/.test(to)) {
+      validationErrors.push('Destination number contains invalid characters');
+    }
+    
+    // Validate from (caller ID)
+    const from = requestBody.from?.toString().trim();
+    if (!from || from.length < 8 || from.length > 20) {
+      validationErrors.push('Caller ID must be 8-20 characters');
+    } else if (!/^\+?[0-9\s\-\(\)]+$/.test(from)) {
+      validationErrors.push('Caller ID contains invalid characters');
+    }
+    
+    // Validate message text
+    const text = requestBody.text?.toString().trim();
+    if (!text || text.length === 0) {
+      validationErrors.push('Message cannot be empty');
+    } else if (text.length > 5000) {
+      validationErrors.push('Message must be less than 5000 characters');
+    }
+    
+    // Validate language
+    const language = (requestBody.language || 'en-US').toString().trim();
+    if (!/^[a-z]{2}(-[A-Z]{2})?$/.test(language)) {
+      validationErrors.push('Invalid language code format');
+    }
+    
+    // Validate style
+    const style = typeof requestBody.style === 'number' ? requestBody.style : 0;
+    if (style < 0 || style > 10) {
+      validationErrors.push('Style must be between 0 and 10');
+    }
+    
+    // Validate other fields
+    const premium = requestBody.premium === true;
+    const dryRun = requestBody.dryRun === true;
+    const voiceName = requestBody.voiceName?.toString().trim().substring(0, 100);
+    
+    // Validate credentialId if provided
+    const credentialId = requestBody.credentialId?.toString().trim();
+    if (credentialId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credentialId)) {
+      validationErrors.push('Invalid credential ID format');
+    }
+    
+    // Return validation errors
+    if (validationErrors.length > 0) {
+      console.error('Validation errors:', validationErrors);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Validation failed', 
+          details: validationErrors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log('Request params:', { provider, credentialId, to, from });
-    
     console.log('Provider selected:', provider);
     
     // Se voiceName foi fornecido, mapear para parâmetros Vonage válidos

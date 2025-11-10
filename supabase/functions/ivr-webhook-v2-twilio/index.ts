@@ -34,17 +34,36 @@ serve(async (req: Request) => {
 
     console.log('Twilio Webhook Data:', { digits, from, to, callSid, callStatus });
 
-    // Extrair parâmetros da URL (passados pelo generate-twiml-ivr)
+    // Extrair e validar parâmetros da URL
     const url = new URL(req.url);
     const assistantNumber = url.searchParams.get('assistant_number');
-    const transferTimeout = url.searchParams.get('transfer_timeout') || '30';
+    const transferTimeoutParam = url.searchParams.get('transfer_timeout') || '30';
+    const transferTimeout = Math.min(Math.max(parseInt(transferTimeoutParam), 1), 600).toString(); // 1-600 seconds
     const fromNumber = url.searchParams.get('from_number');
-    const language = url.searchParams.get('language') || 'pt-PT';
-    const voice = url.searchParams.get('voice') || 'Polly.Cristiano';
-    const action1 = url.searchParams.get('action1') || 'hangup';
-    const action1Message = url.searchParams.get('action1_message') || '';
-    const action2 = url.searchParams.get('action2') || 'transfer';
-    const action2Message = url.searchParams.get('action2_message') || '';
+    
+    // Validate language code
+    const languageParam = url.searchParams.get('language') || 'pt-PT';
+    const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageParam) ? languageParam : 'pt-PT';
+    
+    // Validate voice (basic sanitization)
+    const voiceParam = url.searchParams.get('voice') || 'Polly.Cristiano';
+    const voice = voiceParam.replace(/[^a-zA-Z0-9.\-_]/g, '').substring(0, 100) || 'Polly.Cristiano';
+    
+    // Validate action types
+    const action1Param = url.searchParams.get('action1') || 'hangup';
+    const action1 = ['hangup', 'transfer', 'talk'].includes(action1Param) ? action1Param : 'hangup';
+    
+    const action2Param = url.searchParams.get('action2') || 'transfer';
+    const action2 = ['hangup', 'transfer', 'talk'].includes(action2Param) ? action2Param : 'transfer';
+    
+    // Sanitize messages (prevent injection)
+    const action1Message = (url.searchParams.get('action1_message') || '').substring(0, 500);
+    const action2Message = (url.searchParams.get('action2_message') || '').substring(0, 500);
+    
+    // Validate assistant number if present
+    if (assistantNumber && !/^\+?[0-9]{8,20}$/.test(assistantNumber.replace(/[^0-9]/g, ''))) {
+      console.error('Invalid assistant number format:', assistantNumber);
+    }
 
     console.log('IVR Parameters:', { 
       assistantNumber, 

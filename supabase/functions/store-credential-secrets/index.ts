@@ -53,7 +53,75 @@ serve(async (req) => {
       );
     }
 
-    const { credentialId, provider, credentials }: StoreCredentialRequest = await req.json();
+    const requestBody = await req.json();
+    
+    // ✅ VALIDAÇÃO ROBUSTA DE INPUTS
+    const validationErrors: string[] = [];
+    
+    // Validate credentialId
+    const credentialId = requestBody.credentialId?.toString().trim();
+    if (!credentialId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credentialId)) {
+      validationErrors.push('Invalid credential ID format');
+    }
+    
+    // Validate provider
+    const provider = requestBody.provider?.toString().trim().toLowerCase();
+    if (!provider || !['twilio', 'vonage'].includes(provider)) {
+      validationErrors.push('Provider must be either "twilio" or "vonage"');
+    }
+    
+    // Validate credentials object
+    const credentials = requestBody.credentials;
+    if (!credentials || typeof credentials !== 'object') {
+      validationErrors.push('Credentials object is required');
+    } else {
+      // Validate Twilio credentials
+      if (provider === 'twilio') {
+        const accountSid = credentials.accountSid?.toString().trim();
+        const authToken = credentials.authToken?.toString().trim();
+        
+        if (accountSid && (accountSid.length === 0 || accountSid.length > 255)) {
+          validationErrors.push('Account SID must be 1-255 characters');
+        }
+        if (authToken && (authToken.length === 0 || authToken.length > 1000)) {
+          validationErrors.push('Auth Token must be 1-1000 characters');
+        }
+      }
+      
+      // Validate Vonage credentials
+      if (provider === 'vonage') {
+        const apiKey = credentials.apiKey?.toString().trim();
+        const apiSecret = credentials.apiSecret?.toString().trim();
+        const applicationId = credentials.applicationId?.toString().trim();
+        const privateKey = credentials.privateKey?.toString().trim();
+        
+        if (apiKey && (apiKey.length === 0 || apiKey.length > 255)) {
+          validationErrors.push('API Key must be 1-255 characters');
+        }
+        if (apiSecret && (apiSecret.length === 0 || apiSecret.length > 1000)) {
+          validationErrors.push('API Secret must be 1-1000 characters');
+        }
+        if (applicationId && (applicationId.length === 0 || applicationId.length > 255)) {
+          validationErrors.push('Application ID must be 1-255 characters');
+        }
+        if (privateKey && (privateKey.length === 0 || privateKey.length > 10000)) {
+          validationErrors.push('Private Key must be 1-10000 characters');
+        }
+      }
+    }
+    
+    // Return validation errors
+    if (validationErrors.length > 0) {
+      console.error('Validation errors:', validationErrors);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Validation failed', 
+          details: validationErrors 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log('User:', user.id, 'Provider:', provider, 'CredentialId:', credentialId);
 

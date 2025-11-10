@@ -73,7 +73,7 @@ export const useSyncTwilioNumbers = (
 
       console.log(`New numbers to insert: ${newNumbers.length}`);
 
-      // 4. Inserir números novos em lote
+      // 4. Inserir ou atualizar números novos em lote (UPSERT)
       if (newNumbers.length > 0) {
         const { data: user } = await supabase.auth.getUser();
         
@@ -81,17 +81,20 @@ export const useSyncTwilioNumbers = (
           throw new Error('Usuário não autenticado');
         }
 
-        const numbersToInsert = newNumbers.map(num => ({
+        const numbersToUpsert = newNumbers.map(num => ({
           ...num,
           user_id: user.user.id,
         }));
 
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
           .from('phone_numbers')
-          .insert(numbersToInsert);
+          .upsert(numbersToUpsert, {
+            onConflict: 'phone_number,provider',
+            ignoreDuplicates: false
+          });
 
-        if (insertError) {
-          console.error('Insert error:', insertError);
+        if (upsertError) {
+          console.error('Upsert error:', upsertError);
           throw new Error('Erro ao salvar números no banco de dados');
         }
       }

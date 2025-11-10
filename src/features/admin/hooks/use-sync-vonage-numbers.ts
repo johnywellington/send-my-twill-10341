@@ -92,24 +92,27 @@ export const useSyncVonageNumbers = (
       let insertedCount = 0;
       let updatedCount = 0;
 
-      // 4. Inserir números novos
+      // 4. Inserir ou atualizar números novos (UPSERT)
       if (newNumbers.length > 0) {
-        const numbersToInsert = newNumbers.map(number => ({
+        const numbersToUpsert = newNumbers.map(number => ({
           ...number,
           user_id: user.id,
         }));
 
-        const { error: insertError } = await supabase
+        const { error: upsertError } = await supabase
           .from('phone_numbers')
-          .insert(numbersToInsert);
+          .upsert(numbersToUpsert, {
+            onConflict: 'phone_number,provider',
+            ignoreDuplicates: false
+          });
 
-        if (insertError) {
-          console.error('Error inserting numbers:', insertError);
-          throw insertError;
+        if (upsertError) {
+          console.error('Error upserting numbers:', upsertError);
+          throw upsertError;
         }
 
         insertedCount = newNumbers.length;
-        console.log(`Successfully inserted ${insertedCount} new numbers`);
+        console.log(`Successfully upserted ${insertedCount} numbers`);
       }
 
       // 5. Atualizar capabilities de números existentes

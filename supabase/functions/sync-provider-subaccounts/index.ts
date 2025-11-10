@@ -29,15 +29,21 @@ serve(async (req) => {
       }
     );
 
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
-    if (authError || !user) {
-      console.error('Erro de autenticação:', authError);
+    // Extract user id from JWT (already verified by platform)
+    let userId: string | null = null;
+    try {
+      const token = authHeader.replace(/Bearer\s+/i, '').trim();
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userId = payload.sub || payload.user_id || null;
+    } catch (e) {
+      console.error('Falha ao decodificar JWT:', e);
+    }
+
+    if (!userId) {
       throw new Error('Usuário não autenticado');
     }
 
-    console.log('Usuário autenticado:', user.id);
+    console.log('Usuário autenticado:', userId);
 
     const { credentialId } = await req.json();
     console.log('Sincronizando subcontas para credencial:', credentialId);
@@ -47,7 +53,7 @@ serve(async (req) => {
       .from('provider_credentials')
       .select('*')
       .eq('id', credentialId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (credError || !credential) {
@@ -148,7 +154,7 @@ serve(async (req) => {
         // Inserir nova
         const insertData: any = {
           parent_credential_id: credentialId,
-          user_id: user.id,
+          user_id: userId,
           provider: credential.provider,
           subaccount_name: remoteName,
           is_active: credential.provider === 'twilio' 

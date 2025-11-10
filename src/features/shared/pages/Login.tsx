@@ -1,212 +1,94 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/features/shared/hooks/use-auth";
+import { MessageSquare, User, Shield } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, redirectToDashboard, role, loading } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState("login");
+  const { isAuthenticated, redirectToDashboard, role, loading, signInWithRole } = useAuth();
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
 
   useEffect(() => {
-    // Redirect if already authenticated and role is loaded
     if (isAuthenticated && role && !loading) {
       redirectToDashboard();
     }
   }, [isAuthenticated, role, loading, redirectToDashboard]);
 
-  // Reset form when switching tabs
-  useEffect(() => {
-    setEmail("");
-    setPassword("");
-  }, [activeTab]);
-
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsLoadingUser(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      if (data.session && data.user) {
-        // Verificar se usuário está ativo
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_active, suspended_at, suspension_reason')
-          .eq('user_id', data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          await supabase.auth.signOut();
-          toast.error("Erro ao verificar status da conta");
-          return;
-        }
-
-        // Usuário está suspenso
-        if (profile.suspended_at) {
-          await supabase.auth.signOut();
-          toast.error("Conta suspensa", {
-            description: profile.suspension_reason || "Entre em contato com o administrador",
-            duration: 6000,
-          });
-          return;
-        }
-
-        // Usuário ainda não foi aprovado
-        if (!profile.is_active) {
-          await supabase.auth.signOut();
-          toast.warning("Aguardando aprovação", {
-            description: "Sua conta está aguardando aprovação do administrador. Você receberá um email quando for aprovada.",
-            duration: 8000,
-          });
-          return;
-        }
-
-        // Atualizar last_login_at
-        await supabase
-          .from('profiles')
-          .update({ last_login_at: new Date().toISOString() })
-          .eq('user_id', data.user.id);
-
-        toast.success("Login realizado com sucesso!");
-        
-        // Aguardar role ser carregado e redirecionar
-        // O useEffect irá lidar com o redirecionamento quando role estiver disponível
-      }
-    } catch (error) {
-      toast.error("Erro ao fazer login");
-      console.error("Login error:", error);
+      await signInWithRole(userEmail, userPassword, 'user');
+      toast.success("Login realizado com sucesso!");
+    } catch (error: any) {
+      console.error("User login error:", error);
+      toast.error(error.message || "Erro ao fazer login como operador");
     } finally {
-      setIsLoading(false);
+      setIsLoadingUser(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validation
-    if (!email || !password) {
-      toast.error("Por favor, preencha todos os campos");
-      return;
-    }
-
-    if (!email.includes("@")) {
-      toast.error("Por favor, insira um email válido");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setIsLoading(true);
+    setIsLoadingAdmin(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      if (data.session) {
-        // Verificar status do perfil após cadastro
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_active')
-          .eq('user_id', data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-        }
-
-        // Se perfil inativo, fazer logout imediato
-        if (profile && !profile.is_active) {
-          toast.warning(
-            "Conta criada! Aguardando aprovação do administrador.",
-            {
-              description: "Você será notificado por email quando sua conta for aprovada. Por favor, aguarde.",
-              duration: 10000,
-            }
-          );
-          
-          // Delay para garantir que toast apareça antes do logout
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await supabase.auth.signOut();
-        } else {
-          // Caso improvável: perfil já está ativo
-          toast.success("Conta criada com sucesso!");
-        }
-      } else {
-        // Sem sessão = email precisa ser confirmado
-        toast.success(
-          "Conta criada! Aguardando aprovação do administrador.",
-          {
-            description: "Verifique seu email para confirmar e aguarde a aprovação.",
-            duration: 8000,
-          }
-        );
-      }
-    } catch (error) {
-      toast.error("Erro ao criar conta");
-      console.error("Signup error:", error);
+      await signInWithRole(adminEmail, adminPassword, 'admin');
+      toast.success("Login administrativo realizado com sucesso!");
+    } catch (error: any) {
+      console.error("Admin login error:", error);
+      toast.error(error.message || "Erro ao fazer login como administrador");
     } finally {
-      setIsLoading(false);
+      setIsLoadingAdmin(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">SMS Sender</CardTitle>
-          <CardDescription className="text-center">
-            Entre com sua conta ou crie uma nova
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleSignIn} className="space-y-4">
+      <div className="w-full max-w-6xl space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center mb-4">
+            <MessageSquare className="h-12 w-12 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold">SMS Sender Platform</h1>
+          <p className="text-muted-foreground">Selecione o tipo de acesso</p>
+        </div>
+
+        {/* Dual Login Cards */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* User Login Card */}
+          <Card className="border-2 hover:border-primary/50 transition-colors">
+            <CardHeader className="space-y-1 text-center">
+              <div className="flex justify-center mb-2">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Operador</CardTitle>
+              <CardDescription>
+                Acesso para envio de SMS, chamadas e gestão de contatos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUserLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Input
                     type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
+                    placeholder="Email do Operador"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    disabled={isLoadingUser}
                     required
                   />
                 </div>
@@ -214,48 +96,84 @@ const Login = () => {
                   <Input
                     type="password"
                     placeholder="Senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    disabled={isLoadingUser}
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Entrando..." : "Entrar"}
+                <Button type="submit" className="w-full" disabled={isLoadingUser}>
+                  {isLoadingUser ? "Entrando..." : "Entrar como Operador"}
                 </Button>
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => navigate("/signup")}
+                    disabled={isLoadingUser}
+                  >
+                    Criar conta de operador
+                  </Button>
+                </div>
               </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+            </CardContent>
+          </Card>
+
+          {/* Admin Login Card */}
+          <Card className="border-2 hover:border-destructive/50 transition-colors">
+            <CardHeader className="space-y-1 text-center">
+              <div className="flex justify-center mb-2">
+                <div className="p-3 rounded-full bg-destructive/10">
+                  <Shield className="h-8 w-8 text-destructive" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Administrador</CardTitle>
+              <CardDescription>
+                Acesso completo para configuração e gestão do sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAdminLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Input
                     type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
+                    placeholder="Email do Administrador"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    disabled={isLoadingAdmin}
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Input
                     type="password"
-                    placeholder="Senha (mínimo 6 caracteres)"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
+                    placeholder="Senha"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    disabled={isLoadingAdmin}
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Criando conta..." : "Criar Conta"}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-destructive hover:bg-destructive/90" 
+                  disabled={isLoadingAdmin}
+                >
+                  {isLoadingAdmin ? "Entrando..." : "Entrar como Admin"}
                 </Button>
               </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Back to Home */}
+        <div className="text-center">
+          <Button variant="ghost" onClick={() => navigate("/")}>
+            Voltar para página inicial
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

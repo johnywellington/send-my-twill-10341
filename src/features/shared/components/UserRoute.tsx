@@ -28,5 +28,15 @@ export const UserRoute = ({ children }: UserRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Block admin from accessing user routes
+  if (role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // Only allow users
+  if (role !== 'user') {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 };

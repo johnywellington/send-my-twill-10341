@@ -70,6 +70,74 @@ export const useAuth = () => {
     }
   };
 
+  const signInWithRole = async (email: string, password: string, expectedRole: 'admin' | 'user') => {
+    try {
+      // 1. Fazer login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.session && data.user) {
+        // 2. Verificar se usuário está ativo
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_active, suspended_at, suspension_reason')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (profileError) {
+          await supabase.auth.signOut();
+          throw new Error("Erro ao verificar status da conta");
+        }
+
+        if (profile.suspended_at) {
+          await supabase.auth.signOut();
+          throw new Error(profile.suspension_reason || "Conta suspensa. Entre em contato com o administrador");
+        }
+
+        if (!profile.is_active) {
+          await supabase.auth.signOut();
+          throw new Error("Conta aguardando aprovação do administrador");
+        }
+
+        // 3. Buscar role do usuário
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (roleError) {
+          await supabase.auth.signOut();
+          throw new Error("Erro ao verificar permissões");
+        }
+
+        // 4. Validar se role corresponde ao esperado
+        if (roleData.role !== expectedRole) {
+          await supabase.auth.signOut();
+          const roleNames = {
+            admin: 'administrador',
+            user: 'operador'
+          };
+          throw new Error(`Esta conta não tem permissão de ${roleNames[expectedRole]}. Use o login correto para seu tipo de conta.`);
+        }
+
+        // 5. Atualizar last_login_at
+        await supabase
+          .from('profiles')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('user_id', data.user.id);
+
+        return data;
+      }
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -102,6 +170,7 @@ export const useAuth = () => {
     isAuthenticated: !!session && !!user,
     isAdmin: role === 'admin',
     isUser: role === 'user',
+    signInWithRole,
     signOut,
     redirectToDashboard,
   };

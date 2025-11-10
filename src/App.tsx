@@ -11,8 +11,9 @@ import { UserLayout } from "@/features/user/layouts/UserLayout";
 import { AdminLayout } from "@/features/admin/layouts/AdminLayout";
 
 // Lazy load pages
-const Index = lazy(() => import("./features/shared/pages/Index"));
+const LandingPage = lazy(() => import("./features/shared/pages/LandingPage"));
 const Login = lazy(() => import("./features/shared/pages/Login"));
+const Signup = lazy(() => import("./features/shared/pages/Signup"));
 const NotFound = lazy(() => import("./features/shared/pages/NotFound"));
 const ApiDocs = lazy(() => import("./features/shared/pages/ApiDocs"));
 
@@ -58,20 +59,16 @@ const App = () => (
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/docs" element={
               <PublicLayout>
-                <Login />
+                <ApiDocs />
               </PublicLayout>
             } />
 
           {/* User Routes - Green Sidebar */}
-          <Route path="/" element={
-            <UserRoute>
-              <UserLayout>
-                <Index />
-              </UserLayout>
-            </UserRoute>
-          } />
           <Route path="/dashboard" element={
             <UserRoute>
               <UserLayout>
@@ -149,42 +146,7 @@ const App = () => (
             </UserLayout>
           </UserRoute>
         } />
-          <Route path="/api-test" element={
-            <UserRoute>
-              <UserLayout>
-                <ApiTest />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/docs" element={
-            <UserRoute>
-              <UserLayout>
-                <ApiDocs />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/monitoring" element={
-            <UserRoute>
-              <UserLayout>
-                <Monitoring />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/active-calls" element={
-            <UserRoute>
-              <UserLayout>
-                <ActiveCalls />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/sync-logs" element={
-            <UserRoute>
-              <UserLayout>
-                <SyncLogs />
-              </UserLayout>
-            </UserRoute>
-          } />
-
+          
           {/* Admin Routes - Red Sidebar */}
           <Route path="/admin" element={
             <AdminRoute>
@@ -214,14 +176,47 @@ const App = () => (
               </AdminLayout>
             </AdminRoute>
           } />
-
-          {/* User SIP Route */}
-          <Route path="/sip" element={
-            <UserRoute>
-              <UserLayout>
-                <SIP />
-              </UserLayout>
-            </UserRoute>
+          <Route path="/admin/numbers" element={
+            <AdminRoute>
+              <AdminLayout>
+                <Numbers />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/monitoring" element={
+            <AdminRoute>
+              <AdminLayout>
+                <Monitoring />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/active-calls" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ActiveCalls />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/credentials" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ProviderCredentials />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/sync-logs" element={
+            <AdminRoute>
+              <AdminLayout>
+                <SyncLogs />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/api-test" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ApiTest />
+              </AdminLayout>
+            </AdminRoute>
           } />
 
           {/* 404 Not Found */}

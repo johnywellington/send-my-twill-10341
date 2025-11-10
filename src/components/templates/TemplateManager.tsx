@@ -12,7 +12,7 @@ import {
   useDeleteTemplate,
   useDuplicateTemplate,
   MessageTemplate 
-} from '@/hooks/use-templates';
+} from '@/features/user/hooks/use-templates';
 import { TEMPLATE_CATEGORIES } from '@/lib/template-utils';
 import { Plus, Search, Star, FileText } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';

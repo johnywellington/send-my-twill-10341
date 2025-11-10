@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useSyncTwilioNumbers } from "@/hooks/use-sync-twilio-numbers";
+import { useSyncTwilioNumbers } from "@/features/admin/hooks/use-sync-twilio-numbers";
 
 interface OrphanedNumber {
   id: string;

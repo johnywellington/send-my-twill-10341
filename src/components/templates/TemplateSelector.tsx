@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useTemplates, MessageTemplate, useIncrementTemplateUsage } from '@/hooks/use-templates';
+import { useTemplates, MessageTemplate, useIncrementTemplateUsage } from '@/features/user/hooks/use-templates';
 import { FileText, Search, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useSyncTwilioSIPDomains } from "@/hooks/use-sync-twilio-sip-domains";
+import { useSyncTwilioSIPDomains } from "@/features/admin/hooks/use-sync-twilio-sip-domains";
 
 interface OrphanedDomain {
   domain_group_id: string;

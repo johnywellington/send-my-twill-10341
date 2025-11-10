@@ -39,7 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DateRangePicker } from "@/components/DateRangePicker";
-import { useSmsHistory } from "@/hooks/use-sms-history";
+import { useSmsHistory } from "@/features/user/hooks/use-sms-history";
 
 export default function HistoricoSMS() {
   const navigate = useNavigate();

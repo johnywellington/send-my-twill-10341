@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { UserProfile } from "@/hooks/use-users";
-import { useUserActivity } from "@/hooks/use-user-activity";
+import { UserProfile } from "@/features/admin/hooks/use-users";
+import { useUserActivity } from "@/features/admin/hooks/use-user-activity";
 import {
   Dialog,
   DialogContent,

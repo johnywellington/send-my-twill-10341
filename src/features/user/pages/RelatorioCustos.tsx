@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Download, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import { DateRangePicker } from "@/components/DateRangePicker";
-import { useSmsHistory } from "@/hooks/use-sms-history";
+import { useSmsHistory } from "@/features/user/hooks/use-sms-history";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";

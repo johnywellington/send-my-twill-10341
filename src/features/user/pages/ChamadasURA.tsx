@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneForwarded, RefreshCw, Phone, CheckCircle2, Clock, Hash, TrendingUp } from "lucide-react";
-import { useURAMonitoring } from "@/hooks/use-ura-monitoring";
+import { useURAMonitoring } from "@/features/user/hooks/use-ura-monitoring";
 import { Progress } from "@/components/ui/progress";
 import { RealtimeAlertsCard } from "@/components/monitoring/RealtimeAlertsCard";
 import { ActiveCallsTable } from "@/components/monitoring/ActiveCallsTable";

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { UserProfile, useUsers } from "@/hooks/use-users";
+import { UserProfile, useUsers } from "@/features/admin/hooks/use-users";
 import {
   Dialog,
   DialogContent,

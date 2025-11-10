@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useSyncVonageNumbers } from "@/hooks/use-sync-vonage-numbers";
+import { useSyncVonageNumbers } from "@/features/admin/hooks/use-sync-vonage-numbers";
 
 interface OrphanedNumber {
   id: string;

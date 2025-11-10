@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useSyncLogs } from "@/hooks/use-sync-logs";
-import { useSyncAll } from "@/hooks/use-sync-all";
+import { useSyncLogs } from "@/features/admin/hooks/use-sync-logs";
+import { useSyncAll } from "@/features/admin/hooks/use-sync-all";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

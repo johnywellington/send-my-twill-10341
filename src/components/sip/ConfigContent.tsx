@@ -11,7 +11,7 @@ import { Loader2, Settings, Star, MoreVertical, Plus, Shuffle, Eye, Pencil, Tras
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSIPConfig } from "@/hooks/use-sip-config";
 import { useDomainValidation } from "@/hooks/use-domain-validation";
-import { useOrphanedDomains } from "@/hooks/use-orphaned-domains";
+import { useOrphanedDomains } from "@/features/admin/hooks/use-orphaned-domains";
 import { generateRandomSipName, generateRandomVonageName } from "@/lib/sip-name-generator";
 import { useNavigate } from "react-router-dom";
 import { SyncTwilioDomainsButton } from "./SyncTwilioDomainsButton";

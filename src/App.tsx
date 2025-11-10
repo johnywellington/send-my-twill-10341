@@ -1,38 +1,51 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ProtectedRoute } from "@/features/shared/components/ProtectedRoute";
 import { UserRoute } from "@/features/shared/components/UserRoute";
 import { AdminRoute } from "@/features/shared/components/AdminRoute";
 import { PublicLayout } from "@/features/shared/layouts/PublicLayout";
 import { UserLayout } from "@/features/user/layouts/UserLayout";
 import { AdminLayout } from "@/features/admin/layouts/AdminLayout";
-import Index from "./features/shared/pages/Index";
-import Login from "./features/shared/pages/Login";
-import Dashboard from "./features/user/pages/Dashboard";
-import Contacts from "./features/user/pages/Contacts";
-import Analytics from "./features/user/pages/Analytics";
-import Templates from "./features/user/pages/Templates";
-import ApiTest from "./features/user/pages/ApiTest";
-import ApiDocs from "./features/shared/pages/ApiDocs";
-import Numbers from "./features/admin/pages/Numbers";
-import Monitoring from "./features/admin/pages/Monitoring";
-import ActiveCalls from "./features/admin/pages/ActiveCalls";
-import ChamadasURA from "./features/user/pages/ChamadasURA";
-import HistoricoSMS from "./features/user/pages/HistoricoSMS";
-import ValidarNumeros from "./features/user/pages/ValidarNumeros";
-import RelatorioCustos from "./features/user/pages/RelatorioCustos";
-import ChamadasRecebidas from "./features/user/pages/ChamadasRecebidas";
-import ProviderCredentials from "./features/admin/pages/ProviderCredentials";
-import AdminDashboard from "./features/admin/pages/AdminDashboard";
-import AdminUsers from "./features/admin/pages/AdminUsers";
-import AdminSIP from "./features/admin/pages/SIP";
-import SIPDomainDetails from "./features/admin/pages/SIPDomainDetails";
-import SIP from "./features/user/pages/SIP";
-import SyncLogs from "./features/admin/pages/SyncLogs";
-import NotFound from "./features/shared/pages/NotFound";
+
+// Lazy load pages
+const Index = lazy(() => import("./features/shared/pages/Index"));
+const Login = lazy(() => import("./features/shared/pages/Login"));
+const NotFound = lazy(() => import("./features/shared/pages/NotFound"));
+const ApiDocs = lazy(() => import("./features/shared/pages/ApiDocs"));
+
+// User pages
+const Dashboard = lazy(() => import("./features/user/pages/Dashboard"));
+const Contacts = lazy(() => import("./features/user/pages/Contacts"));
+const Analytics = lazy(() => import("./features/user/pages/Analytics"));
+const Templates = lazy(() => import("./features/user/pages/Templates"));
+const ApiTest = lazy(() => import("./features/user/pages/ApiTest"));
+const ChamadasURA = lazy(() => import("./features/user/pages/ChamadasURA"));
+const HistoricoSMS = lazy(() => import("./features/user/pages/HistoricoSMS"));
+const ValidarNumeros = lazy(() => import("./features/user/pages/ValidarNumeros"));
+const RelatorioCustos = lazy(() => import("./features/user/pages/RelatorioCustos"));
+const ChamadasRecebidas = lazy(() => import("./features/user/pages/ChamadasRecebidas"));
+const SIP = lazy(() => import("./features/user/pages/SIP"));
+
+// Admin pages
+const Numbers = lazy(() => import("./features/admin/pages/Numbers"));
+const Monitoring = lazy(() => import("./features/admin/pages/Monitoring"));
+const ActiveCalls = lazy(() => import("./features/admin/pages/ActiveCalls"));
+const ProviderCredentials = lazy(() => import("./features/admin/pages/ProviderCredentials"));
+const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
+const AdminUsers = lazy(() => import("./features/admin/pages/AdminUsers"));
+const AdminSIP = lazy(() => import("./features/admin/pages/SIP"));
+const SIPDomainDetails = lazy(() => import("./features/admin/pages/SIPDomainDetails"));
+const SyncLogs = lazy(() => import("./features/admin/pages/SyncLogs"));
+
+// Loading fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -42,13 +55,14 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={
-            <PublicLayout>
-              <Login />
-            </PublicLayout>
-          } />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={
+              <PublicLayout>
+                <Login />
+              </PublicLayout>
+            } />
 
           {/* User Routes - Green Sidebar */}
           <Route path="/" element={
@@ -213,6 +227,7 @@ const App = () => (
           {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

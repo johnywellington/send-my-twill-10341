@@ -12,7 +12,7 @@ import { Send, Loader2, Save, Beaker, RefreshCw, AlertTriangle } from "lucide-re
 import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
-import { useCreateTemplate } from "@/hooks/use-templates";
+import { useCreateTemplate } from "@/features/user/hooks/use-templates";
 import { extractVariables } from "@/lib/template-utils";
 import { SenderIdTooltip } from "./SenderIdTooltip";
 import { useProvider } from "@/contexts/ProviderContext";

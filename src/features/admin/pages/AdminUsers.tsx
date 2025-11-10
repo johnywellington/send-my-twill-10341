@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/shared/hooks/use-auth";
-import { useUsers } from "@/hooks/use-users";
-import { UserProfile } from "@/hooks/use-users";
+import { useUsers } from "@/features/admin/hooks/use-users";
+import { UserProfile } from "@/features/admin/hooks/use-users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useSyncVonageSIPApplications } from "@/hooks/use-sync-vonage-sip-applications";
+import { useSyncVonageSIPApplications } from "@/features/admin/hooks/use-sync-vonage-sip-applications";
 
 interface OrphanedApplication {
   domain_group_id: string;

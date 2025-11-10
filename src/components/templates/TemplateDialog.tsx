@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { extractVariables, validateVariables, replaceVariablesForPreview, TEMPLATE_CATEGORIES } from '@/lib/template-utils';
-import { MessageTemplate } from '@/hooks/use-templates';
+import { MessageTemplate } from '@/features/user/hooks/use-templates';
 import { AlertCircle, Sparkles } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

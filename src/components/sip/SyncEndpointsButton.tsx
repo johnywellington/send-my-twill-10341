@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useSyncSIPEndpoints } from "@/hooks/use-sync-sip-endpoints";
+import { useSyncSIPEndpoints } from "@/features/admin/hooks/use-sync-sip-endpoints";
 
 interface OrphanedUser {
   id: string;

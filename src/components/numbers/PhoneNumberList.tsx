@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity, AlertTriangle } from "lucide-react";
 import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
-import { useOrphanedNumbers } from "@/hooks/use-orphaned-numbers";
+import { useOrphanedNumbers } from "@/features/admin/hooks/use-orphaned-numbers";
 import { useProviderCredentials } from "@/hooks/use-provider-credentials";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";

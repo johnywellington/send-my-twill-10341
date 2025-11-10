@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageTemplate } from '@/hooks/use-templates';
+import { MessageTemplate } from '@/features/user/hooks/use-templates';
 import { FileText, Copy, Edit, Trash2, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

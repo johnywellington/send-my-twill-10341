@@ -12,7 +12,7 @@ import { Loader2, Save, Beaker, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
-import { useCreateTemplate } from "@/hooks/use-templates";
+import { useCreateTemplate } from "@/features/user/hooks/use-templates";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
 import { useProvider } from "@/contexts/ProviderContext";

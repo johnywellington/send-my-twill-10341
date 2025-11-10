@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useVonageApplications } from "@/hooks/use-vonage-applications";
+import { useVonageApplications } from "@/features/admin/hooks/use-vonage-applications";
 import { Badge } from "@/components/ui/badge";
 
 interface DeleteVonageApplicationDialogProps {

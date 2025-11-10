@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Plus, Trash2, RefreshCw } from "lucide-react";
 import { useSIPRoutes } from "@/hooks/use-sip-routes";
-import { useSyncSIPRoutes } from "@/hooks/use-sync-sip-routes";
+import { useSyncSIPRoutes } from "@/features/admin/hooks/use-sync-sip-routes";
 import { SIPRouteDialog } from "./SIPRouteDialog";
 import { useProvider } from "@/contexts/ProviderContext";
 import { CredentialBadge } from "./CredentialBadge";

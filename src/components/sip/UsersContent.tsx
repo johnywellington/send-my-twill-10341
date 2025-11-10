@@ -25,14 +25,14 @@ import {
 import { useSIPConnectivityTest } from "@/hooks/use-sip-connectivity-test";
 import { Check, X, AlertCircle } from "lucide-react";
 import { OrphanedResourcesDialog } from "./OrphanedResourcesDialog";
-import { useCleanupOrphanedResources } from "@/hooks/use-cleanup-orphaned-resources";
+import { useCleanupOrphanedResources } from "@/features/admin/hooks/use-cleanup-orphaned-resources";
 import { formatSIPUri, getProviderIcon } from "@/lib/sip-utils";
 import { useProvider } from "@/contexts/ProviderContext";
 import { CredentialBadge } from "./CredentialBadge";
 import { SyncEndpointsButton } from "./SyncEndpointsButton";
 import { OrphanedUsersDialog } from "./OrphanedUsersDialog";
 import { useSIPTestCall } from "@/hooks/use-sip-test-call";
-import { useRecoverVonageEndpoints } from "@/hooks/use-recover-vonage-endpoints";
+import { useRecoverVonageEndpoints } from "@/features/admin/hooks/use-recover-vonage-endpoints";
 
 export function UsersContent() {
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -23,6 +23,7 @@ const Contacts = lazy(() => import("./features/user/pages/Contacts"));
 const Analytics = lazy(() => import("./features/user/pages/Analytics"));
 const Templates = lazy(() => import("./features/user/pages/Templates"));
 const ApiTest = lazy(() => import("./features/user/pages/ApiTest"));
+const Comunicacao = lazy(() => import("./features/user/pages/Comunicacao"));
 const ChamadasURA = lazy(() => import("./features/user/pages/ChamadasURA"));
 const HistoricoSMS = lazy(() => import("./features/user/pages/HistoricoSMS"));
 const ValidarNumeros = lazy(() => import("./features/user/pages/ValidarNumeros"));
@@ -151,6 +152,13 @@ const App = () => (
           <UserRoute>
             <UserLayout>
               <ApiTest />
+            </UserLayout>
+          </UserRoute>
+        } />
+        <Route path="/comunicacao" element={
+          <UserRoute>
+            <UserLayout>
+              <Comunicacao />
             </UserLayout>
           </UserRoute>
         } />

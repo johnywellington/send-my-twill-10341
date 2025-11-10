@@ -1,73 +1,89 @@
-# Welcome to your Lovable project
+# send-my-twill
 
-## Project info
+Aplicação fullstack com frontend React e backend Supabase.
 
-**URL**: https://lovable.dev/projects/405d80af-70a5-475e-aac7-d2625490d887
+## Estrutura do Projeto
 
-## How can I edit this code?
+```
+/
+├── src/                  # Código fonte do frontend React/TypeScript
+├── public/               # Assets estáticos
+├── supabase/             # Backend Supabase
+│   ├── functions/        # Edge Functions (Deno)
+│   ├── config.toml       # Configuração do Supabase
+│   └── migrations/       # Database migrations
+├── package.json          # Dependências do projeto
+├── vite.config.ts        # Configuração do Vite
+└── ...
+```
 
-There are several ways of editing your application.
+## Tecnologias
 
-**Use Lovable**
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn-ui
+- **Backend:** Supabase (Edge Functions, PostgreSQL, Auth)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/405d80af-70a5-475e-aac7-d2625490d887) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Desenvolvimento Local
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Instalar dependências
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Iniciar servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Deploy em Produção
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Deploy Completo (Lovable)
 
-**Use GitHub Codespaces**
+Este projeto está conectado ao Lovable e faz deploy automático ao fazer push para o repositório.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**URL do Projeto:** https://lovable.dev/projects/405d80af-70a5-475e-aac7-d2625490d887
 
-## What technologies are used for this project?
+### Deploy Separado
 
-This project is built with:
+Se desejar fazer deploy do frontend e backend em plataformas diferentes:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+#### Frontend (Vercel, Netlify, Cloudflare Pages)
 
-## How can I deploy this project?
+**Configurações:**
+- **Root Directory:** `/` (raiz)
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Node Version:** 18+
 
-Simply open [Lovable](https://lovable.dev/projects/405d80af-70a5-475e-aac7-d2625490d887) and click on Share -> Publish.
+**Variáveis de Ambiente:**
+```
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-publica
+```
 
-## Can I connect a custom domain to my Lovable project?
+#### Backend (Supabase)
 
-Yes, you can!
+As Edge Functions em `supabase/functions/` são deployadas automaticamente quando conectadas ao projeto Supabase.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+**Para deploy manual:**
+```sh
+# Login no Supabase
+npx supabase login
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Link ao projeto
+npx supabase link --project-ref seu-projeto-id
+
+# Deploy das functions
+npx supabase functions deploy
+```
+
+## Sobre a Estrutura
+
+⚠️ **Nota Importante:** O Lovable requer que `package.json`, `vite.config.ts` e a pasta `src/` estejam na raiz do projeto para funcionar corretamente. A pasta `supabase/` também deve estar na raiz para que o Supabase CLI e o Lovable possam detectá-la automaticamente.
+
+Esta estrutura já permite deploy separado:
+- **Frontend:** Pode ser deployado em qualquer plataforma de hosting estático
+- **Backend:** As Edge Functions e banco de dados são gerenciados pelo Supabase
+
+## Custom Domain
+
+Para conectar um domínio customizado, navegue até Project > Settings > Domains no Lovable.
+
+📚 **Documentação:** [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

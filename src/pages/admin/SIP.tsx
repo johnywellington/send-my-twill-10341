@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings } from "lucide-react";
 import { DomainsManagement } from "@/components/sip/DomainsManagement";
+import { VonageApplicationsManagement } from "@/components/sip/VonageApplicationsManagement";
 import { UsersContent } from "@/components/sip/UsersContent";
 import { RoutesContent } from "@/components/sip/RoutesContent";
 import { MonitorContent } from "@/components/sip/MonitorContent";
@@ -11,7 +12,7 @@ import { SyncDashboard } from "@/components/sip/SyncDashboard";
 
 export default function AdminSIP() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'dominios';
+  const activeTab = searchParams.get('tab') || 'twilio-domains';
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
@@ -25,8 +26,9 @@ export default function AdminSIP() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="dominios">🏢 Domínios</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-8">
+          <TabsTrigger value="twilio-domains">📞 Twilio Domains</TabsTrigger>
+          <TabsTrigger value="vonage-apps">📱 Vonage Apps</TabsTrigger>
           <TabsTrigger value="usuarios">👥 Usuários</TabsTrigger>
           <TabsTrigger value="rotas">🛣️ Rotas</TabsTrigger>
           <TabsTrigger value="monitor">📊 Monitor</TabsTrigger>
@@ -35,8 +37,12 @@ export default function AdminSIP() {
           <TabsTrigger value="sync">🔄 Sincronização</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dominios" className="mt-6">
+        <TabsContent value="twilio-domains" className="mt-6">
           <DomainsManagement />
+        </TabsContent>
+
+        <TabsContent value="vonage-apps" className="mt-6">
+          <VonageApplicationsManagement />
         </TabsContent>
 
         <TabsContent value="usuarios" className="mt-6">

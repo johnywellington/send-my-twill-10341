@@ -9,7 +9,7 @@ const corsHeaders = {
 interface OrphanedResource {
   id: string;
   name: string;
-  type: 'credential_list' | 'endpoint';
+  type: 'credential' | 'endpoint';
   provider: 'twilio' | 'vonage';
   metadata?: any;
 }
@@ -56,10 +56,10 @@ serve(async (req) => {
 
     let orphanedResources: OrphanedResource[] = [];
 
-    // ========== TWILIO: Detectar CredentialLists órfãs ==========
+    // ========== TWILIO: Detectar Credentials órfãos ==========
     if (!provider || provider === 'twilio') {
       try {
-        console.log('[Twilio] Checking for orphaned CredentialLists...');
+        console.log('[Twilio] Checking for orphaned Credentials...');
         
         const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
         const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -67,7 +67,7 @@ serve(async (req) => {
         if (twilioSid && twilioToken) {
           // Buscar todos os CredentialLists do Twilio
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
           
           try {
             const twilioResponse = await fetch(
@@ -95,36 +95,74 @@ serve(async (req) => {
             // Buscar todos os usuários SIP Twilio do banco
             const { data: dbTwilioUsers, error: dbError } = await supabase
               .from('sip_users')
-              .select('twilio_credlist_sid, sip_username')
+              .select('twilio_credential_sid, twilio_credlist_sid, sip_username')
               .eq('provider', 'twilio')
-              .not('twilio_credlist_sid', 'is', null);
+              .not('twilio_credential_sid', 'is', null);
 
             if (dbError) {
               console.error('[Twilio] Database error:', dbError);
               throw dbError;
             }
 
-            const dbCredListSids = new Set(dbTwilioUsers?.map(u => u.twilio_credlist_sid) || []);
+            const dbCredentialSids = new Set(dbTwilioUsers?.map(u => u.twilio_credential_sid) || []);
 
-            console.log(`[Twilio] Found ${dbCredListSids.size} CredentialLists in database`);
+            console.log(`[Twilio] Found ${dbCredentialSids.size} Credentials in database`);
 
-            // Identificar órfãos
+            // Para cada CredentialList, buscar seus Credentials
             for (const credList of twilioCredLists) {
-              if (!dbCredListSids.has(credList.sid)) {
-                orphanedResources.push({
-                  id: credList.sid,
-                  name: credList.friendly_name,
-                  type: 'credential_list',
-                  provider: 'twilio',
-                  metadata: {
-                    date_created: credList.date_created,
-                    date_updated: credList.date_updated,
+              try {
+                const credsController = new AbortController();
+                const credsTimeoutId = setTimeout(() => credsController.abort(), 10000);
+                
+                const credsResponse = await fetch(
+                  `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${credList.sid}/Credentials.json`,
+                  {
+                    headers: {
+                      'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+                    },
+                    signal: credsController.signal,
                   }
-                });
+                );
+                
+                clearTimeout(credsTimeoutId);
+
+                if (!credsResponse.ok) {
+                  console.error(`[Twilio] Error fetching credentials for list ${credList.sid}: ${credsResponse.status}`);
+                  continue;
+                }
+
+                const credsData = await credsResponse.json();
+                const credentials = credsData.credentials || [];
+
+                console.log(`[Twilio] CredentialList ${credList.friendly_name}: ${credentials.length} credentials`);
+
+                // Identificar Credentials órfãos
+                for (const credential of credentials) {
+                  if (!dbCredentialSids.has(credential.sid)) {
+                    orphanedResources.push({
+                      id: credential.sid,
+                      name: credential.username,
+                      type: 'credential',
+                      provider: 'twilio',
+                      metadata: {
+                        credential_list_sid: credList.sid,
+                        credential_list_name: credList.friendly_name,
+                        date_created: credential.date_created,
+                        date_updated: credential.date_updated,
+                      }
+                    });
+                  }
+                }
+              } catch (credError: any) {
+                if (credError.name === 'AbortError') {
+                  console.error(`[Twilio] Request timeout for CredentialList ${credList.sid}`);
+                } else {
+                  console.error(`[Twilio] Error checking CredentialList ${credList.sid}:`, credError.message);
+                }
               }
             }
 
-            console.log(`[Twilio] Found ${orphanedResources.filter(r => r.provider === 'twilio').length} orphaned CredentialLists`);
+            console.log(`[Twilio] Found ${orphanedResources.filter(r => r.provider === 'twilio').length} orphaned Credentials`);
           } catch (fetchError: any) {
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
@@ -254,12 +292,19 @@ serve(async (req) => {
 
         try {
           if (resource.provider === 'twilio') {
-            // Deletar CredentialList do Twilio
+            // Deletar Credential individual do Twilio
             const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
             const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+            const credListSid = resource.metadata?.credential_list_sid;
+
+            if (!credListSid) {
+              cleanupResults.failed.push({ id: resourceId, error: 'Missing credential_list_sid' });
+              console.error(`✗ Cannot delete Credential ${resourceId}: missing CredentialList SID`);
+              continue;
+            }
 
             const deleteResponse = await fetch(
-              `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${resourceId}.json`,
+              `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/SIP/CredentialLists/${credListSid}/Credentials/${resourceId}.json`,
               {
                 method: 'DELETE',
                 headers: {
@@ -270,11 +315,11 @@ serve(async (req) => {
 
             if (deleteResponse.ok || deleteResponse.status === 404) {
               cleanupResults.success.push(resourceId);
-              console.log(`✓ Deleted Twilio CredentialList: ${resourceId}`);
+              console.log(`✓ Deleted Twilio Credential: ${resource.name} (${resourceId})`);
             } else {
               const errorText = await deleteResponse.text();
               cleanupResults.failed.push({ id: resourceId, error: errorText });
-              console.error(`✗ Failed to delete Twilio CredentialList ${resourceId}:`, errorText);
+              console.error(`✗ Failed to delete Twilio Credential ${resourceId}:`, errorText);
             }
           } else if (resource.provider === 'vonage') {
             // Nota: Vonage não permite deletar endpoints individuais via API

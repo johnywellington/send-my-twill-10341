@@ -5,7 +5,7 @@ import { toast } from "sonner";
 interface OrphanedResource {
   id: string;
   name: string;
-  type: 'credential_list' | 'endpoint';
+  type: 'credential' | 'endpoint';
   provider: 'twilio' | 'vonage';
   metadata?: any;
 }

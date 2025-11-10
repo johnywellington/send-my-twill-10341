@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 interface OrphanedResource {
   id: string;
   name: string;
-  type: 'credential_list' | 'endpoint';
+  type: 'credential' | 'endpoint';
   provider: 'twilio' | 'vonage';
   metadata?: any;
 }
@@ -84,7 +84,7 @@ export function OrphanedResourcesDialog({
           {/* Resumo */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <p className="text-sm text-muted-foreground">Twilio CredentialLists</p>
+              <p className="text-sm text-muted-foreground">Twilio Credentials</p>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{twilioCount}</p>
             </div>
             <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
@@ -151,11 +151,18 @@ export function OrphanedResourcesDialog({
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {resource.type === 'credential_list' ? 'CredentialList' : 'Endpoint'}
+                          {resource.type === 'credential' ? 'Credential' : 'Endpoint'}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {resource.name}
+                        <div>
+                          {resource.name}
+                          {resource.metadata?.credential_list_name && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Lista: {resource.metadata.credential_list_name}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {resource.metadata?.date_created && (
@@ -179,12 +186,19 @@ export function OrphanedResourcesDialog({
                 <strong>O que são recursos órfãos?</strong>
               </p>
               <p>
-                São recursos (CredentialLists no Twilio ou Endpoints no Vonage) que existem nas APIs dos provedores 
+                São recursos (Credentials no Twilio ou Endpoints no Vonage) que existem nas APIs dos provedores 
                 mas não têm um registro correspondente no banco de dados da aplicação.
               </p>
               <p className="text-muted-foreground">
                 Isso geralmente acontece quando um usuário SIP é deletado do banco mas o recurso não foi removido da API.
               </p>
+              <div className="mt-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded space-y-1">
+                <p className="font-medium text-amber-600 dark:text-amber-400">⚠️ Importante:</p>
+                <ul className="text-xs space-y-1 text-amber-600 dark:text-amber-400 ml-4">
+                  <li>• <strong>Twilio:</strong> Deleta apenas o Credential (usuário) individual dentro da CredentialList</li>
+                  <li>• <strong>Vonage:</strong> Endpoints não podem ser deletados individualmente via API</li>
+                </ul>
+              </div>
             </AlertDescription>
           </Alert>
         </div>

@@ -163,10 +163,12 @@ serve(async (req) => {
       const ex = existingMap.get(num.phone_number);
       if (!ex) {
         toInsert.push({ ...num, user_id: userId });
-      } else if (ex.user_id === userId) {
+      } else {
+        // Transfer ownership to current user and update capabilities
         toUpdate.push({
           id: ex.id,
           values: {
+            user_id: userId,
             supports_sms: num.supports_sms,
             supports_voice: num.supports_voice,
             supports_mms: num.supports_mms,
@@ -175,8 +177,6 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           }
         });
-      } else {
-        conflicts.push(num.phone_number);
       }
     }
 

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3 } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useImportCredentials } from "@/hooks/use-import-credentials";
@@ -11,19 +11,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCredentialStats } from "@/hooks/use-credential-stats";
 import { CredentialStatsCard } from "@/components/credentials/CredentialStatsCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSubaccounts, useCreateSubaccount, useUpdateSubaccount, useDeleteSubaccount } from "@/hooks/use-provider-subaccounts";
+import { SubaccountDialog } from "@/components/credentials/SubaccountDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function ProviderCredentials() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCredential, setEditingCredential] = useState<ProviderCredential | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [credentialToDelete, setCredentialToDelete] = useState<string | null>(null);
+  const [expandedCredentials, setExpandedCredentials] = useState<Set<string>>(new Set());
+  const [subaccountDialogOpen, setSubaccountDialogOpen] = useState(false);
+  const [selectedParentCredential, setSelectedParentCredential] = useState<{ id: string; provider: 'twilio' | 'vonage' } | null>(null);
+  const [deleteSubaccountDialogOpen, setDeleteSubaccountDialogOpen] = useState(false);
+  const [subaccountToDelete, setSubaccountToDelete] = useState<string | null>(null);
 
   const { data: credentials, isLoading } = useProviderCredentials();
   const { data: allStats, isLoading: statsLoading } = useCredentialStats();
+  const { data: allSubaccounts } = useSubaccounts();
   const createMutation = useCreateProviderCredential();
   const updateMutation = useUpdateProviderCredential();
   const deleteMutation = useDeleteProviderCredential();
   const importCredentials = useImportCredentials();
+  const createSubaccount = useCreateSubaccount();
+  const updateSubaccount = useUpdateSubaccount();
+  const deleteSubaccountMutation = useDeleteSubaccount();
 
   const handleOpenDialog = (credential?: ProviderCredential) => {
     setEditingCredential(credential);
@@ -46,6 +58,36 @@ export default function ProviderCredentials() {
       setDeleteDialogOpen(false);
       setCredentialToDelete(null);
     }
+  };
+
+  const handleCreateSubaccount = async (data: any) => {
+    await createSubaccount.mutateAsync(data);
+    setSubaccountDialogOpen(false);
+    setSelectedParentCredential(null);
+  };
+
+  const handleDeleteSubaccount = async () => {
+    if (subaccountToDelete) {
+      await deleteSubaccountMutation.mutateAsync(subaccountToDelete);
+      setDeleteSubaccountDialogOpen(false);
+      setSubaccountToDelete(null);
+    }
+  };
+
+  const toggleExpanded = (credentialId: string) => {
+    setExpandedCredentials(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(credentialId)) {
+        newSet.delete(credentialId);
+      } else {
+        newSet.add(credentialId);
+      }
+      return newSet;
+    });
+  };
+
+  const getSubaccountsForCredential = (credentialId: string) => {
+    return allSubaccounts?.filter(s => s.parent_credential_id === credentialId) || [];
   };
 
   const getProviderColor = (provider: string) => {
@@ -115,53 +157,128 @@ export default function ProviderCredentials() {
                   Nenhuma conta Twilio configurada
                 </p>
               ) : (
-                twilioCredentials.map((cred) => (
-                  <div key={cred.id} className="flex items-center justify-between p-3 border rounded-lg bg-card/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{cred.credential_name}</p>
-                        {cred.is_default && (
-                          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                        )}
+                twilioCredentials.map((cred) => {
+                  const isExpanded = expandedCredentials.has(cred.id);
+                  const subaccounts = getSubaccountsForCredential(cred.id);
+                  
+                  return (
+                    <Collapsible key={cred.id} open={isExpanded} onOpenChange={() => toggleExpanded(cred.id)}>
+                      <div className="border rounded-lg bg-card/50">
+                        <div className="flex items-center justify-between p-3">
+                          <div className="flex items-center gap-2 flex-1">
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </Button>
+                            </CollapsibleTrigger>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{cred.credential_name}</p>
+                                {cred.is_default && (
+                                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                                )}
+                                {subaccounts.length > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {subaccounts.length} subconta{subaccounts.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {cred.account_identifier}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {cred.is_active ? (
+                                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Ativa
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Inativa
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(cred)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setCredentialToDelete(cred.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <CollapsibleContent>
+                          <div className="px-3 pb-3 ml-8 space-y-2 border-t pt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedParentCredential({ id: cred.id, provider: 'twilio' });
+                                setSubaccountDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-2" />
+                              Criar Subconta
+                            </Button>
+
+                            {subaccounts.length > 0 && (
+                              <div className="space-y-2 mt-3">
+                                {subaccounts.map((sub) => (
+                                  <div key={sub.id} className="flex items-center justify-between p-2 border rounded bg-background/50">
+                                    <div className="flex items-center gap-2 flex-1">
+                                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-sm font-medium">{sub.subaccount_name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {sub.subaccount_sid || sub.subaccount_api_key}
+                                        </p>
+                                      </div>
+                                      {sub.is_active ? (
+                                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                                          Ativa
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                          Inativa
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setSubaccountToDelete(sub.id);
+                                        setDeleteSubaccountDialogOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CollapsibleContent>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {cred.account_identifier}
-                      </p>
-                      <div className="flex gap-2 mt-2">
-                        {cred.is_active ? (
-                          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Ativa
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Inativa
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(cred)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setCredentialToDelete(cred.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                    </Collapsible>
+                  );
+                })
               )}
             </CardContent>
           </Card>
@@ -185,53 +302,133 @@ export default function ProviderCredentials() {
                   Nenhuma conta Vonage configurada
                 </p>
               ) : (
-                vonageCredentials.map((cred) => (
-                  <div key={cred.id} className="flex items-center justify-between p-3 border rounded-lg bg-card/50">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{cred.credential_name}</p>
-                        {cred.is_default && (
-                          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                        )}
+                vonageCredentials.map((cred) => {
+                  const isExpanded = expandedCredentials.has(cred.id);
+                  const subaccounts = getSubaccountsForCredential(cred.id);
+                  
+                  return (
+                    <Collapsible key={cred.id} open={isExpanded} onOpenChange={() => toggleExpanded(cred.id)}>
+                      <div className="border rounded-lg bg-card/50">
+                        <div className="flex items-center justify-between p-3">
+                          <div className="flex items-center gap-2 flex-1">
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </Button>
+                            </CollapsibleTrigger>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{cred.credential_name}</p>
+                                {cred.is_default && (
+                                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                                )}
+                                {subaccounts.length > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {subaccounts.length} subconta{subaccounts.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {cred.account_identifier}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {cred.is_active ? (
+                                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Ativa
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Inativa
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(cred)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setCredentialToDelete(cred.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <CollapsibleContent>
+                          <div className="px-3 pb-3 ml-8 space-y-2 border-t pt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedParentCredential({ id: cred.id, provider: 'vonage' });
+                                setSubaccountDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-2" />
+                              Criar Subconta
+                            </Button>
+
+                            {subaccounts.length > 0 && (
+                              <div className="space-y-2 mt-3">
+                                {subaccounts.map((sub) => (
+                                  <div key={sub.id} className="flex items-center justify-between p-2 border rounded bg-background/50">
+                                    <div className="flex items-center gap-2 flex-1">
+                                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                                      <div>
+                                        <p className="text-sm font-medium">{sub.subaccount_name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {sub.subaccount_api_key}
+                                        </p>
+                                        {sub.use_parent_balance && (
+                                          <Badge variant="outline" className="text-xs mt-1">
+                                            Saldo compartilhado
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {sub.is_active ? (
+                                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
+                                          Ativa
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                          Inativa
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setSubaccountToDelete(sub.id);
+                                        setDeleteSubaccountDialogOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CollapsibleContent>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {cred.account_identifier}
-                      </p>
-                      <div className="flex gap-2 mt-2">
-                        {cred.is_active ? (
-                          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/20">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Ativa
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500 border-gray-500/20">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Inativa
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(cred)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setCredentialToDelete(cred.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                    </Collapsible>
+                  );
+                })
               )}
             </CardContent>
           </Card>
@@ -291,6 +488,35 @@ export default function ProviderCredentials() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={deleteSubaccountDialogOpen} onOpenChange={setDeleteSubaccountDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão de Subconta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover esta subconta? Esta ação não pode ser desfeita.
+              A subconta também será removida do provedor (Twilio/Vonage).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSubaccount} className="bg-destructive text-destructive-foreground">
+              Deletar Subconta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {selectedParentCredential && (
+        <SubaccountDialog
+          open={subaccountDialogOpen}
+          onOpenChange={setSubaccountDialogOpen}
+          parentCredentialId={selectedParentCredential.id}
+          provider={selectedParentCredential.provider}
+          onSubmit={handleCreateSubaccount}
+          isLoading={createSubaccount.isPending}
+        />
+      )}
     </div>
   );
 }

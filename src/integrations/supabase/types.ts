@@ -286,6 +286,7 @@ export type Database = {
           provider: string | null
           status: string
           style: number
+          subaccount_id: string | null
           template_used: string | null
           to_number: string
           updated_at: string
@@ -309,6 +310,7 @@ export type Database = {
           provider?: string | null
           status?: string
           style?: number
+          subaccount_id?: string | null
           template_used?: string | null
           to_number: string
           updated_at?: string
@@ -332,6 +334,7 @@ export type Database = {
           provider?: string | null
           status?: string
           style?: number
+          subaccount_id?: string | null
           template_used?: string | null
           to_number?: string
           updated_at?: string
@@ -344,6 +347,13 @@ export type Database = {
             columns: ["credential_id"]
             isOneToOne: false
             referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ivr_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
             referencedColumns: ["id"]
           },
         ]
@@ -616,6 +626,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      provider_subaccounts: {
+        Row: {
+          api_metadata: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          parent_credential_id: string
+          provider: string
+          subaccount_api_key: string | null
+          subaccount_api_secret: string | null
+          subaccount_name: string
+          subaccount_sid: string | null
+          updated_at: string | null
+          use_parent_balance: boolean | null
+          user_id: string
+        }
+        Insert: {
+          api_metadata?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_credential_id: string
+          provider: string
+          subaccount_api_key?: string | null
+          subaccount_api_secret?: string | null
+          subaccount_name: string
+          subaccount_sid?: string | null
+          updated_at?: string | null
+          use_parent_balance?: boolean | null
+          user_id: string
+        }
+        Update: {
+          api_metadata?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_credential_id?: string
+          provider?: string
+          subaccount_api_key?: string | null
+          subaccount_api_secret?: string | null
+          subaccount_name?: string
+          subaccount_sid?: string | null
+          updated_at?: string | null
+          use_parent_balance?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_subaccounts_parent_credential_id_fkey"
+            columns: ["parent_credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       received_calls: {
         Row: {
@@ -1194,6 +1260,7 @@ export type Database = {
           message: string
           provider: string
           status: string
+          subaccount_id: string | null
           to_number: string
           updated_at: string
           user_id: string
@@ -1209,6 +1276,7 @@ export type Database = {
           message: string
           provider: string
           status?: string
+          subaccount_id?: string | null
           to_number: string
           updated_at?: string
           user_id: string
@@ -1224,6 +1292,7 @@ export type Database = {
           message?: string
           provider?: string
           status?: string
+          subaccount_id?: string | null
           to_number?: string
           updated_at?: string
           user_id?: string
@@ -1234,6 +1303,13 @@ export type Database = {
             columns: ["credential_id"]
             isOneToOne: false
             referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
             referencedColumns: ["id"]
           },
         ]
@@ -1410,6 +1486,7 @@ export type Database = {
           provider: string | null
           status: string
           style: number
+          subaccount_id: string | null
           to_number: string
           updated_at: string
           user_id: string
@@ -1430,6 +1507,7 @@ export type Database = {
           provider?: string | null
           status?: string
           style?: number
+          subaccount_id?: string | null
           to_number: string
           updated_at?: string
           user_id: string
@@ -1450,6 +1528,7 @@ export type Database = {
           provider?: string | null
           status?: string
           style?: number
+          subaccount_id?: string | null
           to_number?: string
           updated_at?: string
           user_id?: string
@@ -1461,6 +1540,13 @@ export type Database = {
             columns: ["credential_id"]
             isOneToOne: false
             referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
             referencedColumns: ["id"]
           },
         ]

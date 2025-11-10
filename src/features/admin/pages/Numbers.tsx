@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, AlertCircle } from "lucide-react";
 import { PhoneNumberList } from "@/components/numbers/PhoneNumberList";
 import { PhoneNumberDialog } from "@/components/numbers/PhoneNumberDialog";
 import { SyncTwilioButton } from "@/components/numbers/SyncTwilioButton";
 import { SyncVonageButton } from "@/components/numbers/SyncVonageButton";
 import { OrphanedNumbersDialog } from "@/components/numbers/OrphanedNumbersDialog";
 import { useDeletePhoneNumber } from "@/hooks/use-phone-numbers";
+import { useProviderCredentials } from "@/hooks/use-provider-credentials";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 
 interface OrphanedNumber {
@@ -27,6 +29,9 @@ const Numbers = () => {
   } | null>(null);
   
   const deleteMutation = useDeletePhoneNumber();
+  const { data: credentials = [], isLoading: loadingCredentials } = useProviderCredentials();
+  
+  const hasCredentials = credentials.length > 0;
 
   const handleCleanupOrphans = async (selectedIds: string[]) => {
     try {
@@ -85,6 +90,24 @@ const Numbers = () => {
             </Button>
           </div>
         </div>
+
+        {!loadingCredentials && !hasCredentials && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Credenciais não configuradas</AlertTitle>
+            <AlertDescription>
+              É necessário configurar credenciais do Twilio ou Vonage antes de adicionar ou sincronizar números.
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin/credentials')}
+                className="mt-2"
+              >
+                Ir para Credenciais
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <PhoneNumberList />
         

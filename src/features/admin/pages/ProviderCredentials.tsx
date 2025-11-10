@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useImportCredentials } from "@/hooks/use-import-credentials";
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCredentialStats } from "@/hooks/use-credential-stats";
 import { CredentialStatsCard } from "@/components/credentials/CredentialStatsCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSubaccounts, useCreateSubaccount, useUpdateSubaccount, useDeleteSubaccount } from "@/hooks/use-provider-subaccounts";
+import { useSubaccounts, useCreateSubaccount, useUpdateSubaccount, useDeleteSubaccount, useSyncSubaccounts } from "@/hooks/use-provider-subaccounts";
 import { SubaccountDialog } from "@/components/credentials/SubaccountDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -36,6 +36,7 @@ export default function ProviderCredentials() {
   const createSubaccount = useCreateSubaccount();
   const updateSubaccount = useUpdateSubaccount();
   const deleteSubaccountMutation = useDeleteSubaccount();
+  const syncSubaccounts = useSyncSubaccounts();
 
   const handleOpenDialog = (credential?: ProviderCredential) => {
     setEditingCredential(credential);
@@ -224,17 +225,29 @@ export default function ProviderCredentials() {
 
                         <CollapsibleContent>
                           <div className="px-3 pb-3 ml-8 space-y-2 border-t pt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedParentCredential({ id: cred.id, provider: 'twilio' });
-                                setSubaccountDialogOpen(true);
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-2" />
-                              Criar Subconta
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => syncSubaccounts.mutate(cred.id)}
+                                disabled={syncSubaccounts.isPending}
+                              >
+                                <RefreshCw className={`h-3 w-3 mr-2 ${syncSubaccounts.isPending ? 'animate-spin' : ''}`} />
+                                Sincronizar
+                              </Button>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedParentCredential({ id: cred.id, provider: 'twilio' });
+                                  setSubaccountDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-2" />
+                                Criar Subconta
+                              </Button>
+                            </div>
 
                             {subaccounts.length > 0 && (
                               <div className="space-y-2 mt-3">
@@ -369,17 +382,29 @@ export default function ProviderCredentials() {
 
                         <CollapsibleContent>
                           <div className="px-3 pb-3 ml-8 space-y-2 border-t pt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedParentCredential({ id: cred.id, provider: 'vonage' });
-                                setSubaccountDialogOpen(true);
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-2" />
-                              Criar Subconta
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => syncSubaccounts.mutate(cred.id)}
+                                disabled={syncSubaccounts.isPending}
+                              >
+                                <RefreshCw className={`h-3 w-3 mr-2 ${syncSubaccounts.isPending ? 'animate-spin' : ''}`} />
+                                Sincronizar
+                              </Button>
+                              
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedParentCredential({ id: cred.id, provider: 'vonage' });
+                                  setSubaccountDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-2" />
+                                Criar Subconta
+                              </Button>
+                            </div>
 
                             {subaccounts.length > 0 && (
                               <div className="space-y-2 mt-3">

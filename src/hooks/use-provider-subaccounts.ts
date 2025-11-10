@@ -136,3 +136,33 @@ export const useDeleteSubaccount = () => {
     },
   });
 };
+
+export const useSyncSubaccounts = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (credentialId: string) => {
+      const { data, error } = await supabase.functions.invoke('sync-provider-subaccounts', {
+        body: { credentialId },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: { added: number; updated: number; total: number }) => {
+      queryClient.invalidateQueries({ queryKey: ['provider-subaccounts'] });
+      toast({
+        title: "Sincronização concluída",
+        description: `${data.added} novas subcontas, ${data.updated} atualizadas de ${data.total} no provedor`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao sincronizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};

@@ -6,6 +6,7 @@ import {
   FlaskConical,
   BookOpen,
   UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -27,6 +28,7 @@ const adminGroups = [
     routes: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
       { title: "Usuários", url: "/admin/users", icon: Users },
+      { title: "Aprovações", url: "/admin/approvals", icon: UserCheck },
       { title: "Criar Usuário", url: "/admin/create-user", icon: UserPlus },
       { title: "Módulo SIP", url: "/admin/sip", icon: Settings },
     ]

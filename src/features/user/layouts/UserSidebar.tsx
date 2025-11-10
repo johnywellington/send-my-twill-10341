@@ -1,4 +1,4 @@
-import { Home, Radio, Phone, Users, FileText, BarChart3, FlaskConical, BookOpen, Activity, PhoneCall, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Database, Key } from "lucide-react";
+import { Home, Radio, Phone, Users, FileText, BarChart3, Activity, PhoneCall, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Key } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -46,25 +46,6 @@ const userGroups = [
       { title: "Contatos", url: "/contacts", icon: Users },
       { title: "Templates", url: "/templates", icon: FileText },
       { title: "Validar Números", url: "/validar-numeros", icon: CheckCircle },
-    ]
-  },
-  {
-    label: "Módulo SIP",
-    routes: [
-      { title: "Módulo SIP", url: "/sip", icon: Phone },
-    ]
-  },
-  {
-    label: "Logs & Sincronização",
-    routes: [
-      { title: "Logs de Sincronização", url: "/sync-logs", icon: Database },
-    ]
-  },
-  {
-    label: "API Testing & Debug",
-    routes: [
-      { title: "API Test", url: "/api-test", icon: FlaskConical },
-      { title: "Documentação", url: "/docs", icon: BookOpen },
     ]
   },
 ];

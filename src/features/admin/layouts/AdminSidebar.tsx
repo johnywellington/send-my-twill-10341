@@ -32,7 +32,7 @@ const adminGroups = [
   {
     label: "Configurações & Logs",
     routes: [
-      { title: "Logs de Sincronização", url: "/sync-logs", icon: Database },
+      { title: "Logs de Sincronização", url: "/admin/sync-logs", icon: Database },
     ]
   },
   {

@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings } from "lucide-react";
-import { ConfigContent } from "@/components/sip/ConfigContent";
+import { DomainsManagement } from "@/components/sip/DomainsManagement";
 import { UsersContent } from "@/components/sip/UsersContent";
 import { RoutesContent } from "@/components/sip/RoutesContent";
 import { MonitorContent } from "@/components/sip/MonitorContent";
@@ -11,7 +11,7 @@ import { SyncDashboard } from "@/components/sip/SyncDashboard";
 
 export default function AdminSIP() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'config';
+  const activeTab = searchParams.get('tab') || 'dominios';
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
@@ -26,7 +26,7 @@ export default function AdminSIP() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="config">⚙️ Config</TabsTrigger>
+          <TabsTrigger value="dominios">🏢 Domínios</TabsTrigger>
           <TabsTrigger value="usuarios">👥 Usuários</TabsTrigger>
           <TabsTrigger value="rotas">🛣️ Rotas</TabsTrigger>
           <TabsTrigger value="monitor">📊 Monitor</TabsTrigger>
@@ -35,8 +35,8 @@ export default function AdminSIP() {
           <TabsTrigger value="sync">🔄 Sincronização</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="config" className="mt-6">
-          <ConfigContent />
+        <TabsContent value="dominios" className="mt-6">
+          <DomainsManagement />
         </TabsContent>
 
         <TabsContent value="usuarios" className="mt-6">

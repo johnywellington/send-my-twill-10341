@@ -2,7 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, Shield, Home } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/shared/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ProviderSelector } from "@/components/ProviderSelector";

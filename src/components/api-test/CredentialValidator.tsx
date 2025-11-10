@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 
 interface LogValidationParams {
   provider: 'twilio' | 'vonage';

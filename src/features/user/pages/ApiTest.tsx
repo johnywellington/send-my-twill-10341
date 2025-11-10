@@ -9,16 +9,7 @@ import { RateLimitMonitor } from "@/components/api-test/RateLimitMonitor";
 import { TestHistory } from "@/components/api-test/TestHistory";
 import { AccountStatusCard } from "@/components/api-test/AccountStatusCard";
 import { ValidationHistory } from "@/components/api-test/ValidationHistory";
-
-export interface TestResult {
-  id: string;
-  timestamp: Date;
-  functionName: string;
-  status: "success" | "error";
-  request: any;
-  response: any;
-  latency: number;
-}
+import type { TestResult } from "@/features/user/types/api-test";
 
 const ApiTest = () => {
   const navigate = useNavigate();

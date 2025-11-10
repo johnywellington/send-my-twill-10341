@@ -9,7 +9,7 @@ import { QuickStart } from "@/components/docs/QuickStart";
 import { EndpointSection } from "@/components/docs/EndpointSection";
 import { TroubleshootingSection } from "@/components/docs/TroubleshootingSection";
 import { BestPractices } from "@/components/docs/BestPractices";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 
 const ApiDocs = () => {
   const navigate = useNavigate();

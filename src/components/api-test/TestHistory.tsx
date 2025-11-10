@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, History, ChevronDown, ChevronRight } from "lucide-react";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 import { useState } from "react";
 import { RequestViewer } from "./RequestViewer";
 

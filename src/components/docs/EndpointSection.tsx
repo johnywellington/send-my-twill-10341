@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 import { toast } from "@/hooks/use-toast";
 
 interface Parameter {

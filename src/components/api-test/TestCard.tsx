@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Loader2, CheckCircle2, XCircle, Beaker } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useEdgeFunctionTest } from "@/hooks/use-edge-function-test";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 import { RequestViewer } from "./RequestViewer";
 
 interface Field {

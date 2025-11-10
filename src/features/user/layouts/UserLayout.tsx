@@ -2,7 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { UserSidebar } from "./UserSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Shield } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/shared/hooks/use-auth";
 import { ProviderSelector } from "@/components/ProviderSelector";
 import { CredentialSelector } from "@/components/credentials/CredentialSelector";
 import { useProvider } from "@/contexts/ProviderContext";

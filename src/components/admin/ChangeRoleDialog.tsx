@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { UserProfile, useUsers } from "@/hooks/use-users";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/features/shared/hooks/use-auth";
 import {
   Dialog,
   DialogContent,

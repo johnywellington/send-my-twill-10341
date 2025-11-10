@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TestResult } from "@/pages/ApiTest";
+import type { TestResult } from "@/features/user/types/api-test";
 
 export const useEdgeFunctionTest = (functionName: string) => {
   const [loading, setLoading] = useState(false);

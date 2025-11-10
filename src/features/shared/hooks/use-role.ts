@@ -1,4 +1,4 @@
-import { useAuth } from "./use-auth";
+import { useAuth } from "@/features/shared/hooks/use-auth";
 
 type UserRole = "admin" | "user";
 

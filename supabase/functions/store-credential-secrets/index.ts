@@ -145,65 +145,68 @@ serve(async (req) => {
     if (!secretKey) {
       // Gerar chave única: provider_timestamp_random
       secretKey = `${provider}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      
-      // Atualizar a credencial com o secret_key
-      const { error: updateError } = await supabase
-        .from('provider_credentials')
-        .update({ secret_key: secretKey })
-        .eq('id', credentialId);
-
-      if (updateError) {
-        console.error('Error updating secret_key:', updateError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Erro ao atualizar secret_key' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
     }
 
-    console.log('Using secret_key:', secretKey);
-
-    // IMPORTANTE: Em produção, os secrets devem ser armazenados usando a API de Secrets do Supabase
-    // Por enquanto, vamos retornar instruções para o usuário adicionar manualmente
+    // 📦 Preparar dados não-sensíveis para o banco (encrypted_data)
+    const encryptedData: Record<string, string> = {};
     
-    const secretsToCreate: Record<string, string> = {};
+    if (provider === 'vonage' && credentials.applicationId) {
+      encryptedData.applicationId = credentials.applicationId;
+    }
+
+    // 💾 Salvar no banco: secret_key, account_identifier, encrypted_data
+    const { error: updateError } = await supabase
+      .from('provider_credentials')
+      .update({ 
+        secret_key: secretKey,
+        account_identifier: provider === 'twilio' ? credentials.accountSid : credentials.apiKey,
+        encrypted_data: encryptedData
+      })
+      .eq('id', credentialId);
+
+    if (updateError) {
+      console.error('Error updating credential:', updateError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Erro ao salvar dados no banco' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✅ Dados salvos no banco. Secret key:', secretKey);
+
+    // 🔐 Preparar APENAS secrets críticos para Lovable
+    const secrets: Array<{ name: string; value: string }> = [];
 
     if (provider === 'twilio') {
-      if (credentials.accountSid) {
-        secretsToCreate[`CRED_${secretKey}_sid`] = credentials.accountSid;
-      }
       if (credentials.authToken) {
-        secretsToCreate[`CRED_${secretKey}_token`] = credentials.authToken;
+        secrets.push({
+          name: `CRED_${secretKey}_TOKEN`,
+          value: credentials.authToken
+        });
       }
     } else if (provider === 'vonage') {
-      if (credentials.apiKey) {
-        secretsToCreate[`CRED_${secretKey}_key`] = credentials.apiKey;
-      }
       if (credentials.apiSecret) {
-        secretsToCreate[`CRED_${secretKey}_secret`] = credentials.apiSecret;
-      }
-      if (credentials.applicationId) {
-        secretsToCreate[`CRED_${secretKey}_app_id`] = credentials.applicationId;
+        secrets.push({
+          name: `CRED_${secretKey}_SECRET`,
+          value: credentials.apiSecret
+        });
       }
       if (credentials.privateKey) {
-        secretsToCreate[`CRED_${secretKey}_private_key`] = credentials.privateKey;
+        secrets.push({
+          name: `CRED_${secretKey}_PRIVATE_KEY`,
+          value: credentials.privateKey
+        });
       }
     }
 
-    console.log('Secrets to create:', Object.keys(secretsToCreate));
-
-    // Log da operação
-    console.log(`✅ Credential secrets prepared for ${provider} (secret_key: ${secretKey})`);
+    console.log(`✅ Preparados ${secrets.length} secret(s) crítico(s) para Lovable`);
 
     return new Response(
       JSON.stringify({
         success: true,
         secretKey,
-        secretsToCreate: Object.keys(secretsToCreate),
-        message: 'Secrets preparados. Use a interface de secrets do Supabase para armazená-los.',
-        // Em ambiente real, os valores não devem ser retornados
-        // Mas para desenvolvimento/debug, vamos incluir
-        _debug_secrets: secretsToCreate
+        secrets,
+        message: 'Dados salvos! Agora adicione os secrets críticos no Lovable.'
       }),
       {
         status: 200,

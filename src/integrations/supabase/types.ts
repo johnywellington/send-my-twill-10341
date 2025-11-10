@@ -593,6 +593,7 @@ export type Database = {
           account_identifier: string
           created_at: string
           credential_name: string
+          encrypted_data: Json | null
           id: string
           is_active: boolean
           is_default: boolean
@@ -605,6 +606,7 @@ export type Database = {
           account_identifier: string
           created_at?: string
           credential_name: string
+          encrypted_data?: Json | null
           id?: string
           is_active?: boolean
           is_default?: boolean
@@ -617,6 +619,7 @@ export type Database = {
           account_identifier?: string
           created_at?: string
           credential_name?: string
+          encrypted_data?: Json | null
           id?: string
           is_active?: boolean
           is_default?: boolean

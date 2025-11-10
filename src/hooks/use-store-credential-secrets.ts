@@ -18,9 +18,8 @@ interface StoreSecretsParams {
 interface StoreSecretsResponse {
   success: boolean;
   secretKey: string;
-  secretsToCreate: string[];
+  secrets: { name: string; value: string }[];
   message: string;
-  debug?: any;
 }
 
 export function useStoreCredentialSecrets() {
@@ -48,11 +47,11 @@ export function useStoreCredentialSecrets() {
     },
     onSuccess: (data) => {
       toast({
-        title: "✅ Secrets Preparados",
-        description: `Secret key gerado: ${data.secretKey}. Total de secrets: ${data.secretsToCreate.length}`,
+        title: "✅ Dados Salvos",
+        description: `Secret key: ${data.secretKey}. Agora adicione ${data.secrets.length} secret(s) crítico(s).`,
       });
       
-      // Invalidate credentials to refresh secret_key status
+      // Invalidate credentials to refresh
       queryClient.invalidateQueries({ queryKey: ['provider-credentials'] });
     },
     onError: (error: Error) => {

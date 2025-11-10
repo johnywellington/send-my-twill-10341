@@ -10,12 +10,18 @@ interface SecretsResultDialogProps {
   onOpenChange: (open: boolean) => void;
   result: {
     secretKey: string;
-    secretsToCreate: string[];
+    secrets: { name: string; value: string }[];
     message: string;
   } | null;
+  onAddSecretsClick: () => void;
 }
 
-export function SecretsResultDialog({ open, onOpenChange, result }: SecretsResultDialogProps) {
+export function SecretsResultDialog({ 
+  open, 
+  onOpenChange, 
+  result,
+  onAddSecretsClick 
+}: SecretsResultDialogProps) {
   if (!result) return null;
 
   const handleCopySecretKey = () => {
@@ -27,7 +33,7 @@ export function SecretsResultDialog({ open, onOpenChange, result }: SecretsResul
   };
 
   const handleCopySecretNames = () => {
-    const names = result.secretsToCreate.join('\n');
+    const names = result.secrets.map(s => s.name).join('\n');
     navigator.clipboard.writeText(names);
     toast({
       title: "✅ Copiado",
@@ -41,38 +47,36 @@ export function SecretsResultDialog({ open, onOpenChange, result }: SecretsResul
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-500" />
-            Secrets Preparados com Sucesso!
+            Dados Salvos com Sucesso!
           </DialogTitle>
           <DialogDescription>
-            Os secrets foram processados e estão prontos para serem configurados
+            Agora adicione os secrets críticos no Lovable
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm">Secret Key Gerado:</h4>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopySecretKey}
-                className="h-8"
-              >
-                <Copy className="h-3 w-3 mr-1" />
-                Copiar
-              </Button>
-            </div>
-            <div className="bg-muted p-3 rounded-md font-mono text-sm break-all">
-              {result.secretKey}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Este identificador será usado pelo sistema para acessar seus secrets
-            </p>
-          </div>
+          <Alert className="border-green-500/50 bg-green-500/10">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <AlertDescription className="text-sm space-y-1">
+              <p className="font-semibold">✅ Dados Salvos no Banco</p>
+              <p className="text-xs">Account Identifier e dados não-sensíveis foram salvos.</p>
+              <div className="bg-background/50 p-2 rounded-md mt-2">
+                <code className="text-xs">Secret Key: {result.secretKey}</code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopySecretKey}
+                  className="ml-2 h-6"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm">Secrets Criados ({result.secretsToCreate.length}):</h4>
+              <h4 className="font-semibold text-sm">🔐 Secrets Críticos ({result.secrets.length}):</h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -80,45 +84,39 @@ export function SecretsResultDialog({ open, onOpenChange, result }: SecretsResul
                 className="h-8"
               >
                 <Copy className="h-3 w-3 mr-1" />
-                Copiar Todos
+                Copiar
               </Button>
             </div>
             <div className="bg-muted p-3 rounded-md space-y-1">
-              {result.secretsToCreate.map((secretName, index) => (
+              {result.secrets.map((secret, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Badge variant="outline" className="font-mono text-xs">
-                    {secretName}
+                    {secret.name}
                   </Badge>
                 </div>
               ))}
             </div>
           </div>
 
-          <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10">
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            <AlertDescription className="text-sm space-y-2">
-              <p className="font-semibold">⚠️ IMPORTANTE - Próximos Passos:</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Anote ou copie os nomes dos secrets acima</li>
-                <li>Acesse <strong>Lovable Cloud → Secrets</strong></li>
-                <li>Adicione cada secret manualmente com seus valores correspondentes</li>
-                <li>Os nomes dos secrets devem ser exatamente como mostrados acima</li>
-              </ol>
-            </AlertDescription>
-          </Alert>
-
-          <Alert>
-            <ExternalLink className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              <strong>Dica:</strong> Guarde o <code>secret_key</code> em local seguro. 
-              Ele será necessário para as edge functions acessarem suas credenciais.
+          <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+            <AlertTriangle className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-sm">
+              <p className="font-semibold mb-2">💡 Por que isso é necessário?</p>
+              <ul className="space-y-1 text-xs">
+                <li>🔒 <strong>Auth Tokens/Secrets</strong> ficam protegidos no Lovable</li>
+                <li>📊 <strong>Account IDs</strong> ficam no banco para acesso rápido</li>
+                <li>⚡ Melhor segurança + Melhor experiência!</li>
+              </ul>
             </AlertDescription>
           </Alert>
         </div>
 
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} className="w-full">
-            ✅ Entendi, Vou Configurar no Lovable Cloud
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+          <Button onClick={onAddSecretsClick} className="gap-2">
+            🔐 Adicionar Secrets no Lovable
           </Button>
         </DialogFooter>
       </DialogContent>

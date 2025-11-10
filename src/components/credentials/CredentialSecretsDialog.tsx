@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Eye, EyeOff, Info, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useStoreCredentialSecrets } from "@/hooks/use-store-credential-secrets";
 import { SecretsResultDialog } from "./SecretsResultDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface CredentialSecretsDialogProps {
   open: boolean;
@@ -76,6 +77,21 @@ export function CredentialSecretsDialog({ open, onOpenChange, credential }: Cred
     }
   };
 
+  const handleAddSecretsToLovable = () => {
+    setResultDialogOpen(false);
+    
+    if (secretsResult?.secrets && secretsResult.secrets.length > 0) {
+      toast({
+        title: "🔐 Próximo Passo",
+        description: `Clique no botão abaixo para adicionar ${secretsResult.secrets.length} secret(s) no Lovable.`,
+        duration: 5000,
+      });
+      
+      // TODO: Aqui seria o lugar para chamar o tool secrets--add_secret
+      // mas por enquanto só mostramos o toast
+    }
+  };
+
   const isFormValid = () => {
     if (!credential) return false;
     
@@ -100,11 +116,13 @@ export function CredentialSecretsDialog({ open, onOpenChange, credential }: Cred
             </DialogDescription>
           </DialogHeader>
 
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Importante:</strong> Os secrets serão processados e você receberá um <code>secret_key</code> único. 
-              Guarde os nomes dos secrets gerados para configurá-los no Lovable Cloud.
+          <Alert className="border-blue-500/50 bg-blue-500/10">
+            <Key className="h-4 w-4 text-blue-500" />
+            <AlertTitle>🔐 Abordagem Híbrida Inteligente</AlertTitle>
+            <AlertDescription className="text-sm space-y-1 mt-2">
+              <p>✅ <strong>Account Identifier</strong> será salvo no banco</p>
+              <p>🔒 <strong>Auth Token / API Secret</strong> será protegido no Lovable</p>
+              <p>⚡ Você preenche uma vez aqui, depois confirma os secrets!</p>
             </AlertDescription>
           </Alert>
 
@@ -242,6 +260,7 @@ export function CredentialSecretsDialog({ open, onOpenChange, credential }: Cred
         open={resultDialogOpen}
         onOpenChange={setResultDialogOpen}
         result={secretsResult}
+        onAddSecretsClick={handleAddSecretsToLovable}
       />
     </>
   );

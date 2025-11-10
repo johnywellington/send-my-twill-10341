@@ -14,11 +14,12 @@ interface CredentialDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   credential?: ProviderCredential;
-  onSave: (data: Partial<ProviderCredential>) => void;
+  onSave: (data: Partial<ProviderCredential>) => Promise<ProviderCredential>;
   isLoading?: boolean;
+  onSecretsConfig?: (credential: ProviderCredential) => void;
 }
 
-export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoading }: CredentialDialogProps) {
+export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoading, onSecretsConfig }: CredentialDialogProps) {
   const [formData, setFormData] = useState({
     provider: credential?.provider || 'twilio' as 'twilio' | 'vonage',
     credential_name: credential?.credential_name || '',
@@ -28,9 +29,33 @@ export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoa
   });
 
   const [showSecrets, setShowSecrets] = useState(false);
+  const [savedCredential, setSavedCredential] = useState<ProviderCredential | null>(null);
+  const [showSecretsPrompt, setShowSecretsPrompt] = useState(false);
 
-  const handleSave = () => {
-    onSave(formData);
+  const handleSave = async () => {
+    const result = await onSave(formData);
+    
+    // If creating new credential (not editing), show secrets prompt
+    if (!credential && result) {
+      setSavedCredential(result);
+      setShowSecretsPrompt(true);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
+  const handleConfigureSecrets = () => {
+    if (savedCredential && onSecretsConfig) {
+      setShowSecretsPrompt(false);
+      onOpenChange(false);
+      onSecretsConfig(savedCredential);
+    }
+  };
+
+  const handleSkipSecrets = () => {
+    setShowSecretsPrompt(false);
+    onOpenChange(false);
+    setSavedCredential(null);
   };
 
   return (
@@ -46,11 +71,27 @@ export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoa
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {!credential && (
+          {showSecretsPrompt ? (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="space-y-3">
+                <p className="font-semibold">✅ Credencial salva com sucesso!</p>
+                <p className="text-sm">Deseja configurar os secrets agora? Você precisará fornecer o Auth Token ou API Secret para esta credencial.</p>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" onClick={handleConfigureSecrets}>
+                    🔑 Configurar Secrets Agora
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleSkipSecrets}>
+                    Pular (configurar depois)
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : !credential && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Após salvar, você precisará adicionar os secrets (Account SID/Auth Token ou API Key/Secret) manualmente no Lovable Cloud.
+                Você poderá configurar os secrets desta credencial após salvá-la.
               </AlertDescription>
             </Alert>
           )}
@@ -124,12 +165,16 @@ export function CredentialDialog({ open, onOpenChange, credential, onSave, isLoa
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={isLoading || !formData.credential_name || !formData.account_identifier}>
-            {isLoading ? 'Salvando...' : 'Salvar'}
-          </Button>
+          {!showSecretsPrompt && (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={isLoading || !formData.credential_name || !formData.account_identifier}>
+                {isLoading ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

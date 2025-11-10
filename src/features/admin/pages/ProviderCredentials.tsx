@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle2, XCircle, Star, Download, BarChart3, ChevronDown, ChevronRight, FolderOpen, RefreshCw, Key, Lock } from "lucide-react";
 import { useState } from "react";
 import { useProviderCredentials, useCreateProviderCredential, useUpdateProviderCredential, useDeleteProviderCredential, ProviderCredential } from "@/hooks/use-provider-credentials";
 import { useImportCredentials } from "@/hooks/use-import-credentials";
 import { CredentialDialog } from "@/components/credentials/CredentialDialog";
+import { CredentialSecretsDialog } from "@/components/credentials/CredentialSecretsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCredentialStats } from "@/hooks/use-credential-stats";
 import { CredentialStatsCard } from "@/components/credentials/CredentialStatsCard";
@@ -25,6 +26,8 @@ export default function ProviderCredentials() {
   const [selectedParentCredential, setSelectedParentCredential] = useState<{ id: string; provider: 'twilio' | 'vonage' } | null>(null);
   const [deleteSubaccountDialogOpen, setDeleteSubaccountDialogOpen] = useState(false);
   const [subaccountToDelete, setSubaccountToDelete] = useState<string | null>(null);
+  const [secretsDialogOpen, setSecretsDialogOpen] = useState(false);
+  const [selectedCredentialForSecrets, setSelectedCredentialForSecrets] = useState<ProviderCredential | null>(null);
 
   const { data: credentials, isLoading } = useProviderCredentials();
   const { data: allStats, isLoading: statsLoading } = useCredentialStats();
@@ -43,14 +46,22 @@ export default function ProviderCredentials() {
     setDialogOpen(true);
   };
 
-  const handleSave = async (data: Partial<ProviderCredential>) => {
+  const handleSave = async (data: Partial<ProviderCredential>): Promise<ProviderCredential> => {
     if (editingCredential) {
       await updateMutation.mutateAsync({ id: editingCredential.id, ...data });
+      setDialogOpen(false);
+      setEditingCredential(undefined);
+      return editingCredential; // Return the edited credential
     } else {
-      await createMutation.mutateAsync(data as any);
+      const result = await createMutation.mutateAsync(data as any);
+      // Don't close dialog here - let CredentialDialog handle the flow
+      return result as ProviderCredential;
     }
-    setDialogOpen(false);
-    setEditingCredential(undefined);
+  };
+
+  const handleSecretsConfig = (credential: ProviderCredential) => {
+    setSelectedCredentialForSecrets(credential);
+    setSecretsDialogOpen(true);
   };
 
   const handleDelete = async () => {
@@ -199,10 +210,32 @@ export default function ProviderCredentials() {
                                     Inativa
                                   </Badge>
                                 )}
+                                {cred.secret_key ? (
+                                  <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    Secrets Configurados
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                                    <Key className="h-3 w-3 mr-1" />
+                                    Secrets Pendentes
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedCredentialForSecrets(cred);
+                                setSecretsDialogOpen(true);
+                              }}
+                              title="Editar Secrets"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -356,10 +389,32 @@ export default function ProviderCredentials() {
                                     Inativa
                                   </Badge>
                                 )}
+                                {cred.secret_key ? (
+                                  <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    Secrets Configurados
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                                    <Key className="h-3 w-3 mr-1" />
+                                    Secrets Pendentes
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedCredentialForSecrets(cred);
+                                setSecretsDialogOpen(true);
+                              }}
+                              title="Editar Secrets"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -494,6 +549,13 @@ export default function ProviderCredentials() {
         credential={editingCredential}
         onSave={handleSave}
         isLoading={createMutation.isPending || updateMutation.isPending}
+        onSecretsConfig={handleSecretsConfig}
+      />
+
+      <CredentialSecretsDialog
+        open={secretsDialogOpen}
+        onOpenChange={setSecretsDialogOpen}
+        credential={selectedCredentialForSecrets}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

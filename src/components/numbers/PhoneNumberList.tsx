@@ -129,6 +129,7 @@ export const PhoneNumberList = () => {
   const renderPhoneCard = (phone: PhoneNumber) => {
     const webhooks = getWebhookUrls(phone.phone_number, phone.provider);
     const credentialInfo = getCredentialInfo(phone.credential_id);
+    const subaccountInfo = (phone as any).provider_subaccounts;
     
     return (
       <Card key={phone.id} className={phone.is_active ? '' : 'opacity-60'}>
@@ -140,37 +141,65 @@ export const PhoneNumberList = () => {
                 <CardDescription>{phone.friendly_name}</CardDescription>
               )}
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge 
-                    variant="outline"
-                    className={getCredentialBadgeColor(phone.provider, phone.credential_id)}
-                  >
-                    {phone.provider.toUpperCase()}
-                    {credentialInfo && ` • ${credentialInfo.credential_name}`}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-xs">
-                  <div className="space-y-1 text-xs">
-                    <p className="font-semibold">Provedor: {phone.provider.toUpperCase()}</p>
-                    {credentialInfo ? (
-                      <>
-                        <p>Conta: <span className="font-medium">{credentialInfo.credential_name}</span></p>
-                        <p className="text-muted-foreground font-mono text-[10px]">
-                          {credentialInfo.account_identifier}
-                        </p>
-                        {credentialInfo.is_default && (
-                          <Badge variant="secondary" className="text-[10px] mt-1">Padrão</Badge>
+            <div className="flex flex-col gap-1.5 items-end">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge 
+                      variant="outline"
+                      className={getCredentialBadgeColor(phone.provider, phone.credential_id)}
+                    >
+                      {phone.provider.toUpperCase()}
+                      {credentialInfo && ` • ${credentialInfo.credential_name}`}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-xs">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-semibold">Provedor: {phone.provider.toUpperCase()}</p>
+                      {credentialInfo ? (
+                        <>
+                          <p>Conta: <span className="font-medium">{credentialInfo.credential_name}</span></p>
+                          <p className="text-muted-foreground font-mono text-[10px]">
+                            {credentialInfo.account_identifier}
+                          </p>
+                          {credentialInfo.is_default && (
+                            <Badge variant="secondary" className="text-[10px] mt-1">Padrão</Badge>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground">Conta não identificada</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              {subaccountInfo && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="secondary"
+                        className="text-xs bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400"
+                      >
+                        📋 {subaccountInfo.subaccount_name}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold">Subconta</p>
+                        <p>Nome: <span className="font-medium">{subaccountInfo.subaccount_name}</span></p>
+                        {subaccountInfo.subaccount_sid && (
+                          <p className="text-muted-foreground font-mono text-[10px]">
+                            {subaccountInfo.subaccount_sid}
+                          </p>
                         )}
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground">Conta não identificada</p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </CardHeader>
         

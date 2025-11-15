@@ -34,7 +34,8 @@ export const SmsForm = ({
     provider,
     autoFallback,
     getAlternativeProvider,
-    selectedCredentialId
+    selectedCredentialId,
+    setSelectedCredentialId
   } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const {
@@ -320,7 +321,15 @@ export const SmsForm = ({
 
           {/* Seletor de Conta/Credencial */}
           <Card>
-            
+            <CardContent className="p-4">
+              <CredentialSelector
+                provider={provider}
+                value={selectedCredentialId}
+                onChange={setSelectedCredentialId}
+                label="Conta/Credencial"
+                showLegacyOption={true}
+              />
+            </CardContent>
           </Card>
 
           {!useSenderId && <PhoneNumberSelector value={from} onChange={setFrom} filterType="sms" label="Número de Origem" description="Escolha um número cadastrado ou adicione novos em 'Números'" />}

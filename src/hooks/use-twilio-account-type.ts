@@ -27,7 +27,7 @@ export function useTwilioAccountType() {
   });
 
   return {
-    isTrial: data?.trial ?? true, // Assume trial se ainda não carregou
+    isTrial: data?.trial ?? false, // Não assume trial durante loading
     status: data?.status,
     friendlyName: data?.friendlyName,
     accountSid: data?.accountSid,

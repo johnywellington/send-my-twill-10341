@@ -269,14 +269,22 @@ export const SmsForm = ({
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1 flex-1">
-                  <Label htmlFor="useSenderId" className={`text-sm font-medium ${provider === 'twilio' && isTrial ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <Label htmlFor="useSenderId" className={`text-sm font-medium ${provider === 'twilio' && isTrial && !loadingAccountType ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                     Usar Sender ID Personalizado
-                    {provider === 'twilio' && isTrial && <Badge variant="destructive" className="ml-2 text-xs">
+                    {provider === 'twilio' && loadingAccountType && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Verificando...
+                      </Badge>
+                    )}
+                    {provider === 'twilio' && !loadingAccountType && isTrial && (
+                      <Badge variant="destructive" className="ml-2 text-xs">
                         Indisponível em Trial
-                      </Badge>}
+                      </Badge>
+                    )}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    {provider === 'twilio' && isTrial ? <>
+                    {provider === 'twilio' && isTrial && !loadingAccountType ? <>
                         Contas trial não podem usar Sender IDs alfanuméricos.
                         Use um número real ou{' '}
                         <button type="button" onClick={() => {
@@ -290,7 +298,7 @@ export const SmsForm = ({
                       </> : "Envie com nome personalizado (ex: EMPRESA) ao invés de número"}
                   </p>
                 </div>
-                <Switch id="useSenderId" checked={useSenderId} disabled={provider === 'twilio' && isTrial} onCheckedChange={checked => {
+                <Switch id="useSenderId" checked={useSenderId} disabled={loadingAccountType || (provider === 'twilio' && isTrial)} onCheckedChange={checked => {
                 // Prevenir ativação em trial Twilio
                 if (checked && provider === 'twilio' && isTrial) {
                   toast.error("Sender ID não disponível em conta trial Twilio", {

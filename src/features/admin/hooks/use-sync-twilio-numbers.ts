@@ -42,7 +42,7 @@ export const useSyncTwilioNumbers = (
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke<SyncResponse>('sync-twilio-numbers');
+      const { data, error } = await supabase.functions.invoke<SyncResponse>('sync-twilio-numbers-v2');
 
       if (error) {
         throw new Error(error.message || 'Erro ao conectar com Twilio');

@@ -140,37 +140,41 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (credError || !credential) {
-        console.error('Credential not found:', credentialId);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Credencial não encontrada ou inativa' }),
-          { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-        );
-      }
-
-      console.log('Using credential:', credential.credential_name, 'Secret key:', credential.secret_key);
-
-      const secretKey = credential.secret_key;
-      
-      if (secretKey && secretKey !== 'legacy_twilio' && secretKey !== 'legacy_vonage') {
-        // Usar secrets específicos da credencial
-        if (provider === 'twilio') {
-          accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
-          authToken = Deno.env.get(`CRED_${secretKey}_token`);
-          console.log('Loading Twilio secrets:', `CRED_${secretKey}_sid`, `CRED_${secretKey}_token`);
-        } else {
-          apiKey = Deno.env.get(`CRED_${secretKey}_key`);
-          apiSecret = Deno.env.get(`CRED_${secretKey}_secret`);
-          console.log('Loading Vonage secrets:', `CRED_${secretKey}_key`, `CRED_${secretKey}_secret`);
-        }
-      } else {
-        // Fallback para secrets legacy
-        console.log('Using legacy secrets for:', provider);
+        console.warn('Credential not found or inactive, falling back to legacy env secrets:', credentialId);
+        // Fallback to legacy/global secrets so the request can still proceed
         if (provider === 'twilio') {
           accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
           authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
         } else {
           apiKey = Deno.env.get('VONAGE_API_KEY');
           apiSecret = Deno.env.get('VONAGE_API_SECRET');
+        }
+      } else {
+        console.log('Using credential:', credential.credential_name, 'Secret key:', credential.secret_key);
+
+        const secretKey = credential.secret_key;
+        
+        if (secretKey && secretKey !== 'legacy_twilio' && secretKey !== 'legacy_vonage') {
+          // Usar secrets específicos da credencial
+          if (provider === 'twilio') {
+            accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
+            authToken = Deno.env.get(`CRED_${secretKey}_token`);
+            console.log('Loading Twilio secrets:', `CRED_${secretKey}_sid`, `CRED_${secretKey}_token`);
+          } else {
+            apiKey = Deno.env.get(`CRED_${secretKey}_key`);
+            apiSecret = Deno.env.get(`CRED_${secretKey}_secret`);
+            console.log('Loading Vonage secrets:', `CRED_${secretKey}_key`, `CRED_${secretKey}_secret`);
+          }
+        } else {
+          // Fallback para secrets legacy
+          console.log('Using legacy secrets for:', provider);
+          if (provider === 'twilio') {
+            accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+            authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+          } else {
+            apiKey = Deno.env.get('VONAGE_API_KEY');
+            apiSecret = Deno.env.get('VONAGE_API_SECRET');
+          }
         }
       }
     } else {

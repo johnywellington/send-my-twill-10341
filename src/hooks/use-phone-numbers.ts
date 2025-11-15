@@ -18,6 +18,7 @@ export interface PhoneNumber {
   notes: string | null;
   sync_source?: 'manual' | 'twilio' | 'vonage';
   credential_id?: string | null;
+  subaccount_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,11 +29,24 @@ export const usePhoneNumbers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('phone_numbers')
-        .select('*')
+        .select(`
+          *,
+          provider_subaccounts:subaccount_id(
+            id,
+            subaccount_name,
+            subaccount_sid
+          )
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as PhoneNumber[];
+      return data as (PhoneNumber & { 
+        provider_subaccounts?: { 
+          id: string; 
+          subaccount_name: string;
+          subaccount_sid: string | null;
+        } | null 
+      })[];
     }
   });
 };

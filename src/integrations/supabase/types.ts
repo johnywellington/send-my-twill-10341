@@ -487,6 +487,7 @@ export type Database = {
           notes: string | null
           phone_number: string
           provider: string
+          subaccount_id: string | null
           supports_mms: boolean | null
           supports_sms: boolean | null
           supports_voice: boolean | null
@@ -506,6 +507,7 @@ export type Database = {
           notes?: string | null
           phone_number: string
           provider: string
+          subaccount_id?: string | null
           supports_mms?: boolean | null
           supports_sms?: boolean | null
           supports_voice?: boolean | null
@@ -525,6 +527,7 @@ export type Database = {
           notes?: string | null
           phone_number?: string
           provider?: string
+          subaccount_id?: string | null
           supports_mms?: boolean | null
           supports_sms?: boolean | null
           supports_voice?: boolean | null
@@ -539,6 +542,13 @@ export type Database = {
             columns: ["credential_id"]
             isOneToOne: false
             referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_numbers_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
             referencedColumns: ["id"]
           },
         ]

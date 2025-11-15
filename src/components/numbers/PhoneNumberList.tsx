@@ -8,10 +8,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Copy, Link, Edit, Trash2, Eye, EyeOff, AlertCircle, ChevronDown, Loader2, Activity, AlertTriangle, Filter } from "lucide-react";
 import { usePhoneNumbers, useDeletePhoneNumber, useUpdatePhoneNumber, type PhoneNumber } from "@/hooks/use-phone-numbers";
 import { useOrphanedNumbers } from "@/features/admin/hooks/use-orphaned-numbers";
 import { useProviderCredentials } from "@/hooks/use-provider-credentials";
+import { useSubaccounts } from "@/hooks/use-provider-subaccounts";
 import { getWebhookUrls, copyAllWebhooksToClipboard, copyWebhookUrl } from "@/lib/webhook-utils";
 import { toast } from "sonner";
 import { PhoneNumberDialog } from "./PhoneNumberDialog";
@@ -21,6 +23,7 @@ export const PhoneNumberList = () => {
   const { data: phoneNumbers, isLoading } = usePhoneNumbers();
   const { data: orphanedData } = useOrphanedNumbers();
   const { data: credentials } = useProviderCredentials();
+  const { data: subaccounts } = useSubaccounts();
   const orphanedIds = orphanedData?.orphanedIds || new Set();
   
   const deleteMutation = useDeletePhoneNumber();
@@ -30,6 +33,8 @@ export const PhoneNumberList = () => {
   const [editingPhone, setEditingPhone] = useState<PhoneNumber | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [credentialFilter, setCredentialFilter] = useState<string>("all");
+  const [subaccountFilter, setSubaccountFilter] = useState<string>("all");
   const [validationDialogPhone, setValidationDialogPhone] = useState<PhoneNumber | null>(null);
 
   const isOrphan = (numberId: string) => {
@@ -97,10 +102,16 @@ export const PhoneNumberList = () => {
     }
   };
 
-  const filteredNumbers = phoneNumbers?.filter(phone =>
-    phone.phone_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    phone.friendly_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredNumbers = phoneNumbers?.filter(phone => {
+    const matchesSearch = phone.phone_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.friendly_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCredential = credentialFilter === "all" || phone.credential_id === credentialFilter;
+    const matchesSubaccount = subaccountFilter === "all" || 
+      (subaccountFilter === "none" ? !phone.subaccount_id : phone.subaccount_id === subaccountFilter);
+    
+    return matchesSearch && matchesCredential && matchesSubaccount;
+  });
 
   const twilioNumbers = filteredNumbers?.filter(phone => phone.provider === 'twilio') || [];
   const vonageNumbers = filteredNumbers?.filter(phone => phone.provider === 'vonage') || [];
@@ -385,14 +396,77 @@ export const PhoneNumberList = () => {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex gap-4">
-          <Input
-            placeholder="Pesquisar por número ou nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="search">Pesquisar</Label>
+                <Input
+                  id="search"
+                  placeholder="Número ou nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="credential">Credencial</Label>
+                <Select value={credentialFilter} onValueChange={setCredentialFilter}>
+                  <SelectTrigger id="credential">
+                    <SelectValue placeholder="Todas as credenciais" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as credenciais</SelectItem>
+                    {credentials?.map((cred) => (
+                      <SelectItem key={cred.id} value={cred.id}>
+                        {cred.credential_name} ({cred.provider.toUpperCase()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="subaccount">Subconta</Label>
+                <Select value={subaccountFilter} onValueChange={setSubaccountFilter}>
+                  <SelectTrigger id="subaccount">
+                    <SelectValue placeholder="Todas as subcontas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as subcontas</SelectItem>
+                    <SelectItem value="none">Sem subconta</SelectItem>
+                    {subaccounts?.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.subaccount_name} ({sub.provider.toUpperCase()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(credentialFilter !== "all" || subaccountFilter !== "all" || searchTerm) && (
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSearchTerm("");
+                      setCredentialFilter("all");
+                      setSubaccountFilter("all");
+                    }}
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Números Twilio */}
         {twilioNumbers.length > 0 && (

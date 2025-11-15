@@ -25,7 +25,7 @@ import { calculateDelay, calculateEstimatedTime } from "@/lib/rate-limits";
 import { CredentialSelector } from "@/components/credentials/CredentialSelector";
 
 export function IVRMenuFormV2() {
-  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId, setSelectedCredentialId } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>([""]);
   const MAX_DESTINATIONS = 100;
@@ -338,6 +338,19 @@ export function IVRMenuFormV2() {
               )}
             </Button>
           </div>
+
+          {/* Seletor de Conta/Credencial */}
+          <Card>
+            <CardContent className="p-4">
+              <CredentialSelector
+                provider={provider}
+                value={selectedCredentialId}
+                onChange={setSelectedCredentialId}
+                label="Conta/Credencial"
+                showLegacyOption={true}
+              />
+            </CardContent>
+          </Card>
 
           {/* Configuração Básica */}
           <div className="space-y-4">

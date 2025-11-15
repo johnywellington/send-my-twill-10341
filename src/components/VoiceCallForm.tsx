@@ -30,7 +30,7 @@ interface VoiceCallFormProps {
 }
 
 export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
-  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId } = useProvider();
+  const { provider, autoFallback, getAlternativeProvider, selectedCredentialId, setSelectedCredentialId } = useProvider();
   const adapter = ProviderFactory.getAdapter(provider);
   const [destinations, setDestinations] = useState<string[]>(["351911019866"]);
   const [from, setFrom] = useState("");
@@ -235,6 +235,18 @@ export function VoiceCallForm({ onCallMade }: VoiceCallFormProps) {
         </CardHeader>
         <CardContent className="pt-8 px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            <Card>
+              <CardContent className="p-4">
+                <CredentialSelector
+                  provider={provider}
+                  value={selectedCredentialId}
+                  onChange={setSelectedCredentialId}
+                  label="Conta/Credencial"
+                  showLegacyOption={true}
+                />
+              </CardContent>
+            </Card>
+
             <PhoneNumberSelector
               value={from}
               onChange={setFrom}

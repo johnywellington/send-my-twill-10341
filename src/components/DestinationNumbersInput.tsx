@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 import { CSVImportDialog } from "./CSVImportDialog";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +67,10 @@ export function DestinationNumbersInput({
     onChange(newNumbers.slice(0, maxNumbers));
   };
 
+  const clearAllNumbers = () => {
+    onChange([""]);
+  };
+
   const filledCount = value.filter(n => n.trim()).length;
 
   return (
@@ -75,8 +79,20 @@ export function DestinationNumbersInput({
         <Label className="text-sm font-medium text-foreground">
           {label} {required && <span className="text-destructive">*</span>}
         </Label>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium">{filledCount} de {maxNumbers}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground font-medium">{filledCount} de {maxNumbers}</span>
+          {filledCount > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearAllNumbers}
+              className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Limpar Todos
+            </Button>
+          )}
         </div>
       </div>
       

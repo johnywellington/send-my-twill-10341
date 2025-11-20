@@ -8,16 +8,18 @@ interface TwilioAccountInfo {
   accountSid?: string;
 }
 
-export function useTwilioAccountType() {
+export function useTwilioAccountType(credentialId?: string) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['twilio-account-type'],
+    queryKey: ['twilio-account-type', credentialId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('check-twilio-account-type');
+      const { data, error } = await supabase.functions.invoke('check-twilio-account-type', {
+        body: { credentialId }
+      });
       
       if (error) {
         console.error('[Twilio Account Hook] Error:', error);
-        // Em caso de erro, assume trial por segurança
-        return { trial: true, status: 'unknown' } as TwilioAccountInfo;
+        // Em caso de erro, não assume trial
+        return { trial: false, status: 'unknown' } as TwilioAccountInfo;
       }
       
       return data as TwilioAccountInfo;

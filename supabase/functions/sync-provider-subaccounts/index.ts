@@ -68,10 +68,29 @@ serve(async (req) => {
 
     // Listar subcontas do provedor
     if (credential.provider === 'twilio') {
-      const authHeader = btoa(`${credential.account_identifier}:${credential.secret_key}`);
+      // Recuperar credenciais reais dos secrets
+      const secretKey = credential.secret_key;
+      if (!secretKey) {
+        throw new Error('Secret key não configurada para esta credencial');
+      }
+
+      const sidKey = `CRED_${secretKey}_SID`;
+      const tokenKey = `CRED_${secretKey}_TOKEN`;
+      
+      const accountSid = Deno.env.get(sidKey);
+      const authToken = Deno.env.get(tokenKey);
+
+      if (!accountSid || !authToken) {
+        console.error(`Secrets não encontrados: ${sidKey}, ${tokenKey}`);
+        throw new Error('Credenciais Twilio não encontradas nos secrets');
+      }
+
+      console.log(`Usando credenciais: SID=${accountSid.substring(0, 10)}...`);
+      
+      const authHeader = btoa(`${accountSid}:${authToken}`);
       
       const response = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${credential.account_identifier}/Accounts.json`,
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Accounts.json`,
         {
           headers: {
             'Authorization': `Basic ${authHeader}`,
@@ -90,10 +109,29 @@ serve(async (req) => {
       console.log(`Encontradas ${remoteSubaccounts.length} subcontas no Twilio`);
 
     } else if (credential.provider === 'vonage') {
-      const authHeader = btoa(`${credential.account_identifier}:${credential.secret_key}`);
+      // Recuperar credenciais reais dos secrets
+      const secretKey = credential.secret_key;
+      if (!secretKey) {
+        throw new Error('Secret key não configurada para esta credencial');
+      }
+
+      const apiKeySecretName = `CRED_${secretKey}_API_KEY`;
+      const apiSecretSecretName = `CRED_${secretKey}_API_SECRET`;
+      
+      const apiKey = Deno.env.get(apiKeySecretName);
+      const apiSecret = Deno.env.get(apiSecretSecretName);
+
+      if (!apiKey || !apiSecret) {
+        console.error(`Secrets não encontrados: ${apiKeySecretName}, ${apiSecretSecretName}`);
+        throw new Error('Credenciais Vonage não encontradas nos secrets');
+      }
+
+      console.log(`Usando credenciais Vonage: API Key=${apiKey.substring(0, 10)}...`);
+      
+      const authHeader = btoa(`${apiKey}:${apiSecret}`);
       
       const response = await fetch(
-        `https://api.nexmo.com/accounts/${credential.account_identifier}/subaccounts`,
+        `https://api.nexmo.com/accounts/${apiKey}/subaccounts`,
         {
           headers: {
             'Authorization': `Basic ${authHeader}`,

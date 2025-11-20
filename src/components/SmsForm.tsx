@@ -41,7 +41,7 @@ export const SmsForm = ({
   const {
     isTrial,
     isLoading: loadingAccountType
-  } = useTwilioAccountType();
+  } = useTwilioAccountType(selectedCredentialId);
   const [destinations, setDestinations] = useState<string[]>([""]);
   const [from, setFrom] = useState("");
   const [senderId, setSenderId] = useState("");

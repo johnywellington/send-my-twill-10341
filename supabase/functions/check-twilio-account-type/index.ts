@@ -51,8 +51,11 @@ serve(async (req) => {
         throw new Error('Secret key não configurada para esta credencial');
       }
 
-      accountSid = Deno.env.get(`CRED_${secretKey}_SID`);
-      authToken = Deno.env.get(`CRED_${secretKey}_TOKEN`);
+      // Tentar ambos os casos (uppercase e lowercase) para compatibilidade
+      accountSid = Deno.env.get(`CRED_${secretKey}_SID`) || Deno.env.get(`CRED_${secretKey}_sid`);
+      authToken = Deno.env.get(`CRED_${secretKey}_TOKEN`) || Deno.env.get(`CRED_${secretKey}_token`);
+      
+      console.log(`[Twilio Account Check] Looking for secrets with key: ${secretKey}`);
     } else {
       // Fallback para credenciais globais
       accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');

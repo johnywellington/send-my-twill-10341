@@ -88,8 +88,17 @@ serve(async (req) => {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[Twilio Account Check] API error:', error);
-      throw new Error(`Twilio API error: ${response.status}`);
+      console.warn('[Twilio Account Check] API error (assuming full account):', response.status, error);
+      // Se autenticação falhar, não assumir trial - deixar o usuário tentar
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          trial: false, // Assume full account when API fails
+          status: 'unknown',
+          message: 'Não foi possível verificar tipo de conta - permitindo uso normal'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
 
     const account = await response.json();
@@ -120,15 +129,17 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Twilio Account Check] Error:', error);
+    console.warn('[Twilio Account Check] Error (assuming full account):', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        trial: true, // Assume trial em caso de erro por segurança
+        success: true,
+        trial: false, // Não bloquear em caso de erro
+        status: 'unknown',
+        message: 'Erro ao verificar - permitindo uso normal'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
+        status: 200 
       }
     );
   }

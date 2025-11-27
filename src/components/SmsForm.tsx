@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +58,18 @@ export const SmsForm = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [throttle, setThrottle] = useState(1.0); // 100% por padrão
+
+  // Desabilitar Sender ID automaticamente quando conta Twilio for trial
+  useEffect(() => {
+    if (provider === 'twilio' && !loadingAccountType && isTrial && useSenderId) {
+      setUseSenderId(false);
+      setSenderId("");
+      toast.warning("Sender ID desabilitado", {
+        description: "Conta Twilio trial não permite Sender ID alfanumérico. Use um número de telefone.",
+        duration: 6000
+      });
+    }
+  }, [provider, loadingAccountType, isTrial, useSenderId]);
 
   const maxLength = 160;
   const messageLength = message.length;

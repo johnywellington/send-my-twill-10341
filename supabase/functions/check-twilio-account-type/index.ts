@@ -60,13 +60,15 @@ serve(async (req) => {
     }
 
     if (!accountSid || !authToken) {
-      console.error('[Twilio Account Check] Missing credentials');
+      console.warn('[Twilio Account Check] Credentials not configured, assuming full account');
       return new Response(
         JSON.stringify({ 
-          error: 'Credenciais Twilio não configuradas',
-          trial: true, // Assume trial por segurança
+          success: true,
+          trial: false, // Assume full account when credentials not configured
+          status: 'unknown',
+          message: 'Credenciais não configuradas - assumindo conta completa'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 

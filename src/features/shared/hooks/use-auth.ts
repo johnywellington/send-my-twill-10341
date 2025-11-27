@@ -103,26 +103,23 @@ export const useAuth = () => {
           throw new Error("Conta aguardando aprovação do administrador");
         }
 
-        // 3. Buscar role do usuário
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
-          .single();
+        // 3. Validar role apenas para admin
+        if (expectedRole === 'admin') {
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .single();
 
-        if (roleError) {
-          await supabase.auth.signOut();
-          throw new Error("Erro ao verificar permissões");
-        }
+          if (roleError) {
+            await supabase.auth.signOut();
+            throw new Error("Erro ao verificar permissões");
+          }
 
-        // 4. Validar se role corresponde ao esperado
-        if (roleData.role !== expectedRole) {
-          await supabase.auth.signOut();
-          const roleNames = {
-            admin: 'administrador',
-            user: 'operador'
-          };
-          throw new Error(`Esta conta não tem permissão de ${roleNames[expectedRole]}. Use o login correto para seu tipo de conta.`);
+          if (roleData.role !== 'admin') {
+            await supabase.auth.signOut();
+            throw new Error("Esta conta não tem permissão de administrador. Use o login de operador.");
+          }
         }
 
         // 5. Atualizar last_login_at

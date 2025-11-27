@@ -130,12 +130,11 @@ const handler = async (req: Request): Promise<Response> => {
     let apiSecret: string | undefined;
 
     if (credentialId) {
-      // Buscar credencial específica
+      // Buscar credencial específica (RLS permite acesso a todas as credenciais ativas)
       const { data: credential, error: credError } = await supabase
         .from('provider_credentials')
         .select('*')
         .eq('id', credentialId)
-        .eq('user_id', userId)
         .eq('is_active', true)
         .single();
 
@@ -155,15 +154,15 @@ const handler = async (req: Request): Promise<Response> => {
         const secretKey = credential.secret_key;
         
         if (secretKey && secretKey !== 'legacy_twilio' && secretKey !== 'legacy_vonage') {
-          // Usar secrets específicos da credencial
+          // Usar secrets específicos da credencial - tentar ambos os casos (uppercase e lowercase)
           if (provider === 'twilio') {
-            accountSid = Deno.env.get(`CRED_${secretKey}_sid`);
-            authToken = Deno.env.get(`CRED_${secretKey}_token`);
-            console.log('Loading Twilio secrets:', `CRED_${secretKey}_sid`, `CRED_${secretKey}_token`);
+            accountSid = Deno.env.get(`CRED_${secretKey}_SID`) || Deno.env.get(`CRED_${secretKey}_sid`);
+            authToken = Deno.env.get(`CRED_${secretKey}_TOKEN`) || Deno.env.get(`CRED_${secretKey}_token`);
+            console.log('Loading Twilio secrets for key:', secretKey, 'found:', !!accountSid && !!authToken);
           } else {
-            apiKey = Deno.env.get(`CRED_${secretKey}_key`);
-            apiSecret = Deno.env.get(`CRED_${secretKey}_secret`);
-            console.log('Loading Vonage secrets:', `CRED_${secretKey}_key`, `CRED_${secretKey}_secret`);
+            apiKey = Deno.env.get(`CRED_${secretKey}_KEY`) || Deno.env.get(`CRED_${secretKey}_key`);
+            apiSecret = Deno.env.get(`CRED_${secretKey}_SECRET`) || Deno.env.get(`CRED_${secretKey}_secret`);
+            console.log('Loading Vonage secrets for key:', secretKey, 'found:', !!apiKey && !!apiSecret);
           }
         } else {
           // Fallback para secrets legacy

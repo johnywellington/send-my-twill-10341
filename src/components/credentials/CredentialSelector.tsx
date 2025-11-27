@@ -84,16 +84,29 @@ export function CredentialSelector({
                       <SelectLabel className="text-xs font-semibold text-muted-foreground px-2 py-1.5">
                         Contas Principais
                       </SelectLabel>
-                      {activeCredentials.map((cred) => (
-                        <SelectItem key={cred.id} value={cred.id}>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-3 w-3 text-success" />
-                            <span>{cred.credential_name}</span>
-                            {cred.is_default && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
-                            <span className="text-xs text-muted-foreground">({cred.account_identifier.substring(0, 10)}...)</span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {activeCredentials.map((cred) => {
+                        const providerLabel = cred.provider === 'twilio' ? 'Twilio' : 'Vonage';
+                        const accountType = (cred as any).account_type || 'full';
+                        const isTrialAccount = accountType === 'trial';
+                        
+                        return (
+                          <SelectItem key={cred.id} value={cred.id}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-3 w-3 text-success" />
+                              <span className="font-medium">{providerLabel}</span>
+                              <span className="text-muted-foreground">-</span>
+                              <span>{cred.credential_name}</span>
+                              {cred.is_default && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
+                              <Badge 
+                                variant={isTrialAccount ? "destructive" : "secondary"} 
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {isTrialAccount ? 'Trial' : 'Padrão'}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectGroup>
                   )}
                   
@@ -104,16 +117,23 @@ export function CredentialSelector({
                       </SelectLabel>
                       {activeSubaccounts.map((sub) => {
                         const parentCred = credentials?.find(c => c.id === sub.parent_credential_id);
+                        const providerLabel = sub.provider === 'twilio' ? 'Twilio' : 'Vonage';
+                        
                         return (
                           <SelectItem key={sub.id} value={sub.id}>
                             <div className="flex items-center gap-2">
                               <Building2 className="h-3 w-3 text-primary" />
+                              <span className="font-medium">{providerLabel}</span>
+                              <span className="text-muted-foreground">-</span>
                               <span>{sub.subaccount_name}</span>
                               {parentCred && (
                                 <span className="text-xs text-muted-foreground">
                                   (via {parentCred.credential_name})
                                 </span>
                               )}
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                Subconta
+                              </Badge>
                             </div>
                           </SelectItem>
                         );

@@ -601,6 +601,7 @@ export type Database = {
       provider_credentials: {
         Row: {
           account_identifier: string
+          account_type: string | null
           created_at: string
           credential_name: string
           encrypted_data: Json | null
@@ -614,6 +615,7 @@ export type Database = {
         }
         Insert: {
           account_identifier: string
+          account_type?: string | null
           created_at?: string
           credential_name: string
           encrypted_data?: Json | null
@@ -627,6 +629,7 @@ export type Database = {
         }
         Update: {
           account_identifier?: string
+          account_type?: string | null
           created_at?: string
           credential_name?: string
           encrypted_data?: Json | null

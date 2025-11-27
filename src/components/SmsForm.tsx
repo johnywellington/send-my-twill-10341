@@ -105,6 +105,19 @@ export const SmsForm = ({
 
       // Validar modo de remetente
       if (useSenderId) {
+        // Bloquear Sender ID em conta Trial Twilio
+        if (provider === 'twilio' && isTrial) {
+          toast.error("Conta Twilio Trial", {
+            description: "Sender ID alfanumérico não é permitido em contas Trial. Use um número de telefone ou troque para Vonage.",
+            duration: 8000
+          });
+          setUseSenderId(false);
+          setSenderId("");
+          setLoading(false);
+          setShowProgress(false);
+          return;
+        }
+        
         // Modo Sender ID: obrigatório
         if (!senderId) {
           toast.error("Preencha o Sender ID");
@@ -160,7 +173,7 @@ export const SmsForm = ({
         return;
       }
       const trySend = async (to: string, providerToUse: 'twilio' | 'vonage') => {
-        return await supabase.functions.invoke('send-sms', {
+        const result = await supabase.functions.invoke('send-sms', {
           body: {
             to,
             from: useSenderId ? senderId : from,
@@ -170,6 +183,22 @@ export const SmsForm = ({
             dryRun
           }
         });
+        
+        // Se a função retornou erro, tentar extrair dados do context
+        if (result.error) {
+          // Tentar parsear o corpo do erro se disponível
+          try {
+            const errorBody = result.error.context?.body || result.error.message;
+            if (typeof errorBody === 'string' && errorBody.includes('{')) {
+              const parsed = JSON.parse(errorBody);
+              return { data: parsed, error: null };
+            }
+          } catch (e) {
+            // Ignorar erro de parse
+          }
+        }
+        
+        return result;
       };
 
       // Enviar para cada destino COM ATUALIZAÇÕES DE STATUS
@@ -193,6 +222,20 @@ export const SmsForm = ({
             data,
             error
           } = await trySend(to, provider);
+          
+          // Verificar erro específico de conta trial com Sender ID
+          if (data?.code === 'TRIAL_SENDER_ID_NOT_ALLOWED' || data?.error?.includes('Sender ID alfanumérico não é permitido')) {
+            toast.error("Conta Twilio Trial", {
+              description: "Sender ID alfanumérico não é permitido em contas Trial. Use um número de telefone ou troque para Vonage.",
+              duration: 8000
+            });
+            setUseSenderId(false);
+            setSenderId("");
+            setLoading(false);
+            setShowProgress(false);
+            return;
+          }
+          
           if (error && autoFallback) {
             const alternativeProvider = getAlternativeProvider();
             console.log(`[SMS] Fallback para ${to}: tentando com ${alternativeProvider}`);

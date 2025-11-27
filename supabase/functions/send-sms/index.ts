@@ -286,6 +286,38 @@ const handler = async (req: Request): Promise<Response> => {
       
       console.log('Using Twilio provider');
 
+      // 🔒 VERIFICAR SE É CONTA TRIAL QUANDO USANDO SENDER ID
+      if (isSenderId(from)) {
+        console.log('[Twilio SMS] Sender ID detected, checking if account is trial...');
+        try {
+          const accountCheckUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`;
+          const accountCheckResponse = await fetch(accountCheckUrl, {
+            headers: {
+              'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`
+            }
+          });
+          
+          if (accountCheckResponse.ok) {
+            const accountData = await accountCheckResponse.json();
+            const isTrialAccount = accountData.type === 'Trial';
+            
+            if (isTrialAccount) {
+              console.error('[Twilio SMS] Sender ID not allowed in trial account');
+              return new Response(
+                JSON.stringify({ 
+                  success: false, 
+                  error: 'Sender ID alfanumérico não é permitido em contas Trial do Twilio. Use um número de telefone ou faça upgrade da conta.',
+                  code: 'TRIAL_SENDER_ID_NOT_ALLOWED'
+                }),
+                { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+              );
+            }
+          }
+        } catch (checkError) {
+          console.warn('[Twilio SMS] Could not verify account type, proceeding anyway:', checkError);
+        }
+      }
+
       // Create Twilio API request
       const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
       const webhookUrl = `${supabaseUrl}/functions/v1/twilio-sms-webhook`;

@@ -2,10 +2,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, CheckCircle2, Star, Building2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Star, Building2, Settings } from "lucide-react";
 import { useProviderCredentials } from "@/hooks/use-provider-credentials";
 import { useSubaccounts } from "@/hooks/use-provider-subaccounts";
+import { useNavigate } from "react-router-dom";
 
 interface CredentialSelectorProps {
   provider: 'twilio' | 'vonage';
@@ -24,6 +26,7 @@ export function CredentialSelector({
   showLegacyOption = true,
   compact = false
 }: CredentialSelectorProps) {
+  const navigate = useNavigate();
   const { data: credentials, isLoading: isLoadingCreds } = useProviderCredentials(provider);
   const { data: subaccounts, isLoading: isLoadingSubs } = useSubaccounts();
 
@@ -46,12 +49,23 @@ export function CredentialSelector({
 
   if (!hasOptions) {
     return (
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Nenhuma conta {provider === 'twilio' ? 'Twilio' : 'Vonage'} configurada.
-          {showLegacyOption && ' Usando credenciais globais.'}
-        </AlertDescription>
+      <Alert className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex-1">
+            Nenhuma conta {provider === 'twilio' ? 'Twilio' : 'Vonage'} configurada.
+            {showLegacyOption && ' Usando credenciais globais.'}
+          </AlertDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/admin/credentials')}
+          className="ml-2 shrink-0"
+        >
+          <Settings className="h-3 w-3 mr-1" />
+          Configurar
+        </Button>
       </Alert>
     );
   }

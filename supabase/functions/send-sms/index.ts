@@ -15,10 +15,36 @@ interface SmsRequest {
   dryRun?: boolean;
 }
 
-// Função auxiliar para detectar se é Sender ID alfanumérico
+// Função auxiliar para detectar se é Sender ID alfanumérico válido
 const isSenderId = (value: string): boolean => {
   // Sender ID: 3-11 caracteres alfanuméricos (apenas letras e números)
   return /^[A-Za-z0-9]{3,11}$/.test(value);
+};
+
+// Função para detectar se parece Sender ID mas é inválido (ex: muito longo)
+const isInvalidSenderId = (value: string): { invalid: boolean; reason?: string } => {
+  // Se é apenas letras (sem números e sem +), parece ser um Sender ID
+  if (/^[A-Za-z]+$/.test(value)) {
+    if (value.length < 3) {
+      return { invalid: true, reason: 'Sender ID deve ter no mínimo 3 caracteres' };
+    }
+    if (value.length > 11) {
+      return { invalid: true, reason: `Sender ID "${value}" tem ${value.length} caracteres. O máximo permitido é 11.` };
+    }
+  }
+  // Se é alfanumérico (começa com letra, sem +), também parece Sender ID
+  if (/^[A-Za-z][A-Za-z0-9]*$/.test(value) && !value.startsWith('+')) {
+    if (value.length > 11) {
+      return { invalid: true, reason: `Sender ID "${value}" tem ${value.length} caracteres. O máximo permitido é 11.` };
+    }
+  }
+  return { invalid: false };
+};
+
+// Função para detectar se parece número de telefone
+const looksLikePhoneNumber = (value: string): boolean => {
+  // Começa com + ou é apenas dígitos
+  return value.startsWith('+') || /^[0-9]+$/.test(value);
 };
 
 // Função para verificar status da conta antes de enviar
@@ -515,12 +541,41 @@ const handler = async (req: Request): Promise<Response> => {
       // Normalizar números para formato E.164 (Twilio exige + no início)
       const normalizedTo = to.startsWith('+') ? to : `+${to}`;
       
+      // Verificar se o remetente é um Sender ID inválido (ex: muito longo)
+      const senderIdCheck = isInvalidSenderId(from);
+      if (senderIdCheck.invalid) {
+        console.error('[Twilio SMS] Invalid Sender ID:', senderIdCheck.reason);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: senderIdCheck.reason,
+            code: 'INVALID_SENDER_ID',
+            suggestion: 'Use um Sender ID com 3-11 caracteres alfanuméricos ou um número de telefone.'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+      
       // Para "from": distinguir entre Sender ID alfanumérico e número
-      const normalizedFrom = isSenderId(from)
-        ? from  // Sender ID: usar como está (sem +)
-        : (from.startsWith('+') ? from : `+${from}`);  // Número: adicionar + se necessário
+      let normalizedFrom: string;
+      if (isSenderId(from)) {
+        normalizedFrom = from;  // Sender ID válido: usar como está
+      } else if (looksLikePhoneNumber(from)) {
+        normalizedFrom = from.startsWith('+') ? from : `+${from}`;  // Número: garantir +
+      } else {
+        // Não é Sender ID válido nem número de telefone
+        console.error('[Twilio SMS] Invalid sender format:', from);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Remetente inválido: "${from}". Use um Sender ID (3-11 caracteres alfanuméricos) ou um número de telefone.`,
+            code: 'INVALID_SENDER_FORMAT'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
 
-      console.log(`Normalized from: "${from}" -> "${normalizedFrom}" (isSenderId: ${isSenderId(from)})`);
+      console.log(`Normalized from: "${from}" -> "${normalizedFrom}" (isSenderId: ${isSenderId(from)}, isPhone: ${looksLikePhoneNumber(from)})`);
       console.log('Twilio request params:', {
         To: normalizedTo,
         From: normalizedFrom,

@@ -60,40 +60,17 @@ const Signup = () => {
       }
 
       if (data.session) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_active')
-          .eq('user_id', data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-        }
-
-        if (profile && !profile.is_active) {
-          toast.warning(
-            "Conta criada! Aguardando aprovação do administrador.",
-            {
-              description: "Você será notificado por email quando sua conta for aprovada. Por favor, aguarde.",
-              duration: 10000,
-            }
-          );
-          
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await supabase.auth.signOut();
-          navigate("/login");
-        } else {
-          toast.success("Conta criada com sucesso!");
-          navigate("/login");
-        }
+        // Conta ativada imediatamente após registro
+        toast.success("Conta criada com sucesso!", {
+          description: "Você já pode fazer login.",
+        });
+        navigate("/login");
       } else {
-        toast.success(
-          "Conta criada! Aguardando aprovação do administrador.",
-          {
-            description: "Verifique seu email para confirmar e aguarde a aprovação.",
-            duration: 8000,
-          }
-        );
+        // Email de confirmação necessário
+        toast.success("Conta criada com sucesso!", {
+          description: "Verifique seu email para confirmar o cadastro.",
+          duration: 8000,
+        });
         navigate("/login");
       }
     } catch (error) {

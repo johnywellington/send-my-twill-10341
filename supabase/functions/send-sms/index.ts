@@ -48,6 +48,43 @@ const looksLikePhoneNumber = (value: string): boolean => {
   return value.startsWith('+') || /^[0-9]+$/.test(value);
 };
 
+// Função para validar se um número de telefone parece completo (com código de país)
+const validatePhoneNumber = (value: string): { valid: boolean; error?: string; suggestion?: string } => {
+  const digits = value.replace(/\D/g, '');
+  
+  // Se já tem + e tem pelo menos 10 dígitos, provavelmente está OK
+  if (value.startsWith('+') && digits.length >= 10) {
+    return { valid: true };
+  }
+  
+  // Se não tem + e tem menos de 10 dígitos, provavelmente falta código de país
+  if (!value.startsWith('+') && digits.length <= 9) {
+    // Detectar padrões portugueses
+    if (digits.startsWith('21') || digits.startsWith('22') || digits.startsWith('23') || digits.startsWith('24') || digits.startsWith('25') || digits.startsWith('26') || digits.startsWith('27') || digits.startsWith('28') || digits.startsWith('29')) {
+      return { 
+        valid: false, 
+        error: `Número "${value}" parece incompleto. Falta o código de país.`,
+        suggestion: `Use o formato internacional: +351${digits}`
+      };
+    }
+    if (digits.startsWith('9')) {
+      return { 
+        valid: false, 
+        error: `Número "${value}" parece incompleto. Falta o código de país.`,
+        suggestion: `Use o formato internacional: +351${digits}`
+      };
+    }
+    // Número genérico curto
+    return { 
+      valid: false, 
+      error: `Número "${value}" parece incompleto (${digits.length} dígitos). Números internacionais devem ter pelo menos 10 dígitos incluindo código de país.`,
+      suggestion: 'Use o formato E.164: +[código país][número]. Ex: +351912345678'
+    };
+  }
+  
+  return { valid: true };
+};
+
 // Função para verificar status da conta antes de enviar
 async function checkAccountStatus(
   provider: 'twilio' | 'vonage',
@@ -562,6 +599,20 @@ const handler = async (req: Request): Promise<Response> => {
       if (isSenderId(from)) {
         normalizedFrom = from;  // Sender ID válido: usar como está
       } else if (looksLikePhoneNumber(from)) {
+        // Validar se o número parece completo (com código de país)
+        const phoneValidation = validatePhoneNumber(from);
+        if (!phoneValidation.valid) {
+          console.error('[Twilio SMS] Incomplete phone number:', phoneValidation.error);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: phoneValidation.error,
+              code: 'INCOMPLETE_PHONE_NUMBER',
+              suggestion: phoneValidation.suggestion
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
         normalizedFrom = from.startsWith('+') ? from : `+${from}`;  // Número: garantir +
       } else {
         // Não é Sender ID válido nem número de telefone

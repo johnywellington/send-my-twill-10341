@@ -21,6 +21,150 @@ const isSenderId = (value: string): boolean => {
   return /^[A-Za-z0-9]{3,11}$/.test(value);
 };
 
+// Função para verificar status da conta antes de enviar
+async function checkAccountStatus(
+  provider: 'twilio' | 'vonage',
+  accountSid?: string,
+  authToken?: string,
+  apiKey?: string,
+  apiSecret?: string
+): Promise<{ valid: boolean; error?: string; errorCode?: string; balance?: number; status?: string }> {
+  try {
+    if (provider === 'twilio') {
+      if (!accountSid || !authToken) {
+        return { valid: false, error: 'Credenciais Twilio não configuradas', errorCode: 'MISSING_CREDENTIALS' };
+      }
+      
+      const accountUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`;
+      const response = await fetch(accountUrl, {
+        headers: {
+          'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Twilio account check failed:', response.status, errorData);
+        
+        if (response.status === 401) {
+          return { 
+            valid: false, 
+            error: 'Credenciais Twilio inválidas. Verifique o Account SID e Auth Token no console Twilio.',
+            errorCode: 'INVALID_CREDENTIALS'
+          };
+        }
+        
+        return { 
+          valid: false, 
+          error: errorData.message || `Erro ao verificar conta: ${response.status}`,
+          errorCode: `HTTP_${response.status}`
+        };
+      }
+      
+      const accountData = await response.json();
+      
+      // Verificar status da conta
+      if (accountData.status === 'suspended') {
+        return { 
+          valid: false, 
+          error: 'Conta Twilio suspensa. Verifique o console Twilio para mais detalhes.',
+          errorCode: 'ACCOUNT_SUSPENDED',
+          status: accountData.status
+        };
+      }
+      
+      if (accountData.status === 'closed') {
+        return { 
+          valid: false, 
+          error: 'Conta Twilio fechada.',
+          errorCode: 'ACCOUNT_CLOSED',
+          status: accountData.status
+        };
+      }
+      
+      // Buscar saldo se possível
+      try {
+        const balanceUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Balance.json`;
+        const balanceResponse = await fetch(balanceUrl, {
+          headers: {
+            'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`
+          }
+        });
+        
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          const balance = parseFloat(balanceData.balance);
+          
+          if (balance <= 0) {
+            return { 
+              valid: false, 
+              error: `Saldo Twilio insuficiente: ${balanceData.currency} ${balance.toFixed(2)}. Adicione créditos para continuar.`,
+              errorCode: 'INSUFFICIENT_BALANCE',
+              balance,
+              status: accountData.status
+            };
+          }
+          
+          console.log(`Twilio account verified - Status: ${accountData.status}, Balance: ${balanceData.currency} ${balance.toFixed(2)}`);
+          return { valid: true, balance, status: accountData.status };
+        }
+      } catch (balanceError) {
+        console.warn('Could not fetch Twilio balance, proceeding anyway:', balanceError);
+      }
+      
+      return { valid: true, status: accountData.status };
+      
+    } else {
+      // Vonage
+      if (!apiKey || !apiSecret) {
+        return { valid: false, error: 'Credenciais Vonage não configuradas', errorCode: 'MISSING_CREDENTIALS' };
+      }
+      
+      // Vonage: verificar saldo
+      const balanceUrl = `https://rest.nexmo.com/account/get-balance?api_key=${apiKey}&api_secret=${apiSecret}`;
+      const response = await fetch(balanceUrl);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Vonage balance check failed:', response.status, errorData);
+        
+        if (response.status === 401) {
+          return { 
+            valid: false, 
+            error: 'Credenciais Vonage inválidas. Verifique o API Key e API Secret.',
+            errorCode: 'INVALID_CREDENTIALS'
+          };
+        }
+        
+        return { 
+          valid: false, 
+          error: errorData['error-text'] || `Erro ao verificar conta: ${response.status}`,
+          errorCode: `HTTP_${response.status}`
+        };
+      }
+      
+      const balanceData = await response.json();
+      const balance = parseFloat(balanceData.value);
+      
+      if (balance <= 0) {
+        return { 
+          valid: false, 
+          error: `Saldo Vonage insuficiente: € ${balance.toFixed(2)}. Adicione créditos para continuar.`,
+          errorCode: 'INSUFFICIENT_BALANCE',
+          balance
+        };
+      }
+      
+      console.log(`Vonage account verified - Balance: € ${balance.toFixed(2)}`);
+      return { valid: true, balance };
+    }
+  } catch (error) {
+    console.error('Error checking account status:', error);
+    // Em caso de erro na verificação, permitir continuar (fail-open)
+    return { valid: true };
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -207,6 +351,33 @@ const handler = async (req: Request): Promise<Response> => {
         apiSecret = Deno.env.get('VONAGE_API_SECRET');
       }
     }
+    
+    // 🔍 VERIFICAR STATUS DA CONTA ANTES DE ENVIAR
+    console.log('Checking account status before sending...');
+    const accountCheck = await checkAccountStatus(
+      provider,
+      accountSid,
+      authToken,
+      apiKey,
+      apiSecret
+    );
+    
+    if (!accountCheck.valid) {
+      console.error('Account check failed:', accountCheck.error, accountCheck.errorCode);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: accountCheck.error,
+          errorCode: accountCheck.errorCode,
+          provider,
+          balance: accountCheck.balance,
+          accountStatus: accountCheck.status
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
+    console.log('Account check passed:', accountCheck.balance ? `Balance: ${accountCheck.balance}` : 'OK');
     
     // 🧪 MODO DRY-RUN: Simular envio sem chamar API
     if (dryRun) {

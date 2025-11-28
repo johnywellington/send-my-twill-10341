@@ -17,8 +17,9 @@ interface SmsRequest {
 
 // Função auxiliar para detectar se é Sender ID alfanumérico válido
 const isSenderId = (value: string): boolean => {
-  // Sender ID: 3-11 caracteres alfanuméricos (apenas letras e números)
-  return /^[A-Za-z0-9]{3,11}$/.test(value);
+  // Sender ID: 3-11 caracteres alfanuméricos, DEVE conter pelo menos uma letra
+  // Strings apenas com dígitos são números de telefone, não Sender IDs
+  return /^[A-Za-z0-9]{3,11}$/.test(value) && /[A-Za-z]/.test(value);
 };
 
 // Função para detectar se parece Sender ID mas é inválido (ex: muito longo)

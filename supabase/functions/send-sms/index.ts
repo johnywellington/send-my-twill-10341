@@ -158,11 +158,27 @@ const handler = async (req: Request): Promise<Response> => {
           if (provider === 'twilio') {
             accountSid = Deno.env.get(`CRED_${secretKey}_SID`) || Deno.env.get(`CRED_${secretKey}_sid`);
             authToken = Deno.env.get(`CRED_${secretKey}_TOKEN`) || Deno.env.get(`CRED_${secretKey}_token`);
-            console.log('Loading Twilio secrets for key:', secretKey, 'found:', !!accountSid && !!authToken);
+            console.log('Loading Twilio secrets for key:', secretKey, 'found SID:', !!accountSid, 'found TOKEN:', !!authToken);
+            
+            // Se secrets específicos não encontrados, fazer fallback para legacy
+            if (!accountSid || !authToken) {
+              console.warn('Specific credential secrets not found, falling back to legacy secrets');
+              accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+              authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+              console.log('Legacy fallback - found SID:', !!accountSid, 'found TOKEN:', !!authToken);
+            }
           } else {
             apiKey = Deno.env.get(`CRED_${secretKey}_KEY`) || Deno.env.get(`CRED_${secretKey}_key`);
             apiSecret = Deno.env.get(`CRED_${secretKey}_SECRET`) || Deno.env.get(`CRED_${secretKey}_secret`);
-            console.log('Loading Vonage secrets for key:', secretKey, 'found:', !!apiKey && !!apiSecret);
+            console.log('Loading Vonage secrets for key:', secretKey, 'found KEY:', !!apiKey, 'found SECRET:', !!apiSecret);
+            
+            // Se secrets específicos não encontrados, fazer fallback para legacy
+            if (!apiKey || !apiSecret) {
+              console.warn('Specific credential secrets not found, falling back to legacy secrets');
+              apiKey = Deno.env.get('VONAGE_API_KEY');
+              apiSecret = Deno.env.get('VONAGE_API_SECRET');
+              console.log('Legacy fallback - found KEY:', !!apiKey, 'found SECRET:', !!apiSecret);
+            }
           }
         } else {
           // Fallback para secrets legacy

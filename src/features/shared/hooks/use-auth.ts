@@ -98,12 +98,7 @@ export const useAuth = () => {
           throw new Error(profile.suspension_reason || "Conta suspensa. Entre em contato com o administrador");
         }
 
-        if (!profile.is_active) {
-          await supabase.auth.signOut();
-          throw new Error("Conta aguardando aprovação do administrador");
-        }
-
-        // 3. Validar role apenas para admin
+        // Validar role apenas para admin
         if (expectedRole === 'admin') {
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')

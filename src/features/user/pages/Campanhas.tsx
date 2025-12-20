@@ -28,30 +28,23 @@ import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 import { useLeadLists, useLeadListContacts } from "@/shared/hooks/use-lead-lists";
+import { useCampaigns, useCreateCampaign, useDeleteCampaign } from "@/shared/hooks/use-campaigns";
 import { useTemplates } from "@/features/user/hooks/use-templates";
-
-interface Campaign {
-  id: string;
-  name: string;
-  template: string;
-  leadListId: string;
-  leadListName: string;
-  contactCount: number;
-  createdAt: Date;
-}
 
 export default function Campanhas() {
   const navigate = useNavigate();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [selectedLeadListId, setSelectedLeadListId] = useState<string>("");
   const [customMessage, setCustomMessage] = useState("");
 
+  const { data: campaigns, isLoading: loadingCampaigns } = useCampaigns();
   const { data: leadLists, isLoading: loadingLists } = useLeadLists();
   const { data: templates, isLoading: loadingTemplates } = useTemplates("sms");
-  const { data: selectedListContacts } = useLeadListContacts(selectedLeadListId);
+  
+  const createCampaign = useCreateCampaign();
+  const deleteCampaign = useDeleteCampaign();
 
   const handleCreateCampaign = () => {
     if (!newCampaignName.trim()) {
@@ -73,36 +66,28 @@ export default function Campanhas() {
       return;
     }
 
-    const newCampaign: Campaign = {
-      id: crypto.randomUUID(),
+    createCampaign.mutate({
       name: newCampaignName,
-      template: messageContent,
-      leadListId: selectedLeadListId,
-      leadListName: selectedList?.name || "",
-      contactCount: selectedList?.total_contacts || 0,
-      createdAt: new Date(),
-    };
-
-    setCampaigns(prev => [newCampaign, ...prev]);
-    setDialogOpen(false);
-    setNewCampaignName("");
-    setSelectedTemplateId("");
-    setSelectedLeadListId("");
-    setCustomMessage("");
-    toast.success("Campanha criada com sucesso!");
-  };
-
-  const handleUseCampaign = (campaign: Campaign) => {
-    // Navegar para comunicação com os dados da campanha
-    // Por enquanto, apenas mostrar toast
-    toast.info(`Campanha "${campaign.name}" selecionada`, {
-      description: `${campaign.contactCount} contatos serão carregados`,
+      message_template: messageContent,
+      lead_list_id: selectedLeadListId,
+      lead_list_name: selectedList?.name,
+      contact_count: selectedList?.total_contacts || 0,
+    }, {
+      onSuccess: () => {
+        setDialogOpen(false);
+        setNewCampaignName("");
+        setSelectedTemplateId("");
+        setSelectedLeadListId("");
+        setCustomMessage("");
+      }
     });
   };
 
-  const handleDeleteCampaign = (id: string) => {
-    setCampaigns(prev => prev.filter(c => c.id !== id));
-    toast.success("Campanha removida");
+  const handleUseCampaign = (campaign: typeof campaigns extends (infer T)[] | undefined ? T : never) => {
+    toast.info(`Campanha "${campaign.name}" selecionada`, {
+      description: `${campaign.contact_count} contatos serão carregados`,
+    });
+    // Futuro: navegar para /comunicacao com os dados pré-carregados
   };
 
   return (
@@ -248,7 +233,8 @@ export default function Campanhas() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateCampaign}>
+              <Button onClick={handleCreateCampaign} disabled={createCampaign.isPending}>
+                {createCampaign.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Criar Campanha
               </Button>
             </div>
@@ -257,67 +243,80 @@ export default function Campanhas() {
       </div>
 
       {/* Lista de Campanhas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {campaigns.length === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="py-12 text-center">
-              <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                Nenhuma campanha criada ainda.
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Clique em "Nova Campanha" para começar.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          campaigns.map((campaign) => (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      <FileText className="h-3 w-3" />
-                      {campaign.leadListName}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteCampaign(campaign.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm line-clamp-3">{campaign.template}</p>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary">
-                    {campaign.contactCount} contatos
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {format(campaign.createdAt, "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => handleUseCampaign(campaign)}
-                >
-                  <Send className="h-4 w-4" />
-                  Usar Campanha
-                </Button>
+      {loadingCampaigns ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {!campaigns?.length ? (
+            <Card className="col-span-full">
+              <CardContent className="py-12 text-center">
+                <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhuma campanha criada ainda.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Clique em "Nova Campanha" para começar.
+                </p>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ) : (
+            campaigns.map((campaign) => (
+              <Card key={campaign.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2 mt-1">
+                        <FileText className="h-3 w-3" />
+                        {campaign.lead_list_name || "Lista removida"}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => deleteCampaign.mutate(campaign.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-sm line-clamp-3">{campaign.message_template}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-1">
+                      <Badge variant="secondary">
+                        {campaign.contact_count} contatos
+                      </Badge>
+                      {campaign.sends_count > 0 && (
+                        <Badge variant="outline">
+                          {campaign.sends_count}x enviado
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(campaign.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => handleUseCampaign(campaign)}
+                  >
+                    <Send className="h-4 w-4" />
+                    Usar Campanha
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Info Card */}
       <Card className="bg-muted/30">

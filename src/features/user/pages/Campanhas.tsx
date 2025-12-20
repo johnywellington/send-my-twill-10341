@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Megaphone, Plus, Send, Trash2, Loader2, FileText } from "lucide-react";
+import { Megaphone, Plus, Send, Trash2, Loader2, FileText, History, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,13 +93,18 @@ export default function Campanhas() {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nova Campanha
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/campanhas/historico")} className="gap-2">
+            <History className="h-4 w-4" />
+            Histórico
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Campanha
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Criar Nova Campanha</DialogTitle>
@@ -196,6 +201,7 @@ export default function Campanhas() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Lista de Campanhas */}

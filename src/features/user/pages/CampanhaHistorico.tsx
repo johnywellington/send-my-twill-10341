@@ -1,0 +1,212 @@
+import { useState } from "react";
+import { History, Filter, Loader2, Search, Calendar, RefreshCcw } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+import { CampaignRunCard } from "@/components/campaigns/CampaignRunCard";
+import { useCampaignRuns, useCancelScheduledRun, type CampaignRun } from "@/shared/hooks/use-campaign-runs";
+import { useCampaigns } from "@/shared/hooks/use-campaigns";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+export default function CampanhaHistorico() {
+  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: runs, isLoading: loadingRuns, refetch } = useCampaignRuns();
+  const { data: campaigns } = useCampaigns();
+  const cancelRun = useCancelScheduledRun();
+
+  const filteredRuns = runs?.filter(run => {
+    // Status filter
+    if (statusFilter !== "all" && run.status !== statusFilter) return false;
+    
+    // Campaign filter
+    if (campaignFilter !== "all" && run.campaign_id !== campaignFilter) return false;
+    
+    // Search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesCampaign = run.campaign?.name?.toLowerCase().includes(query);
+      const matchesNumber = run.from_number.includes(query);
+      if (!matchesCampaign && !matchesNumber) return false;
+    }
+    
+    return true;
+  }) || [];
+
+  const handleCancelRun = (runId: string) => {
+    cancelRun.mutate(runId);
+  };
+
+  const handleRetryFailed = (run: CampaignRun) => {
+    const failedNumbers = run.failed_numbers || [];
+    if (failedNumbers.length === 0) {
+      toast.info("Nenhum número com falha para reenviar");
+      return;
+    }
+
+    // Navegar para comunicação com os números pré-carregados
+    toast.info(`${failedNumbers.length} números para reenviar`, {
+      description: "Redirecionando para a Central de Comunicação...",
+    });
+    
+    // Armazenar números no sessionStorage para recuperar na página de comunicação
+    sessionStorage.setItem('retryNumbers', JSON.stringify({
+      numbers: failedNumbers.map(f => ({
+        phone_number: f.phone_number,
+        name: f.contact_name || 'Reenvio'
+      })),
+      campaignName: run.campaign?.name,
+      message: run.metadata?.message_template || run.campaign?.message_template
+    }));
+    
+    navigate('/comunicacao');
+  };
+
+  // Stats summary
+  const stats = {
+    total: runs?.length || 0,
+    completed: runs?.filter(r => r.status === 'completed').length || 0,
+    scheduled: runs?.filter(r => r.status === 'scheduled').length || 0,
+    failed: runs?.filter(r => r.status === 'failed').length || 0,
+  };
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <History className="h-8 w-8 text-primary" />
+            Histórico de Campanhas
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Acompanhe todas as execuções de envio
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCcw className="h-4 w-4 mr-2" />
+          Atualizar
+        </Button>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-sm text-muted-foreground">Total de Execuções</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-sm text-muted-foreground">Concluídas</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{stats.scheduled}</div>
+            <div className="text-sm text-muted-foreground">Agendadas</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-destructive">{stats.failed}</div>
+            <div className="text-sm text-muted-foreground">Com Falhas</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por campanha ou número..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="completed">Concluídos</SelectItem>
+                <SelectItem value="running">Em andamento</SelectItem>
+                <SelectItem value="scheduled">Agendados</SelectItem>
+                <SelectItem value="failed">Com falhas</SelectItem>
+                <SelectItem value="cancelled">Cancelados</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Campanha" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as campanhas</SelectItem>
+                {campaigns?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Runs List */}
+      {loadingRuns ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : filteredRuns.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              {runs?.length === 0 
+                ? "Nenhuma execução registrada ainda."
+                : "Nenhuma execução encontrada com os filtros selecionados."
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredRuns.map((run) => (
+            <CampaignRunCard
+              key={run.id}
+              run={run}
+              onCancel={handleCancelRun}
+              onRetryFailed={handleRetryFailed}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

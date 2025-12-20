@@ -27,8 +27,10 @@ export interface SendStatus {
   contact_name?: string;
   status: 'pending' | 'sending' | 'success' | 'error';
   error_message?: string;
+  message?: string; // alias for error_message for compatibility
   provider?: string;
   sent_at?: string;
+  timestamp?: Date;
 }
 
 interface SendProgressModalProps {

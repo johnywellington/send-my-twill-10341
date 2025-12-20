@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Loader2, Save, Beaker, RefreshCw, AlertTriangle } from "lucide-react";
+import { Send, Loader2, Save, Beaker, RefreshCw, AlertTriangle, History } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CampaignSelector } from "@/components/campaigns/CampaignSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
@@ -19,11 +19,14 @@ import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { PhoneNumberSelector } from "@/components/PhoneNumberSelector";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
-import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
+import { SendProgressModal, type SendStatus } from "@/components/campaigns/SendProgressModal";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
 import { useTwilioAccountType } from "@/hooks/use-twilio-account-type";
 import { CredentialSelector } from "@/components/CredentialSelector";
+import { useNavigate } from "react-router-dom";
+import type { FailedNumber } from "@/shared/hooks/use-campaign-runs";
+
 interface SmsFormProps {
   onSmsSent?: () => void;
 }
@@ -54,10 +57,30 @@ export const SmsForm = ({
 
   // Estados para progresso de envio em lote
   const [showProgress, setShowProgress] = useState(false);
-  const [phoneStatuses, setPhoneStatuses] = useState<PhoneStatus[]>([]);
+  const [phoneStatuses, setPhoneStatuses] = useState<SendStatus[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [throttle, setThrottle] = useState(1.0); // 100% por padrão
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Carregar números para reenvio do sessionStorage
+  useEffect(() => {
+    const retryData = sessionStorage.getItem('retryNumbers');
+    if (retryData) {
+      try {
+        const { numbers, message: templateMessage } = JSON.parse(retryData);
+        if (numbers && numbers.length > 0) {
+          setDestinations(numbers.map((n: { phone_number: string }) => n.phone_number));
+          if (templateMessage) setMessage(templateMessage);
+          toast.info(`${numbers.length} números carregados para reenvio`);
+        }
+        sessionStorage.removeItem('retryNumbers');
+      } catch (e) {
+        console.error('Erro ao parsear retryNumbers:', e);
+      }
+    }
+  }, []);
 
   // Desabilitar Sender ID automaticamente quando conta Twilio for trial
   useEffect(() => {
@@ -85,8 +108,8 @@ export const SmsForm = ({
     setCancelRequested(false);
 
     // Inicializar status de todos os números como 'pending'
-    const initialStatuses: PhoneStatus[] = validDestinations.map(number => ({
-      number,
+    const initialStatuses: SendStatus[] = validDestinations.map(phone_number => ({
+      phone_number,
       status: 'pending' as const
     }));
     setPhoneStatuses(initialStatuses);
@@ -102,6 +125,8 @@ export const SmsForm = ({
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
+      const failedNumbers: FailedNumber[] = [];
+      let runId: string | null = null;
 
       // Validar modo de remetente
       if (useSenderId) {
@@ -248,9 +273,11 @@ export const SmsForm = ({
             console.error(`Error sending to ${to}:`, errorMsg);
             errorCount++;
             errors.push(`${to}: ${errorMsg}`);
+            failedNumbers.push({ phone_number: to, error: errorMsg, provider });
             setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
               ...p,
               status: 'error',
+              error_message: errorMsg,
               message: errorMsg,
               timestamp: new Date()
             } : p));
@@ -268,9 +295,11 @@ export const SmsForm = ({
           errorCount++;
           const errorMsg = err.message || "Erro inesperado";
           errors.push(`${to}: ${errorMsg}`);
+          failedNumbers.push({ phone_number: to, error: errorMsg, provider });
           setPhoneStatuses(prev => prev.map((p, idx) => idx === i ? {
             ...p,
             status: 'error',
+            error_message: errorMsg,
             message: errorMsg,
             timestamp: new Date()
           } : p));
@@ -280,6 +309,37 @@ export const SmsForm = ({
         if (i < normalizedDestinations.length - 1 && !cancelRequested) {
           const delay = calculateDelay(provider, 'sms', throttle);
           await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+
+      // Salvar histórico de execução
+      if (validDestinations.length > 1) {
+        try {
+          const { data: runData, error: runError } = await supabase
+            .from("campaign_runs")
+            .insert({
+              user_id: user.id,
+              status: errorCount === 0 ? 'completed' : 'failed',
+              started_at: new Date(Date.now() - (successCount + errorCount) * 500).toISOString(),
+              completed_at: new Date().toISOString(),
+              total_contacts: validDestinations.length,
+              successful_sends: successCount,
+              failed_sends: errorCount,
+              pending_sends: 0,
+              provider,
+              from_number: useSenderId ? senderId : from,
+              failed_numbers: JSON.parse(JSON.stringify(failedNumbers)),
+              metadata: { message_template: message }
+            })
+            .select()
+            .single();
+
+          if (!runError && runData) {
+            runId = runData.id;
+            setCurrentRunId(runId);
+          }
+        } catch (err) {
+          console.error("Erro ao salvar histórico:", err);
         }
       }
 
@@ -462,6 +522,32 @@ export const SmsForm = ({
       
       <TemplateDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen} onSave={template => createTemplate.mutate(template)} defaultType="sms" defaultContent={message} />
       
-      <BatchSendProgress open={showProgress} onOpenChange={setShowProgress} phoneStatuses={phoneStatuses} currentIndex={currentIndex} total={phoneStatuses.length} onCancel={() => setCancelRequested(true)} title="Enviando SMS em Lote" />
+      <SendProgressModal 
+        open={showProgress} 
+        onOpenChange={setShowProgress} 
+        statuses={phoneStatuses} 
+        currentIndex={currentIndex} 
+        totalCount={phoneStatuses.length} 
+        isComplete={currentIndex >= phoneStatuses.length && !loading}
+        onCancel={() => setCancelRequested(true)} 
+        title="Enviando SMS em Lote"
+        onRetryFailed={(failedStatuses) => {
+          // Recarregar apenas os números que falharam
+          const failedNumbers = failedStatuses.map(s => s.phone_number);
+          setDestinations(failedNumbers);
+          setShowProgress(false);
+          toast.info(`${failedNumbers.length} números carregados para reenvio`);
+        }}
+        onClose={() => {
+          if (currentRunId) {
+            toast.success("Histórico salvo!", {
+              action: {
+                label: "Ver Histórico",
+                onClick: () => navigate("/campanhas/historico"),
+              },
+            });
+          }
+        }}
+      />
     </Card>;
 };

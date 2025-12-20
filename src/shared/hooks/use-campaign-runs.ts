@@ -6,7 +6,7 @@ export interface CampaignRun {
   id: string;
   user_id: string;
   campaign_id: string | null;
-  status: 'pending' | 'scheduled' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'scheduled' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -260,6 +260,57 @@ export function useAllScheduledRuns() {
 
       if (error) throw error;
       return data as unknown as CampaignRun[];
+    },
+  });
+}
+
+// Hook para pausar uma campanha em execução
+export function usePauseCampaignRun() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (runId: string) => {
+      const { error } = await supabase
+        .from("campaign_runs")
+        .update({ 
+          status: 'paused',
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", runId)
+        .in("status", ["running", "scheduled"]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign-runs"] });
+      toast.success("Campanha pausada!", { description: "Você pode retomá-la a qualquer momento." });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao pausar", { description: error.message });
+    },
+  });
+}
+
+// Hook para retomar uma campanha pausada
+export function useResumeCampaignRun() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (runId: string) => {
+      // Chamar a edge function para retomar a campanha
+      const { data, error } = await supabase.functions.invoke("resume-campaign", {
+        body: { runId }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign-runs"] });
+      toast.success("Campanha retomada!", { description: "Os envios pendentes estão sendo processados." });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao retomar", { description: error.message });
     },
   });
 }

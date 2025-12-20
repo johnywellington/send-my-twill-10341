@@ -100,10 +100,27 @@ serve(async (req) => {
 
         let successCount = 0;
         let failCount = 0;
+        let processedCount = 0;
+        let wasPaused = false;
         const failedNumbers: Array<{ phone_number: string; contact_name?: string; error: string }> = [];
 
         // Processar cada contato
         for (const contact of contacts) {
+          // A cada 5 envios, verificar se a campanha foi pausada
+          if (processedCount > 0 && processedCount % 5 === 0) {
+            const { data: currentRun } = await supabase
+              .from("campaign_runs")
+              .select("status")
+              .eq("id", run.id)
+              .single();
+            
+            if (currentRun?.status === 'paused') {
+              console.log(`[process-scheduled-campaigns] Run ${run.id} was paused by user`);
+              wasPaused = true;
+              break;
+            }
+          }
+
           try {
             // Chamar a edge function send-sms para cada contato
             const smsPayload = {
@@ -162,11 +179,28 @@ serve(async (req) => {
                 .eq("phone_number", contact.phone_number);
             }
 
+            processedCount++;
+
+            // Atualizar contadores incrementalmente a cada 10 envios
+            if (processedCount % 10 === 0) {
+              const remainingPending = contacts.length - processedCount;
+              await supabase
+                .from("campaign_runs")
+                .update({ 
+                  successful_sends: successCount,
+                  failed_sends: failCount,
+                  pending_sends: remainingPending,
+                  failed_numbers: failedNumbers
+                })
+                .eq("id", run.id);
+            }
+
             // Delay entre envios para respeitar rate limits
             await new Promise(resolve => setTimeout(resolve, 200));
             
           } catch (sendError) {
             failCount++;
+            processedCount++;
             const errorMsg = sendError instanceof Error ? sendError.message : "Send error";
             failedNumbers.push({
               phone_number: contact.phone_number,
@@ -183,6 +217,24 @@ serve(async (req) => {
               .eq("run_id", run.id)
               .eq("phone_number", contact.phone_number);
           }
+        }
+
+        // Se foi pausada, apenas atualizar contadores e manter status paused
+        if (wasPaused) {
+          const remainingPending = contacts.length - processedCount;
+          await supabase
+            .from("campaign_runs")
+            .update({ 
+              successful_sends: successCount,
+              failed_sends: failCount,
+              pending_sends: remainingPending,
+              failed_numbers: failedNumbers
+            })
+            .eq("id", run.id);
+          
+          console.log(`[process-scheduled-campaigns] Run ${run.id} paused: ${successCount} success, ${failCount} failed, ${remainingPending} pending`);
+          processedResults.push({ runId: run.id, success: true, error: "Paused by user" });
+          continue;
         }
 
         // Atualizar run como completed

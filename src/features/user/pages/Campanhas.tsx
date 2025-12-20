@@ -29,19 +29,16 @@ import { useNavigate } from "react-router-dom";
 
 import { useLeadLists, useLeadListContacts } from "@/shared/hooks/use-lead-lists";
 import { useCampaigns, useCreateCampaign, useDeleteCampaign } from "@/shared/hooks/use-campaigns";
-import { useTemplates } from "@/features/user/hooks/use-templates";
 
 export default function Campanhas() {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [selectedLeadListId, setSelectedLeadListId] = useState<string>("");
   const [customMessage, setCustomMessage] = useState("");
 
   const { data: campaigns, isLoading: loadingCampaigns } = useCampaigns();
   const { data: leadLists, isLoading: loadingLists } = useLeadLists();
-  const { data: templates, isLoading: loadingTemplates } = useTemplates("sms");
   
   const createCampaign = useCreateCampaign();
   const deleteCampaign = useDeleteCampaign();
@@ -52,31 +49,23 @@ export default function Campanhas() {
       return;
     }
 
-    if (!selectedLeadListId) {
-      toast.error("Selecione uma lista de leads");
+    if (!customMessage.trim()) {
+      toast.error("Digite uma mensagem para a campanha");
       return;
     }
 
-    const selectedList = leadLists?.find(l => l.id === selectedLeadListId);
-    const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
-    const messageContent = selectedTemplate?.content || customMessage;
-
-    if (!messageContent.trim()) {
-      toast.error("Selecione um template ou digite uma mensagem");
-      return;
-    }
+    const selectedList = selectedLeadListId ? leadLists?.find(l => l.id === selectedLeadListId) : null;
 
     createCampaign.mutate({
       name: newCampaignName,
-      message_template: messageContent,
-      lead_list_id: selectedLeadListId,
-      lead_list_name: selectedList?.name,
+      message_template: customMessage,
+      lead_list_id: selectedLeadListId || null,
+      lead_list_name: selectedList?.name || null,
       contact_count: selectedList?.total_contacts || 0,
     }, {
       onSuccess: () => {
         setDialogOpen(false);
         setNewCampaignName("");
-        setSelectedTemplateId("");
         setSelectedLeadListId("");
         setCustomMessage("");
       }
@@ -115,7 +104,7 @@ export default function Campanhas() {
             <DialogHeader>
               <DialogTitle>Criar Nova Campanha</DialogTitle>
               <DialogDescription>
-                Configure uma campanha com template e lista de leads
+                Configure uma campanha com mensagem e opcionalmente uma lista de leads
               </DialogDescription>
             </DialogHeader>
 
@@ -131,45 +120,12 @@ export default function Campanhas() {
                 />
               </div>
 
-              {/* Seletor de Template */}
+              {/* Mensagem */}
               <div className="space-y-2">
-                <Label>Template de Mensagem</Label>
-                {loadingTemplates ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Carregando templates...
-                  </div>
-                ) : (
-                  <Select
-                    value={selectedTemplateId}
-                    onValueChange={(value) => {
-                      setSelectedTemplateId(value);
-                      const template = templates?.find(t => t.id === value);
-                      if (template) {
-                        setCustomMessage(template.content);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates?.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Mensagem Customizada */}
-              <div className="space-y-2">
-                <Label htmlFor="customMessage">Mensagem</Label>
+                <Label htmlFor="customMessage">Mensagem *</Label>
                 <Textarea
                   id="customMessage"
-                  placeholder="Digite a mensagem ou selecione um template acima..."
+                  placeholder="Digite a mensagem da campanha..."
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
                   rows={4}
@@ -179,9 +135,9 @@ export default function Campanhas() {
                 </p>
               </div>
 
-              {/* Seletor de Lista de Leads */}
+              {/* Seletor de Lista de Leads (Opcional) */}
               <div className="space-y-2">
-                <Label>Lista de Leads *</Label>
+                <Label>Lista de Leads <span className="text-muted-foreground font-normal">(opcional)</span></Label>
                 {loadingLists ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />

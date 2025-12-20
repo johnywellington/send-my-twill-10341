@@ -12,3 +12,4 @@ export { useToast, toast } from './use-toast';
 export { useTwilioAccountType } from './use-twilio-account-type';
 export { useValidatePhone } from './use-validate-phone';
 export { useValidationHistory } from './use-validation-history';
+export { useTestCredentialConnection } from './use-test-credential-connection';

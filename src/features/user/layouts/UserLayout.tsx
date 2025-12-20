@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User, Shield } from "lucide-react";
 import { useAuth } from "@/features/shared/hooks/use-auth";
 import { ProviderSelector } from "@/components/ProviderSelector";
-import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { CredentialSelector } from "@/components/CredentialSelector";
 import { useProvider } from "@/contexts/ProviderContext";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";

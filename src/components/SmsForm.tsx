@@ -17,13 +17,13 @@ import { extractVariables } from "@/lib/template-utils";
 import { SenderIdTooltip } from "./SenderIdTooltip";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
-import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
+import { PhoneNumberSelector } from "@/components/PhoneNumberSelector";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
 import { useTwilioAccountType } from "@/hooks/use-twilio-account-type";
-import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { CredentialSelector } from "@/components/CredentialSelector";
 interface SmsFormProps {
   onSmsSent?: () => void;
 }

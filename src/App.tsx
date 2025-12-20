@@ -5,10 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserRoute } from "@/features/shared/components/UserRoute";
-import { AdminRoute } from "@/features/shared/components/AdminRoute";
 import { PublicLayout } from "@/features/shared/layouts/PublicLayout";
 import { UserLayout } from "@/features/user/layouts/UserLayout";
-import { AdminLayout } from "@/features/admin/layouts/AdminLayout";
 
 // Lazy load pages
 const LandingPage = lazy(() => import("./features/shared/pages/LandingPage"));
@@ -30,18 +28,6 @@ const ValidarNumeros = lazy(() => import("./features/user/pages/ValidarNumeros")
 const RelatorioCustos = lazy(() => import("./features/user/pages/RelatorioCustos"));
 const ChamadasRecebidas = lazy(() => import("./features/user/pages/ChamadasRecebidas"));
 const SIP = lazy(() => import("./features/user/pages/SIP"));
-
-// Admin pages
-const Numbers = lazy(() => import("./features/admin/pages/Numbers"));
-const Monitoring = lazy(() => import("./features/admin/pages/Monitoring"));
-const ActiveCalls = lazy(() => import("./features/admin/pages/ActiveCalls"));
-const ProviderCredentials = lazy(() => import("./features/admin/pages/ProviderCredentials"));
-const AdminDashboard = lazy(() => import("./features/admin/pages/AdminDashboard"));
-const AdminUsers = lazy(() => import("./features/admin/pages/AdminUsers"));
-const UserApprovals = lazy(() => import("./features/admin/pages/UserApprovals"));
-const AdminSIP = lazy(() => import("./features/admin/pages/SIP"));
-const SIPDomainDetails = lazy(() => import("./features/admin/pages/SIPDomainDetails"));
-const SyncLogs = lazy(() => import("./features/admin/pages/SyncLogs"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -70,7 +56,7 @@ const App = () => (
               </PublicLayout>
             } />
 
-          {/* User Routes - Green Sidebar */}
+          {/* User Routes */}
           <Route path="/dashboard" element={
             <UserRoute>
               <UserLayout>
@@ -99,13 +85,6 @@ const App = () => (
               </UserLayout>
             </UserRoute>
           } />
-        <Route path="/numbers" element={
-          <UserRoute>
-            <UserLayout>
-              <Numbers />
-            </UserLayout>
-          </UserRoute>
-        } />
         <Route path="/historico-sms" element={
           <UserRoute>
             <UserLayout>
@@ -141,13 +120,6 @@ const App = () => (
             </UserLayout>
           </UserRoute>
         } />
-        <Route path="/credentials" element={
-          <UserRoute>
-            <UserLayout>
-              <ProviderCredentials />
-            </UserLayout>
-          </UserRoute>
-        } />
         <Route path="/api-test" element={
           <UserRoute>
             <UserLayout>
@@ -162,85 +134,13 @@ const App = () => (
             </UserLayout>
           </UserRoute>
         } />
-          
-          {/* Admin Routes - Red Sidebar */}
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminDashboard />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/users" element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminUsers />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/approvals" element={
-            <AdminRoute>
-              <AdminLayout>
-                <UserApprovals />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip" element={
-            <AdminRoute>
-              <AdminLayout>
-                <AdminSIP />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sip/domain/:domainGroupId" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SIPDomainDetails />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/numbers" element={
-            <AdminRoute>
-              <AdminLayout>
-                <Numbers />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/monitoring" element={
-            <AdminRoute>
-              <AdminLayout>
-                <Monitoring />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/active-calls" element={
-            <AdminRoute>
-              <AdminLayout>
-                <ActiveCalls />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/credentials" element={
-            <AdminRoute>
-              <AdminLayout>
-                <ProviderCredentials />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/sync-logs" element={
-            <AdminRoute>
-              <AdminLayout>
-                <SyncLogs />
-              </AdminLayout>
-            </AdminRoute>
-          } />
-          <Route path="/admin/api-test" element={
-            <AdminRoute>
-              <AdminLayout>
-                <ApiTest />
-              </AdminLayout>
-            </AdminRoute>
-          } />
+        <Route path="/sip" element={
+          <UserRoute>
+            <UserLayout>
+              <SIP />
+            </UserLayout>
+          </UserRoute>
+        } />
 
           {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />

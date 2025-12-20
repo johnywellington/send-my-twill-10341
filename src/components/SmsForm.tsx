@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Send, Loader2, Save, Beaker, RefreshCw, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { TemplateSelector } from "@/components/templates/TemplateSelector";
+import { CampaignSelector } from "@/components/campaigns/CampaignSelector";
 import { TemplateDialog } from "@/components/templates/TemplateDialog";
 import { useCreateTemplate } from "@/features/user/hooks/use-templates";
 import { extractVariables } from "@/lib/template-utils";
@@ -416,10 +416,12 @@ export const SmsForm = ({
                 Mensagem
               </Label>
               <div className="flex items-center gap-2">
-                <TemplateSelector type="sms" onSelect={template => {
-                setMessage(template.content);
-                toast.success("Template carregado!");
-              }} />
+                <CampaignSelector onSelect={campaign => {
+                  setMessage(campaign.message_template);
+                  if (campaign.contacts.length > 0) {
+                    setDestinations(campaign.contacts);
+                  }
+                }} />
                 <span className={`text-xs font-medium transition-colors ${isNearLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {messageLength}/{maxLength}
                 </span>

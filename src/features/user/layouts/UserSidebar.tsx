@@ -1,4 +1,4 @@
-import { Home, Radio, Users, FileText, BarChart3, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Key } from "lucide-react";
+import { Home, Radio, Users, FileText, BarChart3, PhoneForwarded, History, CheckCircle, DollarSign, PhoneIncoming, Key, Megaphone, UserCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -24,6 +24,8 @@ const userGroups = [
     label: "Comunicação",
     routes: [
       { title: "Central de Comunicação", url: "/comunicacao", icon: Radio },
+      { title: "Campanhas", url: "/campanhas", icon: Megaphone },
+      { title: "Leads", url: "/leads", icon: UserCheck },
       { title: "Histórico SMS", url: "/historico-sms", icon: History },
       { title: "Chamadas URA", url: "/chamadas-ura", icon: PhoneForwarded },
       { title: "Chamadas Recebidas", url: "/chamadas-recebidas", icon: PhoneIncoming },

@@ -118,6 +118,121 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_run_details: {
+        Row: {
+          contact_name: string | null
+          created_at: string | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          phone_number: string
+          provider: string | null
+          run_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          phone_number: string
+          provider?: string | null
+          run_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          phone_number?: string
+          provider?: string | null
+          run_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_run_details_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_runs: {
+        Row: {
+          campaign_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          failed_numbers: Json | null
+          failed_sends: number
+          from_number: string
+          id: string
+          metadata: Json | null
+          pending_sends: number
+          provider: string
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          successful_sends: number
+          total_contacts: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          failed_numbers?: Json | null
+          failed_sends?: number
+          from_number: string
+          id?: string
+          metadata?: Json | null
+          pending_sends?: number
+          provider: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          successful_sends?: number
+          total_contacts?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          failed_numbers?: Json | null
+          failed_sends?: number
+          from_number?: string
+          id?: string
+          metadata?: Json | null
+          pending_sends?: number
+          provider?: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          successful_sends?: number
+          total_contacts?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_runs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           contact_count: number | null

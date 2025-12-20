@@ -141,3 +141,29 @@ export function useIncrementCampaignSends() {
     },
   });
 }
+
+// Hook para buscar campanhas sem runs (rascunhos)
+export function useDraftCampaigns() {
+  return useQuery({
+    queryKey: ["draft-campaigns"],
+    queryFn: async () => {
+      // Buscar campanhas que NÃO têm nenhum campaign_run associado
+      const { data: campaigns, error } = await supabase
+        .from("campaigns")
+        .select(`
+          *,
+          campaign_runs!left(id)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Filtrar apenas campanhas sem runs
+      const drafts = (campaigns || []).filter(
+        (c: any) => !c.campaign_runs || c.campaign_runs.length === 0
+      );
+
+      return drafts as Campaign[];
+    },
+  });
+}

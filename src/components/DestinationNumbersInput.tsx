@@ -2,9 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { X, Plus, Trash2 } from "lucide-react";
 import { CSVImportDialog } from "./CSVImportDialog";
+import { LeadListSelector } from "./leads/LeadListSelector";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface DestinationNumbersInputProps {
   value: string[];
@@ -27,6 +30,7 @@ export function DestinationNumbersInput({
   description = "Use formato internacional completo: +[código país][número] (mínimo 10 dígitos). Ou importe via CSV.",
   className
 }: DestinationNumbersInputProps) {
+  const [loadedListName, setLoadedListName] = useState<string | null>(null);
   
   const addNumber = () => {
     if (value.length < maxNumbers) {
@@ -67,7 +71,21 @@ export function DestinationNumbersInput({
     onChange(newNumbers.slice(0, maxNumbers));
   };
 
+  const handleLeadListSelect = (numbers: string[], listName: string) => {
+    onChange(numbers);
+    setLoadedListName(listName);
+    toast.success(`${numbers.length} números carregados`, {
+      description: `Lista: ${listName}`
+    });
+  };
+
+  const clearLoadedList = () => {
+    setLoadedListName(null);
+    onChange([""]);
+  };
+
   const clearAllNumbers = () => {
+    setLoadedListName(null);
     onChange([""]);
   };
 
@@ -144,7 +162,24 @@ export function DestinationNumbersInput({
           currentCount={filledCount}
           maxCount={maxNumbers}
         />
+        
+        <LeadListSelector onSelect={handleLeadListSelect} />
       </div>
+      
+      {loadedListName && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="gap-1">
+            📋 {loadedListName}
+            <button
+              type="button"
+              onClick={clearLoadedList}
+              className="ml-1 hover:text-destructive"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
       
       {description && (
         <p className="text-xs text-muted-foreground">

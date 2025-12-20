@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Search, FileText, Star, MessageSquare, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, FileText, Star, MessageSquare, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useTemplates, type MessageTemplate } from "@/features/user/hooks/use-templates";
+import { useTemplates, useCreateTemplate, type MessageTemplate } from "@/features/user/hooks/use-templates";
+import { TemplateDialog } from "@/components/templates/TemplateDialog";
+import { toast } from "sonner";
 
 interface TemplateSelectorProps {
   selectedTemplateId: string | null;
@@ -28,8 +29,10 @@ export function TemplateSelector({
   const [mode, setMode] = useState<"template" | "custom">(
     selectedTemplateId ? "template" : customMessage ? "custom" : "template"
   );
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   
-  const { data: templates, isLoading } = useTemplates("sms");
+  const { data: templates, isLoading, refetch } = useTemplates("sms");
+  const createTemplate = useCreateTemplate();
 
   const filteredTemplates = templates?.filter((t) =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,6 +51,21 @@ export function TemplateSelector({
   const handleSelectTemplate = (template: MessageTemplate) => {
     onSelectTemplate(template);
     onCustomMessageChange(template.content);
+  };
+
+  const handleSaveNewTemplate = async (templateData: any) => {
+    try {
+      const newTemplate = await createTemplate.mutateAsync(templateData);
+      await refetch();
+      
+      // Seleciona automaticamente o novo template
+      if (newTemplate) {
+        handleSelectTemplate(newTemplate as MessageTemplate);
+        toast.success("Template criado e selecionado!");
+      }
+    } catch (error) {
+      toast.error("Erro ao criar template");
+    }
   };
 
   return (
@@ -69,14 +87,25 @@ export function TemplateSelector({
 
       {mode === "template" ? (
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              size="default"
+              onClick={() => setShowCreateDialog(true)}
+              className="gap-2 shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              Criar Template
+            </Button>
           </div>
 
           {isLoading ? (
@@ -92,14 +121,8 @@ export function TemplateSelector({
                   : "Nenhum template corresponde à busca."}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Selecione "Escrever Nova Mensagem" ou crie templates na página de Templates.
+                Clique em "Criar Template" acima ou selecione "Escrever Nova Mensagem".
               </p>
-              <Button variant="outline" asChild className="mt-4 gap-2">
-                <Link to="/templates">
-                  <ExternalLink className="h-4 w-4" />
-                  Ir para Templates
-                </Link>
-              </Button>
             </div>
           ) : (
             <ScrollArea className="h-[280px] pr-4">
@@ -167,6 +190,14 @@ export function TemplateSelector({
           <p className="text-sm">{customMessage}</p>
         </div>
       )}
+
+      {/* Dialog para criar template */}
+      <TemplateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSave={handleSaveNewTemplate}
+        defaultType="sms"
+      />
     </div>
   );
 }

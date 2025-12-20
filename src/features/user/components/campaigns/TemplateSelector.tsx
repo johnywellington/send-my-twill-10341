@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Search, FileText, Star, MessageSquare } from "lucide-react";
+import { Search, FileText, Star, MessageSquare, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -90,8 +92,14 @@ export function TemplateSelector({
                   : "Nenhum template corresponde à busca."}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Selecione "Escrever Nova Mensagem" para criar uma mensagem personalizada.
+                Selecione "Escrever Nova Mensagem" ou crie templates na página de Templates.
               </p>
+              <Button variant="outline" asChild className="mt-4 gap-2">
+                <Link to="/templates">
+                  <ExternalLink className="h-4 w-4" />
+                  Ir para Templates
+                </Link>
+              </Button>
             </div>
           ) : (
             <ScrollArea className="h-[280px] pr-4">

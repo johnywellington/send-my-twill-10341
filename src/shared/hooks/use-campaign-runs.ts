@@ -222,3 +222,44 @@ export function useUpdateRunDetail() {
     },
   });
 }
+
+// Hook para buscar agendamentos de uma campanha específica
+export function useScheduledRunsByCampaign(campaignId?: string) {
+  return useQuery({
+    queryKey: ["scheduled-runs", campaignId],
+    queryFn: async () => {
+      if (!campaignId) return [];
+      
+      const { data, error } = await supabase
+        .from("campaign_runs")
+        .select("*")
+        .eq("campaign_id", campaignId)
+        .eq("status", "scheduled")
+        .order("scheduled_at", { ascending: true });
+
+      if (error) throw error;
+      return data as unknown as CampaignRun[];
+    },
+    enabled: !!campaignId,
+  });
+}
+
+// Hook para buscar todos os agendamentos pendentes do usuário
+export function useAllScheduledRuns() {
+  return useQuery({
+    queryKey: ["all-scheduled-runs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campaign_runs")
+        .select(`
+          *,
+          campaign:campaigns(name, message_template)
+        `)
+        .eq("status", "scheduled")
+        .order("scheduled_at", { ascending: true });
+
+      if (error) throw error;
+      return data as unknown as CampaignRun[];
+    },
+  });
+}

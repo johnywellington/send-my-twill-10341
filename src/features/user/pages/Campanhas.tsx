@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Megaphone, Plus, Send, Trash2, Loader2, FileText, History, CalendarDays } from "lucide-react";
+import { Megaphone, Plus, Send, Trash2, Loader2, FileText, History, CalendarDays, Clock, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +28,21 @@ import { useNavigate } from "react-router-dom";
 
 import { useLeadLists, useLeadListContacts } from "@/shared/hooks/use-lead-lists";
 import { useCampaigns, useCreateCampaign, useDeleteCampaign } from "@/shared/hooks/use-campaigns";
+import { useAllScheduledRuns, useCreateCampaignRun, useCancelScheduledRun } from "@/shared/hooks/use-campaign-runs";
+import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
+import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
+import { ScheduleCampaignDialog } from "@/components/campaigns/ScheduleCampaignDialog";
+
+interface Campaign {
+  id: string;
+  name: string;
+  message_template: string;
+  lead_list_id: string | null;
+  lead_list_name: string | null;
+  contact_count: number;
+  sends_count: number;
+  created_at: string;
+}
 
 export default function Campanhas() {
   const navigate = useNavigate();
@@ -36,12 +50,30 @@ export default function Campanhas() {
   const [newCampaignName, setNewCampaignName] = useState("");
   const [selectedLeadListId, setSelectedLeadListId] = useState<string>("");
   const [customMessage, setCustomMessage] = useState("");
+  
+  // Estado para agendamento
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedCampaignForSchedule, setSelectedCampaignForSchedule] = useState<Campaign | null>(null);
 
   const { data: campaigns, isLoading: loadingCampaigns } = useCampaigns();
   const { data: leadLists, isLoading: loadingLists } = useLeadLists();
+  const { data: scheduledRuns } = useAllScheduledRuns();
+  const { data: credentials } = useProviderCredentials();
+  const { data: phoneNumbers } = usePhoneNumbers();
   
   const createCampaign = useCreateCampaign();
   const deleteCampaign = useDeleteCampaign();
+  const createCampaignRun = useCreateCampaignRun();
+  const cancelScheduledRun = useCancelScheduledRun();
+
+  // Obter configuração padrão do usuário
+  const defaultCredential = credentials?.find(c => c.is_default) || credentials?.[0];
+  const defaultPhoneNumber = phoneNumbers?.find(p => p.is_active);
+
+  // Função para obter agendamentos de uma campanha
+  const getScheduledRunsForCampaign = (campaignId: string) => {
+    return scheduledRuns?.filter(run => run.campaign_id === campaignId) || [];
+  };
 
   const handleCreateCampaign = () => {
     if (!newCampaignName.trim()) {
@@ -72,11 +104,81 @@ export default function Campanhas() {
     });
   };
 
-  const handleUseCampaign = (campaign: typeof campaigns extends (infer T)[] | undefined ? T : never) => {
-    toast.info(`Campanha "${campaign.name}" selecionada`, {
-      description: `${campaign.contact_count} contatos serão carregados`,
+  const handleSendNow = (campaign: Campaign) => {
+    // Navegar para /comunicacao com dados pré-carregados
+    const params = new URLSearchParams({
+      campaign_id: campaign.id,
+      campaign_name: campaign.name,
+      message: campaign.message_template,
+      lead_list_id: campaign.lead_list_id || "",
     });
-    // Futuro: navegar para /comunicacao com os dados pré-carregados
+    navigate(`/comunicacao?${params.toString()}`);
+  };
+
+  const handleOpenScheduleDialog = (campaign: Campaign) => {
+    if (!campaign.lead_list_id) {
+      toast.error("Campanha sem lista de leads", {
+        description: "Associe uma lista de leads à campanha para agendar envios."
+      });
+      return;
+    }
+
+    if (!campaign.contact_count || campaign.contact_count === 0) {
+      toast.error("Lista sem contatos", {
+        description: "A lista de leads não possui contatos."
+      });
+      return;
+    }
+
+    if (!defaultCredential) {
+      toast.error("Credenciais não configuradas", {
+        description: "Configure suas credenciais de provedor antes de agendar."
+      });
+      navigate("/credenciais");
+      return;
+    }
+
+    if (!defaultPhoneNumber) {
+      toast.error("Número de origem não configurado", {
+        description: "Configure um número de telefone antes de agendar."
+      });
+      navigate("/credenciais");
+      return;
+    }
+
+    setSelectedCampaignForSchedule(campaign);
+    setScheduleDialogOpen(true);
+  };
+
+  const handleScheduleCampaign = async (scheduledAt: Date) => {
+    if (!selectedCampaignForSchedule || !defaultCredential || !defaultPhoneNumber) return;
+
+    try {
+      await createCampaignRun.mutateAsync({
+        campaign_id: selectedCampaignForSchedule.id,
+        status: "scheduled",
+        scheduled_at: scheduledAt.toISOString(),
+        total_contacts: selectedCampaignForSchedule.contact_count || 0,
+        provider: defaultCredential.provider,
+        from_number: defaultPhoneNumber.phone_number,
+        metadata: {
+          campaign_name: selectedCampaignForSchedule.name,
+          message_template: selectedCampaignForSchedule.message_template,
+          lead_list_id: selectedCampaignForSchedule.lead_list_id,
+          credential_id: defaultCredential.id,
+        }
+      });
+
+      toast.success("Campanha agendada!", {
+        description: `Envio programado para ${format(scheduledAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+      });
+    } catch (error) {
+      console.error("Erro ao agendar campanha:", error);
+    }
+  };
+
+  const handleCancelScheduledRun = (runId: string) => {
+    cancelScheduledRun.mutate(runId);
   };
 
   return (
@@ -224,58 +326,108 @@ export default function Campanhas() {
               </CardContent>
             </Card>
           ) : (
-            campaigns.map((campaign) => (
-              <Card key={campaign.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <FileText className="h-3 w-3" />
-                        {campaign.lead_list_name || "Lista removida"}
-                      </CardDescription>
+            campaigns.map((campaign) => {
+              const scheduledRunsForCampaign = getScheduledRunsForCampaign(campaign.id);
+              const hasScheduledRuns = scheduledRunsForCampaign.length > 0;
+              
+              return (
+                <Card key={campaign.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-1">
+                          <FileText className="h-3 w-3" />
+                          {campaign.lead_list_name || "Sem lista associada"}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => deleteCampaign.mutate(campaign.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => deleteCampaign.mutate(campaign.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm line-clamp-3">{campaign.message_template}</p>
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-sm line-clamp-3">{campaign.message_template}</p>
+                    </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1">
-                      <Badge variant="secondary">
-                        {campaign.contact_count} contatos
-                      </Badge>
-                      {campaign.sends_count > 0 && (
-                        <Badge variant="outline">
-                          {campaign.sends_count}x enviado
+                    {/* Agendamentos da campanha */}
+                    {hasScheduledRuns && (
+                      <div className="space-y-2">
+                        {scheduledRunsForCampaign.map((run) => (
+                          <div 
+                            key={run.id} 
+                            className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-primary" />
+                              <span className="text-sm font-medium">
+                                {format(new Date(run.scheduled_at!), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleCancelScheduledRun(run.id)}
+                              disabled={cancelScheduledRun.isPending}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1 flex-wrap">
+                        <Badge variant="secondary">
+                          {campaign.contact_count} contatos
                         </Badge>
-                      )}
+                        {campaign.sends_count > 0 && (
+                          <Badge variant="outline">
+                            {campaign.sends_count}x enviado
+                          </Badge>
+                        )}
+                        {hasScheduledRuns && (
+                          <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
+                            <CalendarDays className="h-3 w-3 mr-1" />
+                            Agendado
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(campaign.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(campaign.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  </div>
 
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleUseCampaign(campaign)}
-                  >
-                    <Send className="h-4 w-4" />
-                    Usar Campanha
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
+                    {/* Botões de ação */}
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 gap-2"
+                        onClick={() => handleSendNow(campaign)}
+                      >
+                        <Send className="h-4 w-4" />
+                        Enviar Agora
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => handleOpenScheduleDialog(campaign)}
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                        Agendar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       )}
@@ -291,12 +443,21 @@ export default function Campanhas() {
               <p className="font-medium">Dica: Campanhas Rápidas</p>
               <p className="text-sm text-muted-foreground">
                 Crie campanhas pré-configuradas com templates e listas de leads. 
-                Ao clicar em "Usar Campanha", os dados serão carregados automaticamente na Central de Comunicação.
+                Use "Enviar Agora" para envio imediato ou "Agendar" para programar o envio.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog de Agendamento */}
+      <ScheduleCampaignDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+        campaignName={selectedCampaignForSchedule?.name}
+        contactCount={selectedCampaignForSchedule?.contact_count || 0}
+        onSchedule={handleScheduleCampaign}
+      />
     </div>
   );
 }

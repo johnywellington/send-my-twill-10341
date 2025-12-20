@@ -15,3 +15,4 @@ export { useValidationHistory } from './use-validation-history';
 export { useTestCredentialConnection } from './use-test-credential-connection';
 export { useLeadLists, useLeadListContacts, useCreateLeadList, useDeleteLeadList } from './use-lead-lists';
 export { useVerifyRecurring } from './use-verify-recurring';
+export { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, useIncrementCampaignSends } from './use-campaigns';

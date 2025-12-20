@@ -118,6 +118,56 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          contact_count: number | null
+          created_at: string | null
+          id: string
+          last_sent_at: string | null
+          lead_list_id: string | null
+          lead_list_name: string | null
+          message_template: string
+          name: string
+          sends_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_list_id?: string | null
+          lead_list_name?: string | null
+          message_template: string
+          name: string
+          sends_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_list_id?: string | null
+          lead_list_name?: string | null
+          message_template?: string
+          name?: string
+          sends_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_lead_list_id_fkey"
+            columns: ["lead_list_id"]
+            isOneToOne: false
+            referencedRelation: "lead_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_group_members: {
         Row: {
           added_at: string

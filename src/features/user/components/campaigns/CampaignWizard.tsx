@@ -33,6 +33,7 @@ import { toast } from "sonner";
 
 import { TemplateSelector } from "./TemplateSelector";
 import { LeadListSelector } from "./LeadListSelector";
+import { CampaignSendProgressModal } from "./CampaignSendProgressModal";
 import { useLeadLists, type LeadList } from "@/shared/hooks/use-lead-lists";
 import { useCreateCampaign } from "@/shared/hooks/use-campaigns";
 import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
@@ -66,6 +67,15 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("schedule");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState("09:00");
+  
+  // Progress modal state for "Enviar Agora"
+  const [sendProgressOpen, setSendProgressOpen] = useState(false);
+  const [sendingCampaign, setSendingCampaign] = useState<{
+    campaignId: string;
+    runId: string;
+    leadListId: string;
+    messageTemplate: string;
+  } | null>(null);
   
   // Data
   const { data: credentials } = useProviderCredentials();
@@ -152,8 +162,8 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           description: "Você pode enviá-la manualmente depois na aba 'Agendados'."
         });
       } else if (scheduleMode === "send_now") {
-        // Enviar agora - cria run com status pending e scheduled_at = now
-        await createCampaignRun.mutateAsync({
+        // Enviar agora - cria run e abre modal de progresso
+        const run = await createCampaignRun.mutateAsync({
           campaign_id: campaign.id,
           status: "pending",
           scheduled_at: new Date().toISOString(),
@@ -168,9 +178,16 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           }
         });
 
-        toast.success("Campanha iniciada!", {
-          description: `Enviando ${selectedList.total_contacts} mensagens agora.`
+        // Abrir modal de progresso para envio em tempo real
+        setSendingCampaign({
+          campaignId: campaign.id,
+          runId: run.id,
+          leadListId: selectedList.id,
+          messageTemplate: customMessage,
         });
+        setSendProgressOpen(true);
+        
+        // Não resetar wizard ainda - será feito quando o modal fechar
       } else {
         // Agendar - cria run com status scheduled
         const scheduledAt = getScheduledDate()!;
@@ -581,6 +598,35 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           </Button>
         )}
       </div>
+
+      {/* Progress Modal for "Enviar Agora" */}
+      {sendingCampaign && defaultCredential && defaultPhoneNumber && (
+        <CampaignSendProgressModal
+          open={sendProgressOpen}
+          onOpenChange={(open) => {
+            setSendProgressOpen(open);
+            if (!open) {
+              // Reset wizard when modal closes
+              setCurrentStep(1);
+              setSelectedTemplate(null);
+              setCustomMessage("");
+              setSelectedList(null);
+              setScheduleMode("schedule");
+              setSelectedDate(undefined);
+              setSelectedTime("09:00");
+              setSendingCampaign(null);
+              onComplete?.();
+            }
+          }}
+          campaignId={sendingCampaign.campaignId}
+          runId={sendingCampaign.runId}
+          leadListId={sendingCampaign.leadListId}
+          messageTemplate={sendingCampaign.messageTemplate}
+          fromNumber={defaultPhoneNumber.phone_number}
+          provider={defaultCredential.provider}
+          credentialId={defaultCredential.id}
+        />
+      )}
     </div>
   );
 }

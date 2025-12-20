@@ -18,6 +18,7 @@ const ApiDocs = lazy(() => import("./features/shared/pages/ApiDocs"));
 // User pages
 const Dashboard = lazy(() => import("./features/user/pages/Dashboard"));
 const Contacts = lazy(() => import("./features/user/pages/Contacts"));
+const Credentials = lazy(() => import("./features/user/pages/Credentials"));
 const Analytics = lazy(() => import("./features/user/pages/Analytics"));
 const Templates = lazy(() => import("./features/user/pages/Templates"));
 const ApiTest = lazy(() => import("./features/user/pages/ApiTest"));
@@ -68,6 +69,13 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <Contacts />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/credentials" element={
+            <UserRoute>
+              <UserLayout>
+                <Credentials />
               </UserLayout>
             </UserRoute>
           } />

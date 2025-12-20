@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   FileText, 
   Users, 
@@ -11,7 +11,9 @@ import {
   Phone,
   MessageSquare,
   Send,
-  Save
+  Save,
+  Key,
+  Settings
 } from "lucide-react";
 import { format, addMinutes, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +29,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -37,7 +46,7 @@ import { CampaignSendProgressModal } from "./CampaignSendProgressModal";
 import { useLeadLists, type LeadList } from "@/shared/hooks/use-lead-lists";
 import { useCreateCampaign } from "@/shared/hooks/use-campaigns";
 import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
-import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
+import { useProviderCredentials, type ProviderCredential } from "@/shared/hooks/use-provider-credentials";
 import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
 import type { MessageTemplate } from "@/features/user/hooks/use-templates";
 
@@ -77,6 +86,10 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
     messageTemplate: string;
   } | null>(null);
   
+  // API/Credential and Phone Number selection
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null);
+  const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
+  
   // Data
   const { data: credentials } = useProviderCredentials();
   const { data: phoneNumbers } = usePhoneNumbers();
@@ -86,6 +99,36 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
   
   const defaultCredential = credentials?.find(c => c.is_default) || credentials?.[0];
   const defaultPhoneNumber = phoneNumbers?.find(p => p.is_active);
+  
+  // Credencial selecionada (ou default)
+  const activeCredential = useMemo(() => {
+    if (selectedCredentialId && credentials) {
+      return credentials.find(c => c.id === selectedCredentialId) || defaultCredential;
+    }
+    return defaultCredential;
+  }, [selectedCredentialId, credentials, defaultCredential]);
+  
+  // Números filtrados pelo provedor selecionado
+  const availablePhoneNumbers = useMemo(() => {
+    if (!phoneNumbers || !activeCredential) return [];
+    return phoneNumbers.filter(p => 
+      p.provider === activeCredential.provider && p.is_active
+    );
+  }, [phoneNumbers, activeCredential]);
+  
+  // Número selecionado (ou primeiro disponível)
+  const activeFromNumber = useMemo(() => {
+    if (selectedFromNumber && availablePhoneNumbers.some(p => p.phone_number === selectedFromNumber)) {
+      return selectedFromNumber;
+    }
+    return availablePhoneNumbers[0]?.phone_number || "";
+  }, [selectedFromNumber, availablePhoneNumbers]);
+  
+  // Resetar número quando trocar de provedor
+  const handleCredentialChange = (credentialId: string) => {
+    setSelectedCredentialId(credentialId);
+    setSelectedFromNumber(""); // Reset para escolher novo número
+  };
 
   const canProceed = () => {
     switch (currentStep) {
@@ -129,7 +172,7 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
   };
 
   const handleConfirm = async () => {
-    if (!selectedList || !customMessage || !defaultCredential || !defaultPhoneNumber) {
+    if (!selectedList || !customMessage || !activeCredential || !activeFromNumber) {
       toast.error("Dados incompletos");
       return;
     }
@@ -168,13 +211,13 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           status: "pending",
           scheduled_at: new Date().toISOString(),
           total_contacts: selectedList.total_contacts,
-          provider: defaultCredential.provider,
-          from_number: defaultPhoneNumber.phone_number,
+          provider: activeCredential.provider,
+          from_number: activeFromNumber,
           metadata: {
             campaign_name: campaignName,
             message_template: customMessage,
             lead_list_id: selectedList.id,
-            credential_id: defaultCredential.id,
+            credential_id: activeCredential.id,
           }
         });
 
@@ -196,13 +239,13 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           status: "scheduled",
           scheduled_at: scheduledAt.toISOString(),
           total_contacts: selectedList.total_contacts,
-          provider: defaultCredential.provider,
-          from_number: defaultPhoneNumber.phone_number,
+          provider: activeCredential.provider,
+          from_number: activeFromNumber,
           metadata: {
             campaign_name: campaignName,
             message_template: customMessage,
             lead_list_id: selectedList.id,
-            credential_id: defaultCredential.id,
+            credential_id: activeCredential.id,
           }
         });
 
@@ -219,6 +262,8 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
       setScheduleMode("schedule");
       setSelectedDate(undefined);
       setSelectedTime("09:00");
+      setSelectedCredentialId(null);
+      setSelectedFromNumber("");
       
       onComplete?.();
     } catch (error) {
@@ -461,6 +506,83 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
                   )}
                 </div>
               )}
+
+              {/* API/Credential and Phone Number Selection - Para todos os modos exceto rascunho */}
+              {scheduleMode !== "draft" && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Settings className="h-4 w-4" />
+                    Configuração de Envio
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Credential/API Selector */}
+                    <div className="space-y-2">
+                      <Label>Provedor / API</Label>
+                      <Select
+                        value={selectedCredentialId || activeCredential?.id || ""}
+                        onValueChange={handleCredentialChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma API" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {credentials?.map((cred) => (
+                            <SelectItem key={cred.id} value={cred.id}>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {cred.provider}
+                                </Badge>
+                                {cred.credential_name}
+                                {cred.is_default && (
+                                  <Badge variant="secondary" className="text-xs ml-1">
+                                    Padrão
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Phone Number Selector */}
+                    <div className="space-y-2">
+                      <Label>Número de Origem / Sender ID</Label>
+                      <Select
+                        value={activeFromNumber}
+                        onValueChange={setSelectedFromNumber}
+                        disabled={availablePhoneNumbers.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            availablePhoneNumbers.length === 0 
+                              ? "Nenhum número disponível" 
+                              : "Selecione um número"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePhoneNumbers.map((phone) => (
+                            <SelectItem key={phone.id} value={phone.phone_number}>
+                              {phone.phone_number}
+                              {phone.friendly_name && (
+                                <span className="text-muted-foreground ml-2">
+                                  ({phone.friendly_name})
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {availablePhoneNumbers.length === 0 && activeCredential && (
+                        <p className="text-xs text-muted-foreground">
+                          Nenhum número encontrado para {activeCredential.provider}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -515,28 +637,33 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
               </div>
 
               {/* Provider Info */}
-              <div className="p-4 rounded-lg border">
+              <div className="p-4 rounded-lg border bg-muted/30">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-                  <Phone className="h-4 w-4" />
+                  <Settings className="h-4 w-4" />
                   Configuração de Envio
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Número de Origem</p>
-                    <p className="font-medium">{defaultPhoneNumber?.phone_number || "Não configurado"}</p>
+                    <p className="text-sm text-muted-foreground">Provedor / API</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline">{activeCredential?.provider || "N/A"}</Badge>
+                      <span className="font-medium text-sm">
+                        {activeCredential?.credential_name || "Não configurado"}
+                      </span>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Provedor</p>
-                    <Badge>{defaultCredential?.provider || "Não configurado"}</Badge>
+                    <p className="text-sm text-muted-foreground">Número de Origem</p>
+                    <p className="font-medium">{activeFromNumber || "Não configurado"}</p>
                   </div>
                 </div>
               </div>
 
-              {(!defaultCredential || !defaultPhoneNumber) && (
+              {(!activeCredential || !activeFromNumber) && scheduleMode !== "draft" && (
                 <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
                   <p className="font-medium">Configuração incompleta</p>
                   <p className="text-sm mt-1">
-                    Configure suas credenciais e número de origem antes de agendar.
+                    Configure suas credenciais e número de origem antes de enviar.
                   </p>
                 </div>
               )}
@@ -564,7 +691,7 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
         ) : (
           <Button 
             onClick={handleConfirm} 
-            disabled={!defaultCredential || !defaultPhoneNumber || isLoading}
+            disabled={(scheduleMode !== "draft" && (!activeCredential || !activeFromNumber)) || isLoading}
           >
             {isLoading ? (
               <>
@@ -600,7 +727,7 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
       </div>
 
       {/* Progress Modal for "Enviar Agora" */}
-      {sendingCampaign && defaultCredential && defaultPhoneNumber && (
+      {sendingCampaign && activeCredential && activeFromNumber && (
         <CampaignSendProgressModal
           open={sendProgressOpen}
           onOpenChange={(open) => {
@@ -614,6 +741,8 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
               setScheduleMode("schedule");
               setSelectedDate(undefined);
               setSelectedTime("09:00");
+              setSelectedCredentialId(null);
+              setSelectedFromNumber("");
               setSendingCampaign(null);
               onComplete?.();
             }
@@ -622,9 +751,9 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
           runId={sendingCampaign.runId}
           leadListId={sendingCampaign.leadListId}
           messageTemplate={sendingCampaign.messageTemplate}
-          fromNumber={defaultPhoneNumber.phone_number}
-          provider={defaultCredential.provider}
-          credentialId={defaultCredential.id}
+          fromNumber={activeFromNumber}
+          provider={activeCredential.provider}
+          credentialId={activeCredential.id}
         />
       )}
     </div>

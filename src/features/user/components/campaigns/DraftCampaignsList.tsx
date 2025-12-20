@@ -1,16 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   CalendarDays, 
   Loader2, 
   Trash2, 
   FileText,
   Play,
-  Inbox
+  Inbox,
+  Settings
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
 import { useDraftCampaigns, useDeleteCampaign, type Campaign } from "@/shared/hooks/use-campaigns";
 import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
@@ -27,6 +44,7 @@ export function DraftCampaignsList() {
   const deleteCampaign = useDeleteCampaign();
   const createRun = useCreateCampaignRun();
 
+  // Dialog states
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<Campaign | null>(null);
   const [sendProgressOpen, setSendProgressOpen] = useState(false);
@@ -37,50 +55,97 @@ export function DraftCampaignsList() {
     messageTemplate: string;
   } | null>(null);
 
+  // Send config dialog state
+  const [sendConfigOpen, setSendConfigOpen] = useState(false);
+  const [configDraft, setConfigDraft] = useState<Campaign | null>(null);
+  const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
+  const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
+
   const defaultCredential = credentials?.find(c => c.is_default) || credentials?.[0];
   const defaultPhoneNumber = phoneNumbers?.find(p => p.is_active);
+
+  // Get active credential based on selection
+  const activeCredential = useMemo(() => {
+    if (selectedCredentialId && credentials) {
+      return credentials.find(c => c.id === selectedCredentialId);
+    }
+    return defaultCredential;
+  }, [selectedCredentialId, credentials, defaultCredential]);
+
+  // Filter phone numbers by selected provider
+  const availablePhoneNumbers = useMemo(() => {
+    if (!phoneNumbers || !activeCredential) return [];
+    return phoneNumbers.filter(p => 
+      p.provider === activeCredential.provider && p.is_active
+    );
+  }, [phoneNumbers, activeCredential]);
+
+  // Get active phone number
+  const activeFromNumber = useMemo(() => {
+    if (selectedFromNumber && availablePhoneNumbers.some(p => p.phone_number === selectedFromNumber)) {
+      return selectedFromNumber;
+    }
+    return availablePhoneNumbers[0]?.phone_number || "";
+  }, [selectedFromNumber, availablePhoneNumbers]);
+
+  const handleCredentialChange = (credentialId: string) => {
+    setSelectedCredentialId(credentialId);
+    setSelectedFromNumber(""); // Reset phone number when changing provider
+  };
 
   const handleDeleteDraft = (campaignId: string) => {
     deleteCampaign.mutate(campaignId);
   };
 
   const handleScheduleDraft = (draft: Campaign) => {
+    // Open config dialog first, then schedule dialog
+    setConfigDraft(draft);
+    setSelectedCredentialId(defaultCredential?.id || "");
+    setSelectedFromNumber(defaultPhoneNumber?.phone_number || "");
     setSelectedDraft(draft);
     setScheduleDialogOpen(true);
   };
 
-  const handleSendNowDraft = async (draft: Campaign) => {
-    if (!defaultCredential || !defaultPhoneNumber) {
-      toast.error("Configure uma credencial e número de telefone padrão");
+  const openSendConfigDialog = (draft: Campaign) => {
+    setConfigDraft(draft);
+    setSelectedCredentialId(defaultCredential?.id || "");
+    setSelectedFromNumber(defaultPhoneNumber?.phone_number || "");
+    setSendConfigOpen(true);
+  };
+
+  const handleConfirmSendNow = async () => {
+    if (!configDraft || !activeCredential || !activeFromNumber) {
+      toast.error("Configure uma credencial e número de telefone");
       return;
     }
 
-    if (!draft.lead_list_id) {
+    if (!configDraft.lead_list_id) {
       toast.error("Esta campanha não possui uma lista de leads associada");
       return;
     }
 
     try {
       const run = await createRun.mutateAsync({
-        campaign_id: draft.id,
+        campaign_id: configDraft.id,
         status: "pending",
         scheduled_at: new Date().toISOString(),
-        total_contacts: draft.contact_count || 0,
-        provider: defaultCredential.provider,
-        from_number: defaultPhoneNumber.phone_number,
+        total_contacts: configDraft.contact_count || 0,
+        provider: activeCredential.provider,
+        from_number: activeFromNumber,
         metadata: {
-          campaign_name: draft.name,
-          message_template: draft.message_template,
-          lead_list_id: draft.lead_list_id,
-          credential_id: defaultCredential.id,
+          campaign_name: configDraft.name,
+          message_template: configDraft.message_template,
+          lead_list_id: configDraft.lead_list_id,
+          credential_id: activeCredential.id,
         }
       });
 
+      setSendConfigOpen(false);
       setSendingCampaign({
-        campaignId: draft.id,
+        campaignId: configDraft.id,
         runId: run.id,
-        leadListId: draft.lead_list_id,
-        messageTemplate: draft.message_template,
+        leadListId: configDraft.lead_list_id,
+        messageTemplate: configDraft.message_template,
       });
       setSendProgressOpen(true);
     } catch (error) {
@@ -90,6 +155,7 @@ export function DraftCampaignsList() {
 
   const handleSendComplete = () => {
     refetch();
+    setConfigDraft(null);
   };
 
   if (isLoading) {
@@ -173,7 +239,7 @@ export function DraftCampaignsList() {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => handleSendNowDraft(draft)}
+                    onClick={() => openSendConfigDialog(draft)}
                     disabled={createRun.isPending || !draft.lead_list_id}
                   >
                     <Play className="h-4 w-4 mr-1" />
@@ -204,15 +270,127 @@ export function DraftCampaignsList() {
         ))}
       </div>
 
+      {/* Send Config Dialog */}
+      <Dialog open={sendConfigOpen} onOpenChange={setSendConfigOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurar Envio
+            </DialogTitle>
+            <DialogDescription>
+              Selecione a API e o número de origem para enviar a campanha.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {configDraft && (
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="font-medium text-sm">{configDraft.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {configDraft.contact_count || 0} contatos
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* Credential/API Selector */}
+              <div className="space-y-2">
+                <Label>Provedor / API</Label>
+                <Select
+                  value={selectedCredentialId}
+                  onValueChange={handleCredentialChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma API" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {credentials?.map((cred) => (
+                      <SelectItem key={cred.id} value={cred.id}>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {cred.provider}
+                          </Badge>
+                          {cred.credential_name}
+                          {cred.is_default && (
+                            <Badge variant="secondary" className="text-xs ml-1">
+                              Padrão
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Phone Number Selector */}
+              <div className="space-y-2">
+                <Label>Número de Origem / Sender ID</Label>
+                <Select
+                  value={activeFromNumber}
+                  onValueChange={setSelectedFromNumber}
+                  disabled={availablePhoneNumbers.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      availablePhoneNumbers.length === 0 
+                        ? "Nenhum número disponível" 
+                        : "Selecione um número"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePhoneNumbers.map((phone) => (
+                      <SelectItem key={phone.id} value={phone.phone_number}>
+                        {phone.phone_number}
+                        {phone.friendly_name && (
+                          <span className="text-muted-foreground ml-2">
+                            ({phone.friendly_name})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availablePhoneNumbers.length === 0 && activeCredential && (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum número encontrado para {activeCredential.provider}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendConfigOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmSendNow}
+              disabled={!activeCredential || !activeFromNumber || createRun.isPending}
+            >
+              {createRun.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Enviar Agora
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Schedule Dialog */}
-      {selectedDraft && defaultCredential && defaultPhoneNumber && (
+      {selectedDraft && (
         <ScheduleDraftDialog
           open={scheduleDialogOpen}
           onOpenChange={setScheduleDialogOpen}
           campaign={selectedDraft}
-          provider={defaultCredential.provider}
-          fromNumber={defaultPhoneNumber.phone_number}
-          credentialId={defaultCredential.id}
           onScheduled={() => {
             setScheduleDialogOpen(false);
             setSelectedDraft(null);
@@ -222,7 +400,7 @@ export function DraftCampaignsList() {
       )}
 
       {/* Send Progress Modal */}
-      {sendingCampaign && defaultCredential && defaultPhoneNumber && (
+      {sendingCampaign && activeCredential && activeFromNumber && (
         <CampaignSendProgressModal
           open={sendProgressOpen}
           onOpenChange={setSendProgressOpen}
@@ -230,9 +408,9 @@ export function DraftCampaignsList() {
           runId={sendingCampaign.runId}
           leadListId={sendingCampaign.leadListId}
           messageTemplate={sendingCampaign.messageTemplate}
-          fromNumber={defaultPhoneNumber.phone_number}
-          provider={defaultCredential.provider}
-          credentialId={defaultCredential.id}
+          fromNumber={activeFromNumber}
+          provider={activeCredential.provider}
+          credentialId={activeCredential.id}
           onComplete={handleSendComplete}
         />
       )}

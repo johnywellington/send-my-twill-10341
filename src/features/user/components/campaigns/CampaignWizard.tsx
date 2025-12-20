@@ -9,7 +9,9 @@ import {
   Loader2,
   Clock,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Send,
+  Save
 } from "lucide-react";
 import { format, addMinutes, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -58,7 +61,9 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
   // Step 2 - Lead List
   const [selectedList, setSelectedList] = useState<LeadList | null>(null);
   
-  // Step 3 - Schedule
+  // Step 3 - Schedule Mode
+  type ScheduleMode = "send_now" | "schedule" | "draft";
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("schedule");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState("09:00");
   
@@ -79,6 +84,9 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
       case 2:
         return selectedList !== null;
       case 3:
+        // "send_now" e "draft" sempre podem prosseguir
+        if (scheduleMode === "send_now" || scheduleMode === "draft") return true;
+        // "schedule" precisa de data/hora válida
         return isValidSchedule();
       default:
         return true;
@@ -116,10 +124,13 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
       return;
     }
 
-    const scheduledAt = getScheduledDate();
-    if (!scheduledAt) {
-      toast.error("Data de agendamento inválida");
-      return;
+    // Validar data apenas para modo agendado
+    if (scheduleMode === "schedule") {
+      const scheduledAt = getScheduledDate();
+      if (!scheduledAt) {
+        toast.error("Data de agendamento inválida");
+        return;
+      }
     }
 
     try {
@@ -134,31 +145,61 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
         contact_count: selectedList.total_contacts,
       });
 
-      // 2. Create scheduled run
-      await createCampaignRun.mutateAsync({
-        campaign_id: campaign.id,
-        status: "scheduled",
-        scheduled_at: scheduledAt.toISOString(),
-        total_contacts: selectedList.total_contacts,
-        provider: defaultCredential.provider,
-        from_number: defaultPhoneNumber.phone_number,
-        metadata: {
-          campaign_name: campaignName,
-          message_template: customMessage,
-          lead_list_id: selectedList.id,
-          credential_id: defaultCredential.id,
-        }
-      });
+      // 2. Criar run baseado no modo selecionado
+      if (scheduleMode === "draft") {
+        // Salvar como rascunho - não cria run
+        toast.success("Campanha salva como rascunho!", {
+          description: "Você pode enviá-la manualmente depois na aba 'Agendados'."
+        });
+      } else if (scheduleMode === "send_now") {
+        // Enviar agora - cria run com status pending e scheduled_at = now
+        await createCampaignRun.mutateAsync({
+          campaign_id: campaign.id,
+          status: "pending",
+          scheduled_at: new Date().toISOString(),
+          total_contacts: selectedList.total_contacts,
+          provider: defaultCredential.provider,
+          from_number: defaultPhoneNumber.phone_number,
+          metadata: {
+            campaign_name: campaignName,
+            message_template: customMessage,
+            lead_list_id: selectedList.id,
+            credential_id: defaultCredential.id,
+          }
+        });
 
-      toast.success("Campanha agendada com sucesso!", {
-        description: `Envio programado para ${format(scheduledAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
-      });
+        toast.success("Campanha iniciada!", {
+          description: `Enviando ${selectedList.total_contacts} mensagens agora.`
+        });
+      } else {
+        // Agendar - cria run com status scheduled
+        const scheduledAt = getScheduledDate()!;
+        await createCampaignRun.mutateAsync({
+          campaign_id: campaign.id,
+          status: "scheduled",
+          scheduled_at: scheduledAt.toISOString(),
+          total_contacts: selectedList.total_contacts,
+          provider: defaultCredential.provider,
+          from_number: defaultPhoneNumber.phone_number,
+          metadata: {
+            campaign_name: campaignName,
+            message_template: customMessage,
+            lead_list_id: selectedList.id,
+            credential_id: defaultCredential.id,
+          }
+        });
+
+        toast.success("Campanha agendada com sucesso!", {
+          description: `Envio programado para ${format(scheduledAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+        });
+      }
 
       // Reset wizard
       setCurrentStep(1);
       setSelectedTemplate(null);
       setCustomMessage("");
       setSelectedList(null);
+      setScheduleMode("schedule");
       setSelectedDate(undefined);
       setSelectedTime("09:00");
       
@@ -223,7 +264,7 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
             {currentStep === 3 && (
               <>
                 <CalendarDays className="h-5 w-5" />
-                Passo 3: Agende Data e Hora
+                Passo 3: Opções de Envio
               </>
             )}
             {currentStep === 4 && (
@@ -253,77 +294,155 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
             />
           )}
 
-          {/* Step 3 - Schedule */}
+          {/* Step 3 - Schedule Options */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Date Picker */}
-                <div className="space-y-2">
-                  <Label>Data do Envio</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal h-12",
-                          !selectedDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarDays className="mr-2 h-4 w-4" />
-                        {selectedDate ? (
-                          format(selectedDate, "PPP", { locale: ptBR })
-                        ) : (
-                          "Selecione uma data"
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
-                        initialFocus
-                        locale={ptBR}
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Time Picker */}
-                <div className="space-y-2">
-                  <Label htmlFor="time">Horário</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="time"
-                      type="time"
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                      className="pl-10 h-12"
-                    />
+              {/* Radio options */}
+              <RadioGroup 
+                value={scheduleMode} 
+                onValueChange={(v) => setScheduleMode(v as ScheduleMode)}
+                className="grid gap-4"
+              >
+                {/* Opção 1: Enviar Agora */}
+                <label 
+                  htmlFor="send_now"
+                  className={cn(
+                    "flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                    scheduleMode === "send_now" 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted hover:border-muted-foreground/50"
+                  )}
+                >
+                  <RadioGroupItem value="send_now" id="send_now" className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Send className="h-5 w-5 text-primary" />
+                      <span className="font-medium">Enviar Agora</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Inicia o envio imediatamente após a confirmação
+                    </p>
                   </div>
-                </div>
-              </div>
+                </label>
 
-              {/* Preview */}
-              {selectedDate && (
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="font-medium">Resumo do Agendamento:</p>
-                  <p className="text-muted-foreground mt-1">
-                    {selectedList?.total_contacts || 0} mensagens serão enviadas em{" "}
-                    <span className="font-medium text-foreground">
-                      {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} às {selectedTime}
-                    </span>
-                  </p>
-                </div>
-              )}
+                {/* Opção 2: Agendar */}
+                <label 
+                  htmlFor="schedule"
+                  className={cn(
+                    "flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                    scheduleMode === "schedule" 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted hover:border-muted-foreground/50"
+                  )}
+                >
+                  <RadioGroupItem value="schedule" id="schedule" className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-5 w-5 text-primary" />
+                      <span className="font-medium">Agendar para Data e Hora</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Programe o envio para uma data e horário específicos
+                    </p>
+                  </div>
+                </label>
 
-              {!isValidSchedule() && selectedDate && (
-                <p className="text-sm text-destructive">
-                  O agendamento deve ser para pelo menos 5 minutos no futuro.
-                </p>
+                {/* Opção 3: Salvar como Rascunho */}
+                <label 
+                  htmlFor="draft"
+                  className={cn(
+                    "flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                    scheduleMode === "draft" 
+                      ? "border-primary bg-primary/5" 
+                      : "border-muted hover:border-muted-foreground/50"
+                  )}
+                >
+                  <RadioGroupItem value="draft" id="draft" className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Save className="h-5 w-5 text-primary" />
+                      <span className="font-medium">Salvar para Enviar Depois</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Salva a campanha como rascunho para envio manual posterior
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
+
+              {/* Date/Time Picker - Apenas para modo agendado */}
+              {scheduleMode === "schedule" && (
+                <div className="space-y-4 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Date Picker */}
+                    <div className="space-y-2">
+                      <Label>Data do Envio</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal h-12",
+                              !selectedDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {selectedDate ? (
+                              format(selectedDate, "PPP", { locale: ptBR })
+                            ) : (
+                              "Selecione uma data"
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                            initialFocus
+                            locale={ptBR}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Time Picker */}
+                    <div className="space-y-2">
+                      <Label htmlFor="time">Horário</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="time"
+                          type="time"
+                          value={selectedTime}
+                          onChange={(e) => setSelectedTime(e.target.value)}
+                          className="pl-10 h-12"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {selectedDate && (
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="font-medium">Resumo do Agendamento:</p>
+                      <p className="text-muted-foreground mt-1">
+                        {selectedList?.total_contacts || 0} mensagens serão enviadas em{" "}
+                        <span className="font-medium text-foreground">
+                          {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })} às {selectedTime}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
+                  {!isValidSchedule() && selectedDate && (
+                    <p className="text-sm text-destructive">
+                      O agendamento deve ser para pelo menos 5 minutos no futuro.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -357,15 +476,25 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
                 </Badge>
               </div>
 
-              {/* Schedule */}
+              {/* Schedule/Send Mode */}
               <div className="p-4 rounded-lg border">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-                  <CalendarDays className="h-4 w-4" />
-                  Data e Hora
+                  {scheduleMode === "send_now" && <Send className="h-4 w-4" />}
+                  {scheduleMode === "schedule" && <CalendarDays className="h-4 w-4" />}
+                  {scheduleMode === "draft" && <Save className="h-4 w-4" />}
+                  Modo de Envio
                 </div>
-                <p className="font-medium">
-                  {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} às {selectedTime}
-                </p>
+                {scheduleMode === "send_now" && (
+                  <p className="font-medium text-primary">Enviar imediatamente após confirmar</p>
+                )}
+                {scheduleMode === "schedule" && (
+                  <p className="font-medium">
+                    {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} às {selectedTime}
+                  </p>
+                )}
+                {scheduleMode === "draft" && (
+                  <p className="font-medium text-muted-foreground">Salvar como rascunho (envio manual)</p>
+                )}
               </div>
 
               {/* Provider Info */}
@@ -423,12 +552,30 @@ export function CampaignWizard({ onComplete }: CampaignWizardProps) {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Agendando...
+                {scheduleMode === "send_now" && "Enviando..."}
+                {scheduleMode === "schedule" && "Agendando..."}
+                {scheduleMode === "draft" && "Salvando..."}
               </>
             ) : (
               <>
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Agendar Campanha
+                {scheduleMode === "send_now" && (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar Agora
+                  </>
+                )}
+                {scheduleMode === "schedule" && (
+                  <>
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    Agendar Campanha
+                  </>
+                )}
+                {scheduleMode === "draft" && (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Rascunho
+                  </>
+                )}
               </>
             )}
           </Button>

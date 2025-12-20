@@ -9,7 +9,9 @@ import {
   ChevronUp,
   RefreshCcw,
   Download,
-  Eye
+  Eye,
+  PauseCircle,
+  Play
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,18 +31,21 @@ interface CampaignRunCardProps {
   onCancel?: (runId: string) => void;
   onRetryFailed?: (run: CampaignRun) => void;
   onViewDetails?: (run: CampaignRun) => void;
+  onPause?: (runId: string) => void;
+  onResume?: (runId: string) => void;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
   pending: { label: 'Pendente', icon: Clock, color: 'bg-muted text-muted-foreground' },
   scheduled: { label: 'Agendado', icon: CalendarDays, color: 'bg-blue-500/10 text-blue-600' },
   running: { label: 'Em andamento', icon: PlayCircle, color: 'bg-amber-500/10 text-amber-600' },
   completed: { label: 'Concluído', icon: CheckCircle2, color: 'bg-green-500/10 text-green-600' },
   failed: { label: 'Falhou', icon: XCircle, color: 'bg-destructive/10 text-destructive' },
   cancelled: { label: 'Cancelado', icon: Ban, color: 'bg-muted text-muted-foreground' },
+  paused: { label: 'Pausado', icon: PauseCircle, color: 'bg-yellow-500/10 text-yellow-600' },
 };
 
-export function CampaignRunCard({ run, onCancel, onRetryFailed, onViewDetails }: CampaignRunCardProps) {
+export function CampaignRunCard({ run, onCancel, onRetryFailed, onViewDetails, onPause, onResume }: CampaignRunCardProps) {
   const [showFailed, setShowFailed] = useState(false);
 
   const status = statusConfig[run.status] || statusConfig.pending;
@@ -102,7 +107,7 @@ export function CampaignRunCard({ run, onCancel, onRetryFailed, onViewDetails }:
 
       <CardContent className="space-y-4">
         {/* Progress Bar */}
-        {(run.status === 'running' || run.status === 'completed' || run.status === 'failed') && (
+        {(run.status === 'running' || run.status === 'completed' || run.status === 'failed' || run.status === 'paused') && (
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -165,9 +170,43 @@ export function CampaignRunCard({ run, onCancel, onRetryFailed, onViewDetails }:
           </Collapsible>
         )}
 
+        {/* Pending indicator for paused campaigns */}
+        {run.status === 'paused' && run.pending_sends > 0 && (
+          <div className="flex items-center gap-2 text-xs text-yellow-600 bg-yellow-500/10 p-2 rounded">
+            <PauseCircle className="h-4 w-4" />
+            <span>{run.pending_sends} envios pendentes aguardando retomada</span>
+          </div>
+        )}
+
         {/* Action Buttons */}
-        <div className="flex gap-2">
-          {run.status === 'scheduled' && onCancel && (
+        <div className="flex gap-2 flex-wrap">
+          {/* Pause button - only for running campaigns */}
+          {run.status === 'running' && onPause && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+              onClick={() => onPause(run.id)}
+            >
+              <PauseCircle className="h-4 w-4 mr-1" />
+              Pausar
+            </Button>
+          )}
+
+          {/* Resume button - only for paused campaigns */}
+          {run.status === 'paused' && onResume && (
+            <Button 
+              size="sm" 
+              className="flex-1"
+              onClick={() => onResume(run.id)}
+            >
+              <Play className="h-4 w-4 mr-1" />
+              Retomar
+            </Button>
+          )}
+
+          {/* Cancel button - for scheduled or paused campaigns */}
+          {(run.status === 'scheduled' || run.status === 'paused') && onCancel && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -179,7 +218,7 @@ export function CampaignRunCard({ run, onCancel, onRetryFailed, onViewDetails }:
             </Button>
           )}
           
-          {hasFailures && run.status !== 'running' && (
+          {hasFailures && run.status !== 'running' && run.status !== 'paused' && (
             <>
               <Button
                 variant="outline"

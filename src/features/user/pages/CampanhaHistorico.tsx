@@ -16,7 +16,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 import { CampaignRunCard } from "@/components/campaigns/CampaignRunCard";
-import { useCampaignRuns, useCancelScheduledRun, type CampaignRun } from "@/shared/hooks/use-campaign-runs";
+import { 
+  useCampaignRuns, 
+  useCancelScheduledRun, 
+  usePauseCampaignRun,
+  useResumeCampaignRun,
+  type CampaignRun 
+} from "@/shared/hooks/use-campaign-runs";
 import { useCampaigns } from "@/shared/hooks/use-campaigns";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +36,8 @@ export default function CampanhaHistorico() {
   const { data: runs, isLoading: loadingRuns, refetch } = useCampaignRuns();
   const { data: campaigns } = useCampaigns();
   const cancelRun = useCancelScheduledRun();
+  const pauseRun = usePauseCampaignRun();
+  const resumeRun = useResumeCampaignRun();
 
   const filteredRuns = runs?.filter(run => {
     // Status filter
@@ -51,6 +59,14 @@ export default function CampanhaHistorico() {
 
   const handleCancelRun = (runId: string) => {
     cancelRun.mutate(runId);
+  };
+
+  const handlePauseRun = (runId: string) => {
+    pauseRun.mutate(runId);
+  };
+
+  const handleResumeRun = (runId: string) => {
+    resumeRun.mutate(runId);
   };
 
   const handleRetryFailed = (run: CampaignRun) => {
@@ -84,6 +100,7 @@ export default function CampanhaHistorico() {
     completed: runs?.filter(r => r.status === 'completed').length || 0,
     scheduled: runs?.filter(r => r.status === 'scheduled').length || 0,
     failed: runs?.filter(r => r.status === 'failed').length || 0,
+    paused: runs?.filter(r => r.status === 'paused').length || 0,
   };
 
   return (
@@ -106,7 +123,7 @@ export default function CampanhaHistorico() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -123,6 +140,12 @@ export default function CampanhaHistorico() {
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">{stats.scheduled}</div>
             <div className="text-sm text-muted-foreground">Agendadas</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-600">{stats.paused}</div>
+            <div className="text-sm text-muted-foreground">Pausadas</div>
           </CardContent>
         </Card>
         <Card>
@@ -157,6 +180,7 @@ export default function CampanhaHistorico() {
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="completed">Concluídos</SelectItem>
                 <SelectItem value="running">Em andamento</SelectItem>
+                <SelectItem value="paused">Pausados</SelectItem>
                 <SelectItem value="scheduled">Agendados</SelectItem>
                 <SelectItem value="failed">Com falhas</SelectItem>
                 <SelectItem value="cancelled">Cancelados</SelectItem>
@@ -203,6 +227,8 @@ export default function CampanhaHistorico() {
               run={run}
               onCancel={handleCancelRun}
               onRetryFailed={handleRetryFailed}
+              onPause={handlePauseRun}
+              onResume={handleResumeRun}
             />
           ))}
         </div>

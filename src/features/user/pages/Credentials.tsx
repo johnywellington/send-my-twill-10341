@@ -16,7 +16,8 @@ import {
   useDeleteProviderCredential,
   ProviderCredential 
 } from "@/shared/hooks/use-provider-credentials";
-import { Key, Plus, Trash2, Edit2, Star, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { useTestCredentialConnection } from "@/shared/hooks/use-test-credential-connection";
+import { Key, Plus, Trash2, Edit2, Star, Wifi, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Credentials() {
@@ -24,6 +25,33 @@ export default function Credentials() {
   const createCredential = useCreateProviderCredential();
   const updateCredential = useUpdateProviderCredential();
   const deleteCredential = useDeleteProviderCredential();
+  const testConnection = useTestCredentialConnection();
+
+  const [testingCredentialId, setTestingCredentialId] = useState<string | null>(null);
+
+  const handleTestConnection = async (credentialId: string) => {
+    setTestingCredentialId(credentialId);
+    try {
+      const result = await testConnection.mutateAsync(credentialId);
+      if (result.success) {
+        toast({ title: "Conexão OK", description: "Credenciais válidas e funcionando!" });
+      } else {
+        toast({ 
+          title: "Falha na conexão", 
+          description: result.error || "Verifique as credenciais", 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      toast({ 
+        title: "Erro ao testar", 
+        description: error instanceof Error ? error.message : "Erro desconhecido", 
+        variant: "destructive" 
+      });
+    } finally {
+      setTestingCredentialId(null);
+    }
+  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCredential, setEditingCredential] = useState<ProviderCredential | null>(null);
@@ -292,7 +320,9 @@ export default function Credentials() {
                     onEdit={() => handleOpenDialog(cred)}
                     onDelete={() => handleDelete(cred.id)}
                     onSetDefault={() => handleSetDefault(cred)}
+                    onTest={() => handleTestConnection(cred.id)}
                     isDeleting={deleteCredential.isPending}
+                    isTesting={testingCredentialId === cred.id}
                   />
                 ))
               )}
@@ -332,7 +362,9 @@ export default function Credentials() {
                     onEdit={() => handleOpenDialog(cred)}
                     onDelete={() => handleDelete(cred.id)}
                     onSetDefault={() => handleSetDefault(cred)}
+                    onTest={() => handleTestConnection(cred.id)}
                     isDeleting={deleteCredential.isPending}
+                    isTesting={testingCredentialId === cred.id}
                   />
                 ))
               )}
@@ -349,10 +381,12 @@ interface CredentialCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onSetDefault: () => void;
+  onTest: () => void;
   isDeleting: boolean;
+  isTesting: boolean;
 }
 
-function CredentialCard({ credential, onEdit, onDelete, onSetDefault, isDeleting }: CredentialCardProps) {
+function CredentialCard({ credential, onEdit, onDelete, onSetDefault, onTest, isDeleting, isTesting }: CredentialCardProps) {
   return (
     <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
       <div className="flex items-center gap-3">
@@ -373,6 +407,19 @@ function CredentialCard({ credential, onEdit, onDelete, onSetDefault, isDeleting
       </div>
 
       <div className="flex items-center gap-1">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onTest} 
+          disabled={isTesting}
+          title="Testar conexão"
+        >
+          {isTesting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Wifi className="h-4 w-4" />
+          )}
+        </Button>
         {!credential.is_default && (
           <Button variant="ghost" size="icon" onClick={onSetDefault} title="Definir como padrão">
             <Star className="h-4 w-4" />

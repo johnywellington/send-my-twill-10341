@@ -31,7 +31,7 @@ const ChamadasRecebidas = lazy(() => import("./features/user/pages/ChamadasReceb
 const SIP = lazy(() => import("./features/user/pages/SIP"));
 const Leads = lazy(() => import("./features/user/pages/Leads"));
 const Campanhas = lazy(() => import("./features/user/pages/Campanhas"));
-const CampanhaHistorico = lazy(() => import("./features/user/pages/CampanhaHistorico"));
+
 
 // Loading fallback
 const PageLoader = () => (
@@ -163,13 +163,6 @@ const App = () => (
             <UserRoute>
               <UserLayout>
                 <Campanhas />
-              </UserLayout>
-            </UserRoute>
-          } />
-          <Route path="/campanhas/historico" element={
-            <UserRoute>
-              <UserLayout>
-                <CampanhaHistorico />
               </UserLayout>
             </UserRoute>
           } />

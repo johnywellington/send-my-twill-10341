@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { History, Filter, Loader2, Search, Calendar, RefreshCcw } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { History, Loader2, Search, RefreshCcw } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 
 import { CampaignRunCard } from "@/components/campaigns/CampaignRunCard";
 import { 
@@ -27,7 +24,7 @@ import { useCampaigns } from "@/shared/hooks/use-campaigns";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-export default function CampanhaHistorico() {
+export function CampaignHistoryTab() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
@@ -40,13 +37,9 @@ export default function CampanhaHistorico() {
   const resumeRun = useResumeCampaignRun();
 
   const filteredRuns = runs?.filter(run => {
-    // Status filter
     if (statusFilter !== "all" && run.status !== statusFilter) return false;
-    
-    // Campaign filter
     if (campaignFilter !== "all" && run.campaign_id !== campaignFilter) return false;
     
-    // Search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesCampaign = run.campaign?.name?.toLowerCase().includes(query);
@@ -76,12 +69,10 @@ export default function CampanhaHistorico() {
       return;
     }
 
-    // Navegar para comunicação com os números pré-carregados
     toast.info(`${failedNumbers.length} números para reenviar`, {
       description: "Redirecionando para a Central de Comunicação...",
     });
     
-    // Armazenar números no sessionStorage para recuperar na página de comunicação
     sessionStorage.setItem('retryNumbers', JSON.stringify({
       numbers: failedNumbers.map(f => ({
         phone_number: f.phone_number,
@@ -94,7 +85,6 @@ export default function CampanhaHistorico() {
     navigate('/comunicacao');
   };
 
-  // Stats summary
   const stats = {
     total: runs?.length || 0,
     completed: runs?.filter(r => r.status === 'completed').length || 0,
@@ -104,30 +94,13 @@ export default function CampanhaHistorico() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <History className="h-8 w-8 text-primary" />
-            Histórico de Campanhas
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Acompanhe todas as execuções de envio
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">Total de Execuções</div>
+            <div className="text-sm text-muted-foreground">Total</div>
           </CardContent>
         </Card>
         <Card>
@@ -198,6 +171,11 @@ export default function CampanhaHistorico() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity } from "lucide-react";
 import { formatSIPUri } from "@/lib/sip-utils";
-import { SyncEndpointsButton } from "./SyncEndpointsButton";
 
 export function MonitorContent() {
   // Buscar endpoints registrados com polling inteligente
@@ -46,7 +45,6 @@ export function MonitorContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Monitor SIP</h2>
-        <SyncEndpointsButton />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

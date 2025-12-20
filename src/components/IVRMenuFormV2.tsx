@@ -19,10 +19,10 @@ import { IVRVoiceTestDialog } from "@/components/IVRVoiceTestDialog";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
 import { Badge } from "@/components/ui/badge";
-import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
+import { PhoneNumberSelector } from "@/components/PhoneNumberSelector";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay, calculateEstimatedTime } from "@/lib/rate-limits";
-import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { CredentialSelector } from "@/components/CredentialSelector";
 
 export function IVRMenuFormV2() {
   const { provider, autoFallback, getAlternativeProvider, selectedCredentialId, setSelectedCredentialId } = useProvider();

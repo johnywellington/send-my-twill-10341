@@ -17,13 +17,13 @@ import { VoiceSelector } from "@/components/VoiceSelector";
 import { isPortugueseLanguage } from "@/lib/voice-options";
 import { useProvider } from "@/contexts/ProviderContext";
 import { ProviderFactory } from "@/services/providers";
-import { PhoneNumberSelector } from "@/components/numbers/PhoneNumberSelector";
+import { PhoneNumberSelector } from "@/components/PhoneNumberSelector";
 import { Badge } from "@/components/ui/badge";
 import { DestinationNumbersInput } from "@/components/DestinationNumbersInput";
 import { BatchSendProgress, PhoneStatus } from "@/components/BatchSendProgress";
 import { RateLimitSelector } from "@/components/RateLimitSelector";
 import { calculateDelay } from "@/lib/rate-limits";
-import { CredentialSelector } from "@/components/credentials/CredentialSelector";
+import { CredentialSelector } from "@/components/CredentialSelector";
 
 interface VoiceCallFormProps {
   onCallMade?: () => void;

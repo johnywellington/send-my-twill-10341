@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PhoneForwarded, RefreshCw, Phone, CheckCircle2, Clock, Hash, TrendingUp } from "lucide-react";
+import { PhoneForwarded, RefreshCw, Phone, CheckCircle2, Clock, Hash, TrendingUp, AlertTriangle } from "lucide-react";
 import { useURAMonitoring } from "@/features/user/hooks/use-ura-monitoring";
 import { Progress } from "@/components/ui/progress";
-import { RealtimeAlertsCard } from "@/components/monitoring/RealtimeAlertsCard";
-import { ActiveCallsTable } from "@/components/monitoring/ActiveCallsTable";
 import { IVRAnalytics } from "@/components/analytics/IVRAnalytics";
-import { CallDetailsDialog } from "@/components/monitoring/CallDetailsDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ChamadasURA() {
   const [liveTimeWindow, setLiveTimeWindow] = useState<'5min' | '1hour' | '24hours'>('24hours');
@@ -62,7 +63,12 @@ export default function ChamadasURA() {
 
       {/* Alertas em Tempo Real */}
       {alerts.length > 0 && (
-        <RealtimeAlertsCard alerts={alerts} />
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {alerts.length} alerta(s) ativo(s) - Verifique as chamadas em andamento
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* KPIs em Tempo Real */}
@@ -178,10 +184,44 @@ export default function ChamadasURA() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ActiveCallsTable
-            calls={activeCalls}
-            onViewDetails={(call) => setSelectedCall(call)}
-          />
+          {activeCalls.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>De</TableHead>
+                  <TableHead>Para</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Duração</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activeCalls.map((call: any) => (
+                  <TableRow key={call.id}>
+                    <TableCell className="font-mono text-sm">{call.from_number}</TableCell>
+                    <TableCell className="font-mono text-sm">{call.to_number}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{call.status}</Badge>
+                    </TableCell>
+                    <TableCell>{call.duration || 0}s</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedCall(call)}
+                      >
+                        Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">
+              Nenhuma chamada URA ativa no momento
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -216,13 +256,46 @@ export default function ChamadasURA() {
       </Card>
 
       {/* Call Details Dialog */}
-      {selectedCall && (
-        <CallDetailsDialog
-          call={selectedCall}
-          open={!!selectedCall}
-          onOpenChange={(open) => !open && setSelectedCall(null)}
-        />
-      )}
+      <Dialog open={!!selectedCall} onOpenChange={(open) => !open && setSelectedCall(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Chamada</DialogTitle>
+            <DialogDescription>
+              Informações detalhadas sobre a chamada URA
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCall && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">De</p>
+                  <p className="font-mono">{selectedCall.from_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Para</p>
+                  <p className="font-mono">{selectedCall.to_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge>{selectedCall.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Duração</p>
+                  <p>{selectedCall.duration || 0} segundos</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Criado em</p>
+                  <p>{new Date(selectedCall.created_at).toLocaleString('pt-BR')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Provider</p>
+                  <p>{selectedCall.provider}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

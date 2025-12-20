@@ -29,6 +29,8 @@ const ValidarNumeros = lazy(() => import("./features/user/pages/ValidarNumeros")
 const RelatorioCustos = lazy(() => import("./features/user/pages/RelatorioCustos"));
 const ChamadasRecebidas = lazy(() => import("./features/user/pages/ChamadasRecebidas"));
 const SIP = lazy(() => import("./features/user/pages/SIP"));
+const Leads = lazy(() => import("./features/user/pages/Leads"));
+const Campanhas = lazy(() => import("./features/user/pages/Campanhas"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -143,12 +145,26 @@ const App = () => (
           </UserRoute>
         } />
         <Route path="/sip" element={
-          <UserRoute>
-            <UserLayout>
-              <SIP />
-            </UserLayout>
-          </UserRoute>
-        } />
+            <UserRoute>
+              <UserLayout>
+                <SIP />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/leads" element={
+            <UserRoute>
+              <UserLayout>
+                <Leads />
+              </UserLayout>
+            </UserRoute>
+          } />
+          <Route path="/campanhas" element={
+            <UserRoute>
+              <UserLayout>
+                <Campanhas />
+              </UserLayout>
+            </UserRoute>
+          } />
 
           {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />

@@ -430,6 +430,83 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_list_contacts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_recurring: boolean | null
+          last_campaign_date: string | null
+          last_campaign_name: string | null
+          lead_list_id: string
+          name: string | null
+          phone_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          last_campaign_date?: string | null
+          last_campaign_name?: string | null
+          lead_list_id: string
+          name?: string | null
+          phone_number: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          last_campaign_date?: string | null
+          last_campaign_name?: string | null
+          lead_list_id?: string
+          name?: string | null
+          phone_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_list_contacts_lead_list_id_fkey"
+            columns: ["lead_list_id"]
+            isOneToOne: false
+            referencedRelation: "lead_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_lists: {
+        Row: {
+          clean_contacts: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          recurring_contacts: number | null
+          total_contacts: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          clean_contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          recurring_contacts?: number | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clean_contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          recurring_contacts?: number | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_templates: {
         Row: {
           category: string | null
@@ -1266,6 +1343,7 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          campaign_name: string | null
           cost: number | null
           created_at: string
           credential_id: string | null
@@ -1282,6 +1360,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          campaign_name?: string | null
           cost?: number | null
           created_at?: string
           credential_id?: string | null
@@ -1298,6 +1377,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          campaign_name?: string | null
           cost?: number | null
           created_at?: string
           credential_id?: string | null

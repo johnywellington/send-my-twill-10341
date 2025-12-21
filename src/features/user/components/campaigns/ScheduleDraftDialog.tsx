@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { format, addMinutes, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, Clock, Loader2, Settings, MessageSquare } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Settings, MessageSquare, Eye } from "lucide-react";
 
 import {
   Dialog,
@@ -35,6 +35,8 @@ import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
 import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
 import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
 import { useUpdateCampaign, type Campaign } from "@/shared/hooks/use-campaigns";
+import { replaceVariablesForPreview, extractVariables } from "@/shared/lib/template-utils";
+import { MessageEditorWithPreview } from "./MessageEditorWithPreview";
 
 interface ScheduleDraftDialogProps {
   open: boolean;
@@ -168,23 +170,11 @@ export function ScheduleDraftDialog({
             </p>
           </div>
 
-          {/* Editable Message */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Mensagem
-            </Label>
-            <Textarea
-              value={editedMessage}
-              onChange={(e) => setEditedMessage(e.target.value)}
-              placeholder="Digite a mensagem..."
-              rows={4}
-              className="resize-none"
-            />
-            <p className="text-xs text-muted-foreground">
-              Use {"{{variavel}}"} para personalização
-            </p>
-          </div>
+          {/* Editable Message with Preview */}
+          <MessageEditorWithPreview
+            value={editedMessage}
+            onChange={setEditedMessage}
+          />
 
           {/* API/Credential Selection */}
           <div className="space-y-4 border-t pt-4">

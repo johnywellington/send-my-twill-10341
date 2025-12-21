@@ -143,14 +143,14 @@ export function DestinationNumbersInput({
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {value.length < maxNumbers && (
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={addNumber}
-            className="flex-1 border-dashed"
+            className="flex-1 min-w-fit border-dashed"
           >
             <Plus className="mr-2 h-4 w-4" />
             Adicionar Número ({filledCount}/{maxNumbers})

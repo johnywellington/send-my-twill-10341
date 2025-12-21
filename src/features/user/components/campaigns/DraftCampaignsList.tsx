@@ -7,7 +7,8 @@ import {
   Play,
   Inbox,
   Settings,
-  MessageSquare
+  MessageSquare,
+  Eye
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +37,7 @@ import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials"
 import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
 import { ScheduleDraftDialog } from "./ScheduleDraftDialog";
 import { CampaignSendProgressModal } from "./CampaignSendProgressModal";
+import { MessageEditorWithPreview } from "./MessageEditorWithPreview";
 import { toast } from "sonner";
 
 export function DraftCampaignsList() {
@@ -309,22 +311,10 @@ export function DraftCampaignsList() {
             )}
 
             {/* Editable Message */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Mensagem
-              </Label>
-              <Textarea
-                value={editedMessage}
-                onChange={(e) => setEditedMessage(e.target.value)}
-                placeholder="Digite a mensagem..."
-                rows={4}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use {"{{variavel}}"} para personalização
-              </p>
-            </div>
+            <MessageEditorWithPreview
+              value={editedMessage}
+              onChange={setEditedMessage}
+            />
 
             <div className="space-y-4 border-t pt-4">
               {/* Credential/API Selector */}

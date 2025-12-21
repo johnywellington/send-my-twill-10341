@@ -185,8 +185,8 @@ serve(async (req: Request) => {
       const voiceMapping: Record<string, { language: string; style: number; premium: boolean }> = {
         'Camila': { language: 'pt-BR', style: 0, premium: true },
         'Vitória': { language: 'pt-BR', style: 1, premium: true },
-        'Ricardo': { language: 'pt-BR', style: 2, premium: true },
-        'Thiago': { language: 'pt-BR', style: 3, premium: true },
+        'Ricardo': { language: 'pt-BR', style: 5, premium: true },
+        'Thiago': { language: 'pt-BR', style: 6, premium: true },
         'Inês': { language: 'pt-PT', style: 0, premium: true },
         'Cristiano': { language: 'pt-PT', style: 1, premium: true }
       };

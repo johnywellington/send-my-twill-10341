@@ -20,8 +20,8 @@ export const VOICE_MAPPING: Record<string, VonageVoiceParams> = {
   // Portuguese Brazil - Neural Voices
   'Camila': { language: 'pt-BR', style: 0, premium: true },
   'Vitória': { language: 'pt-BR', style: 1, premium: true },
-  'Ricardo': { language: 'pt-BR', style: 2, premium: true },
-  'Thiago': { language: 'pt-BR', style: 3, premium: true },
+  'Ricardo': { language: 'pt-BR', style: 5, premium: true },
+  'Thiago': { language: 'pt-BR', style: 6, premium: true },
   
   // Portuguese Portugal - Neural Voices
   'Inês': { language: 'pt-PT', style: 0, premium: true },

@@ -6,13 +6,15 @@ import {
   FileText,
   Play,
   Inbox,
-  Settings
+  Settings,
+  MessageSquare
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
-import { useDraftCampaigns, useDeleteCampaign, type Campaign } from "@/shared/hooks/use-campaigns";
+import { useDraftCampaigns, useDeleteCampaign, useUpdateCampaign, type Campaign } from "@/shared/hooks/use-campaigns";
 import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
 import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
 import { ScheduleDraftDialog } from "./ScheduleDraftDialog";
@@ -42,6 +44,7 @@ export function DraftCampaignsList() {
   const { data: phoneNumbers } = usePhoneNumbers();
   
   const deleteCampaign = useDeleteCampaign();
+  const updateCampaign = useUpdateCampaign();
   const createRun = useCreateCampaignRun();
 
   // Dialog states
@@ -60,6 +63,7 @@ export function DraftCampaignsList() {
   const [configDraft, setConfigDraft] = useState<Campaign | null>(null);
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
   const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
+  const [editedMessage, setEditedMessage] = useState<string>("");
 
   const defaultCredential = credentials?.find(c => c.is_default) || credentials?.[0];
   const defaultPhoneNumber = phoneNumbers?.find(p => p.is_active);
@@ -110,6 +114,7 @@ export function DraftCampaignsList() {
     setConfigDraft(draft);
     setSelectedCredentialId(defaultCredential?.id || "");
     setSelectedFromNumber(defaultPhoneNumber?.phone_number || "");
+    setEditedMessage(draft.message_template);
     setSendConfigOpen(true);
   };
 
@@ -124,7 +129,17 @@ export function DraftCampaignsList() {
       return;
     }
 
+    const messageToSend = editedMessage.trim() || configDraft.message_template;
+
     try {
+      // Update campaign message if it was edited
+      if (editedMessage.trim() && editedMessage !== configDraft.message_template) {
+        await updateCampaign.mutateAsync({
+          id: configDraft.id,
+          message_template: editedMessage.trim(),
+        });
+      }
+
       const run = await createRun.mutateAsync({
         campaign_id: configDraft.id,
         status: "pending",
@@ -134,7 +149,7 @@ export function DraftCampaignsList() {
         from_number: activeFromNumber,
         metadata: {
           campaign_name: configDraft.name,
-          message_template: configDraft.message_template,
+          message_template: messageToSend,
           lead_list_id: configDraft.lead_list_id,
           credential_id: activeCredential.id,
         }
@@ -145,7 +160,7 @@ export function DraftCampaignsList() {
         campaignId: configDraft.id,
         runId: run.id,
         leadListId: configDraft.lead_list_id,
-        messageTemplate: configDraft.message_template,
+        messageTemplate: messageToSend,
       });
       setSendProgressOpen(true);
     } catch (error) {
@@ -293,7 +308,25 @@ export function DraftCampaignsList() {
               </div>
             )}
 
-            <div className="space-y-4">
+            {/* Editable Message */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Mensagem
+              </Label>
+              <Textarea
+                value={editedMessage}
+                onChange={(e) => setEditedMessage(e.target.value)}
+                placeholder="Digite a mensagem..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Use {"{{variavel}}"} para personalização
+              </p>
+            </div>
+
+            <div className="space-y-4 border-t pt-4">
               {/* Credential/API Selector */}
               <div className="space-y-2">
                 <Label>Provedor / API</Label>

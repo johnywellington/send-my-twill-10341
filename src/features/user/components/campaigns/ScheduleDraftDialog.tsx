@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addMinutes, setHours, setMinutes, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, Clock, Loader2, Settings } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Settings, MessageSquare } from "lucide-react";
 
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -33,7 +34,7 @@ import { toast } from "sonner";
 import { useCreateCampaignRun } from "@/shared/hooks/use-campaign-runs";
 import { useProviderCredentials } from "@/shared/hooks/use-provider-credentials";
 import { usePhoneNumbers } from "@/shared/hooks/use-phone-numbers";
-import type { Campaign } from "@/shared/hooks/use-campaigns";
+import { useUpdateCampaign, type Campaign } from "@/shared/hooks/use-campaigns";
 
 interface ScheduleDraftDialogProps {
   open: boolean;
@@ -52,10 +53,19 @@ export function ScheduleDraftDialog({
   const [selectedTime, setSelectedTime] = useState("09:00");
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>("");
   const [selectedFromNumber, setSelectedFromNumber] = useState<string>("");
+  const [editedMessage, setEditedMessage] = useState<string>("");
 
   const createRun = useCreateCampaignRun();
+  const updateCampaign = useUpdateCampaign();
   const { data: credentials } = useProviderCredentials();
   const { data: phoneNumbers } = usePhoneNumbers();
+
+  // Initialize message when dialog opens
+  useEffect(() => {
+    if (open && campaign) {
+      setEditedMessage(campaign.message_template);
+    }
+  }, [open, campaign]);
 
   const defaultCredential = credentials?.find(c => c.is_default) || credentials?.[0];
 
@@ -103,7 +113,17 @@ export function ScheduleDraftDialog({
       return;
     }
 
+    const messageToSend = editedMessage.trim() || campaign.message_template;
+
     try {
+      // Update campaign message if it was edited
+      if (editedMessage.trim() && editedMessage !== campaign.message_template) {
+        await updateCampaign.mutateAsync({
+          id: campaign.id,
+          message_template: editedMessage.trim(),
+        });
+      }
+
       await createRun.mutateAsync({
         campaign_id: campaign.id,
         status: "scheduled",
@@ -113,7 +133,7 @@ export function ScheduleDraftDialog({
         from_number: activeFromNumber,
         metadata: {
           campaign_name: campaign.name,
-          message_template: campaign.message_template,
+          message_template: messageToSend,
           lead_list_id: campaign.lead_list_id,
           credential_id: activeCredential.id,
         }
@@ -145,6 +165,24 @@ export function ScheduleDraftDialog({
             <p className="font-medium text-sm">{campaign.name}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {campaign.contact_count || 0} contatos
+            </p>
+          </div>
+
+          {/* Editable Message */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Mensagem
+            </Label>
+            <Textarea
+              value={editedMessage}
+              onChange={(e) => setEditedMessage(e.target.value)}
+              placeholder="Digite a mensagem..."
+              rows={4}
+              className="resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use {"{{variavel}}"} para personalização
             </p>
           </div>
 

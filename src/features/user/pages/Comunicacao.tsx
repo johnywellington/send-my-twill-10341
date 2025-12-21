@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { SmsForm } from "@/components/SmsForm";
 import { VoiceCallForm } from "@/components/VoiceCallForm";
 import { IVRMenuFormV2 } from "@/components/IVRMenuFormV2";
@@ -82,27 +82,15 @@ const Comunicacao = () => {
         </TabsList>
 
         <TabsContent value="sms" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <SmsForm />
-            </CardContent>
-          </Card>
+          <SmsForm />
         </TabsContent>
 
         <TabsContent value="voice" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <VoiceCallForm />
-            </CardContent>
-          </Card>
+          <VoiceCallForm />
         </TabsContent>
 
         <TabsContent value="ivr" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <IVRMenuFormV2 />
-            </CardContent>
-          </Card>
+          <IVRMenuFormV2 />
         </TabsContent>
 
         <TabsContent value="receive-sms" className="mt-6">

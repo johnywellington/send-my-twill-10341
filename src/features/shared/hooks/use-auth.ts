@@ -4,12 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-type UserRole = "admin" | "user" | null;
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<UserRole>(null);
+  const [role, setRole] = useState<"user" | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -60,7 +58,8 @@ export const useAuth = () => {
         console.error('Error fetching user role:', error);
         setRole('user'); // Default to user if role not found
       } else {
-        setRole(data.role as UserRole);
+        // Always set as user in this portal
+        setRole('user');
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
@@ -70,7 +69,7 @@ export const useAuth = () => {
     }
   };
 
-  const signInWithRole = async (email: string, password: string, expectedRole: 'admin' | 'user') => {
+  const signIn = async (email: string, password: string) => {
     try {
       // 1. Fazer login
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -98,26 +97,7 @@ export const useAuth = () => {
           throw new Error(profile.suspension_reason || "Conta suspensa. Entre em contato com o administrador");
         }
 
-        // Validar role apenas para admin
-        if (expectedRole === 'admin') {
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', data.user.id)
-            .single();
-
-          if (roleError) {
-            await supabase.auth.signOut();
-            throw new Error("Erro ao verificar permissões");
-          }
-
-          if (roleData.role !== 'admin') {
-            await supabase.auth.signOut();
-            throw new Error("Esta conta não tem permissão de administrador. Use o login de operador.");
-          }
-        }
-
-        // 5. Atualizar last_login_at
+        // 3. Atualizar last_login_at
         await supabase
           .from('profiles')
           .update({ last_login_at: new Date().toISOString() })
@@ -147,11 +127,7 @@ export const useAuth = () => {
   };
 
   const redirectToDashboard = () => {
-    if (role === 'admin') {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
   return {
@@ -160,9 +136,8 @@ export const useAuth = () => {
     role,
     loading,
     isAuthenticated: !!session && !!user,
-    isAdmin: role === 'admin',
     isUser: role === 'user',
-    signInWithRole,
+    signIn,
     signOut,
     redirectToDashboard,
   };

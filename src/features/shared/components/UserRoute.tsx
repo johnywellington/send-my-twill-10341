@@ -6,7 +6,7 @@ interface UserRouteProps {
 }
 
 export const UserRoute = ({ children }: UserRouteProps) => {
-  const { user, session, role, loading } = useAuth();
+  const { user, session, loading } = useAuth();
 
   if (loading) {
     return (
@@ -25,16 +25,6 @@ export const UserRoute = ({ children }: UserRouteProps) => {
 
   // Not authenticated
   if (!session || !user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Block admin from accessing user routes
-  if (role === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
-
-  // Only allow users
-  if (role !== 'user') {
     return <Navigate to="/login" replace />;
   }
 

@@ -23,11 +23,11 @@ export const VOICE_MAPPING: Record<string, { vonage: VonageVoiceParams; twilio: 
     twilio: { voice: 'Polly.Vitoria', language: 'pt-BR' }
   },
   'Ricardo': {
-    vonage: { language: 'pt-BR', style: 2, premium: true, name: 'Ricardo' },
+    vonage: { language: 'pt-BR', style: 5, premium: true, name: 'Ricardo' },
     twilio: { voice: 'Polly.Ricardo', language: 'pt-BR' }
   },
   'Thiago': {
-    vonage: { language: 'pt-BR', style: 3, premium: true, name: 'Thiago' },
+    vonage: { language: 'pt-BR', style: 6, premium: true, name: 'Thiago' },
     twilio: { voice: 'Polly.Thiago', language: 'pt-BR' }
   },
   

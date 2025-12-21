@@ -1,22 +1,19 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { UserSidebar } from "./UserSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Shield } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/features/shared/hooks/use-auth";
 import { ProviderSelector } from "@/components/ProviderSelector";
 import { CredentialSelector } from "@/components/CredentialSelector";
 import { useProvider } from "@/contexts/ProviderContext";
-import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 
 interface UserLayoutProps {
   children: React.ReactNode;
 }
 
 export const UserLayout = ({ children }: UserLayoutProps) => {
-  const { signOut, user, isAdmin } = useAuth();
+  const { signOut, user } = useAuth();
   const { provider, selectedCredentialId, setSelectedCredentialId } = useProvider();
-  const navigate = useNavigate();
 
   return (
     <SidebarProvider>
@@ -44,26 +41,9 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
                 />
               </div>
               
-              {isAdmin && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => navigate('/admin')}
-                  className="gap-2"
-                >
-                  <Shield className="h-4 w-4" />
-                  Painel Admin
-                </Button>
-              )}
-              
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 <span>{user?.email}</span>
-                {isAdmin && (
-                  <Badge variant="destructive" className="ml-2">
-                    Admin
-                  </Badge>
-                )}
               </div>
               <Button
                 variant="outline"

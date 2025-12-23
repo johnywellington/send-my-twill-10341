@@ -14,16 +14,1886 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_validation_logs: {
+        Row: {
+          account_info: Json | null
+          account_type: string | null
+          created_at: string
+          credential_id: string | null
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          provider: string
+          status: string
+          tested_at: string
+          user_id: string
+          validation_type: string
+        }
+        Insert: {
+          account_info?: Json | null
+          account_type?: string | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider: string
+          status: string
+          tested_at?: string
+          user_id: string
+          validation_type: string
+        }
+        Update: {
+          account_info?: Json | null
+          account_type?: string | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          provider?: string
+          status?: string
+          tested_at?: string
+          user_id?: string
+          validation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_validation_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_send_logs: {
+        Row: {
+          avg_delay_ms: number
+          completed_at: string
+          created_at: string
+          failed_sends: number
+          id: string
+          provider: string
+          retry_count: number | null
+          started_at: string
+          successful_sends: number
+          throttle_percentage: number
+          total_contacts: number
+          total_duration_seconds: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          avg_delay_ms: number
+          completed_at?: string
+          created_at?: string
+          failed_sends?: number
+          id?: string
+          provider: string
+          retry_count?: number | null
+          started_at?: string
+          successful_sends?: number
+          throttle_percentage?: number
+          total_contacts: number
+          total_duration_seconds: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          avg_delay_ms?: number
+          completed_at?: string
+          created_at?: string
+          failed_sends?: number
+          id?: string
+          provider?: string
+          retry_count?: number | null
+          started_at?: string
+          successful_sends?: number
+          throttle_percentage?: number
+          total_contacts?: number
+          total_duration_seconds?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaign_run_details: {
+        Row: {
+          contact_name: string | null
+          created_at: string | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          phone_number: string
+          provider: string | null
+          run_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          phone_number: string
+          provider?: string | null
+          run_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          phone_number?: string
+          provider?: string | null
+          run_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_run_details_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_runs: {
+        Row: {
+          campaign_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          failed_numbers: Json | null
+          failed_sends: number
+          from_number: string
+          id: string
+          metadata: Json | null
+          pending_sends: number
+          provider: string
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          successful_sends: number
+          total_contacts: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          failed_numbers?: Json | null
+          failed_sends?: number
+          from_number: string
+          id?: string
+          metadata?: Json | null
+          pending_sends?: number
+          provider: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          successful_sends?: number
+          total_contacts?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          failed_numbers?: Json | null
+          failed_sends?: number
+          from_number?: string
+          id?: string
+          metadata?: Json | null
+          pending_sends?: number
+          provider?: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          successful_sends?: number
+          total_contacts?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_runs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          contact_count: number | null
+          created_at: string | null
+          id: string
+          last_sent_at: string | null
+          lead_list_id: string | null
+          lead_list_name: string | null
+          message_template: string
+          name: string
+          sends_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contact_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_list_id?: string | null
+          lead_list_name?: string | null
+          message_template: string
+          name: string
+          sends_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contact_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_sent_at?: string | null
+          lead_list_id?: string | null
+          lead_list_name?: string | null
+          message_template?: string
+          name?: string
+          sends_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_lead_list_id_fkey"
+            columns: ["lead_list_id"]
+            isOneToOne: false
+            referencedRelation: "lead_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_group_members: {
+        Row: {
+          added_at: string
+          contact_id: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          added_at?: string
+          contact_id: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          added_at?: string
+          contact_id?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_group_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "contact_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          carrier_name: string | null
+          country_code_detected: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_valid: boolean | null
+          line_type: string | null
+          name: string
+          notes: string | null
+          phone_number: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          validated_at: string | null
+          validation_reason: string | null
+          validation_status: string | null
+        }
+        Insert: {
+          carrier_name?: string | null
+          country_code_detected?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_valid?: boolean | null
+          line_type?: string | null
+          name: string
+          notes?: string | null
+          phone_number: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          validated_at?: string | null
+          validation_reason?: string | null
+          validation_status?: string | null
+        }
+        Update: {
+          carrier_name?: string | null
+          country_code_detected?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_valid?: boolean | null
+          line_type?: string | null
+          name?: string
+          notes?: string | null
+          phone_number?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          validated_at?: string | null
+          validation_reason?: string | null
+          validation_status?: string | null
+        }
+        Relationships: []
+      }
+      exchange_rates: {
+        Row: {
+          base_currency: string
+          created_at: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          rate: number
+          target_currency: string
+        }
+        Insert: {
+          base_currency: string
+          created_at?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          rate: number
+          target_currency: string
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          rate?: number
+          target_currency?: string
+        }
+        Relationships: []
+      }
+      ivr_logs: {
+        Row: {
+          call_uuid: string | null
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string
+          credential_id: string | null
+          dtmf_response: string | null
+          duration: number | null
+          error_message: string | null
+          from_number: string
+          id: string
+          language: string
+          ncco: Json
+          premium: boolean
+          provider: string | null
+          status: string
+          style: number
+          subaccount_id: string | null
+          template_used: string | null
+          to_number: string
+          updated_at: string
+          user_id: string
+          voice_label: string | null
+        }
+        Insert: {
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          dtmf_response?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number: string
+          id?: string
+          language?: string
+          ncco: Json
+          premium?: boolean
+          provider?: string | null
+          status?: string
+          style?: number
+          subaccount_id?: string | null
+          template_used?: string | null
+          to_number: string
+          updated_at?: string
+          user_id: string
+          voice_label?: string | null
+        }
+        Update: {
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          dtmf_response?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number?: string
+          id?: string
+          language?: string
+          ncco?: Json
+          premium?: boolean
+          provider?: string | null
+          status?: string
+          style?: number
+          subaccount_id?: string | null
+          template_used?: string | null
+          to_number?: string
+          updated_at?: string
+          user_id?: string
+          voice_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ivr_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ivr_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ivr_responses: {
+        Row: {
+          conversation_uuid: string
+          created_at: string
+          dtmf_digits: string | null
+          event_data: Json | null
+          id: string
+          phone_number: string
+          template_used: string | null
+          timed_out: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_uuid: string
+          created_at?: string
+          dtmf_digits?: string | null
+          event_data?: Json | null
+          id?: string
+          phone_number: string
+          template_used?: string | null
+          timed_out?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_uuid?: string
+          created_at?: string
+          dtmf_digits?: string | null
+          event_data?: Json | null
+          id?: string
+          phone_number?: string
+          template_used?: string | null
+          timed_out?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ivr_transfer_params: {
+        Row: {
+          assistant_number: string
+          call_uuid: string | null
+          conversation_uuid: string | null
+          created_at: string | null
+          expires_at: string | null
+          from_number: string
+          id: string
+          transfer_timeout: number | null
+          user_id: string | null
+        }
+        Insert: {
+          assistant_number: string
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          from_number: string
+          id?: string
+          transfer_timeout?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          assistant_number?: string
+          call_uuid?: string | null
+          conversation_uuid?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          from_number?: string
+          id?: string
+          transfer_timeout?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      lead_list_contacts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_recurring: boolean | null
+          last_campaign_date: string | null
+          last_campaign_name: string | null
+          lead_list_id: string
+          name: string | null
+          phone_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          last_campaign_date?: string | null
+          last_campaign_name?: string | null
+          lead_list_id: string
+          name?: string | null
+          phone_number: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          last_campaign_date?: string | null
+          last_campaign_name?: string | null
+          lead_list_id?: string
+          name?: string | null
+          phone_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_list_contacts_lead_list_id_fkey"
+            columns: ["lead_list_id"]
+            isOneToOne: false
+            referencedRelation: "lead_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_lists: {
+        Row: {
+          clean_contacts: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          recurring_contacts: number | null
+          total_contacts: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          clean_contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          recurring_contacts?: number | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          clean_contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          recurring_contacts?: number | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      message_templates: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          is_favorite: boolean | null
+          name: string
+          type: string
+          updated_at: string
+          usage_count: number | null
+          user_id: string
+          variables: string[] | null
+          voice_name: string | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          name: string
+          type: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id: string
+          variables?: string[] | null
+          voice_name?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+          variables?: string[] | null
+          voice_name?: string | null
+        }
+        Relationships: []
+      }
+      phone_numbers: {
+        Row: {
+          country_code: string
+          created_at: string | null
+          credential_id: string | null
+          friendly_name: string | null
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          notes: string | null
+          phone_number: string
+          provider: string
+          subaccount_id: string | null
+          supports_mms: boolean | null
+          supports_sms: boolean | null
+          supports_voice: boolean | null
+          sync_source: string | null
+          updated_at: string | null
+          user_id: string
+          webhook_configured: boolean | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string | null
+          credential_id?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          notes?: string | null
+          phone_number: string
+          provider: string
+          subaccount_id?: string | null
+          supports_mms?: boolean | null
+          supports_sms?: boolean | null
+          supports_voice?: boolean | null
+          sync_source?: string | null
+          updated_at?: string | null
+          user_id: string
+          webhook_configured?: boolean | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string | null
+          credential_id?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          notes?: string | null
+          phone_number?: string
+          provider?: string
+          subaccount_id?: string | null
+          supports_mms?: boolean | null
+          supports_sms?: boolean | null
+          supports_voice?: boolean | null
+          sync_source?: string | null
+          updated_at?: string | null
+          user_id?: string
+          webhook_configured?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_numbers_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          metadata: Json | null
+          phone: string | null
+          suspended_at: string | null
+          suspension_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      provider_credentials: {
+        Row: {
+          account_identifier: string
+          account_type: string | null
+          created_at: string
+          credential_name: string
+          encrypted_data: Json | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          provider: string
+          secret_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_identifier: string
+          account_type?: string | null
+          created_at?: string
+          credential_name: string
+          encrypted_data?: Json | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider: string
+          secret_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_identifier?: string
+          account_type?: string | null
+          created_at?: string
+          credential_name?: string
+          encrypted_data?: Json | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          provider?: string
+          secret_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      provider_subaccounts: {
+        Row: {
+          api_metadata: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          parent_credential_id: string
+          provider: string
+          subaccount_api_key: string | null
+          subaccount_api_secret: string | null
+          subaccount_name: string
+          subaccount_sid: string | null
+          updated_at: string | null
+          use_parent_balance: boolean | null
+          user_id: string
+        }
+        Insert: {
+          api_metadata?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_credential_id: string
+          provider: string
+          subaccount_api_key?: string | null
+          subaccount_api_secret?: string | null
+          subaccount_name: string
+          subaccount_sid?: string | null
+          updated_at?: string | null
+          use_parent_balance?: boolean | null
+          user_id: string
+        }
+        Update: {
+          api_metadata?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          parent_credential_id?: string
+          provider?: string
+          subaccount_api_key?: string | null
+          subaccount_api_secret?: string | null
+          subaccount_name?: string
+          subaccount_sid?: string | null
+          updated_at?: string | null
+          use_parent_balance?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_subaccounts_parent_credential_id_fkey"
+            columns: ["parent_credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      received_calls: {
+        Row: {
+          answer_time: string | null
+          answered: boolean | null
+          call_uuid: string
+          caller_name: string | null
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string | null
+          duration: number | null
+          ended_at: string | null
+          from_number: string
+          hangup_cause: string | null
+          id: string
+          metadata: Json | null
+          provider: string
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          to_number: string
+          transcription_available: boolean | null
+          transcription_text: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          answer_time?: string | null
+          answered?: boolean | null
+          call_uuid: string
+          caller_name?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          from_number: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider: string
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number: string
+          transcription_available?: boolean | null
+          transcription_text?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          answer_time?: string | null
+          answered?: boolean | null
+          call_uuid?: string
+          caller_name?: string | null
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string | null
+          duration?: number | null
+          ended_at?: string | null
+          from_number?: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number?: string
+          transcription_available?: boolean | null
+          transcription_text?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      received_sms: {
+        Row: {
+          created_at: string | null
+          external_id: string
+          from_number: string
+          id: string
+          message: string
+          metadata: Json | null
+          provider: string
+          received_at: string | null
+          to_number: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_id: string
+          from_number: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          provider: string
+          received_at?: string | null
+          to_number: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_id?: string
+          from_number?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          provider?: string
+          received_at?: string | null
+          to_number?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      sip_call_logs: {
+        Row: {
+          answer_time: string | null
+          call_type: string
+          call_uuid: string
+          conversation_uuid: string | null
+          cost: number | null
+          created_at: string
+          duration: number | null
+          end_time: string | null
+          error_message: string | null
+          from_uri: string
+          hangup_cause: string | null
+          id: string
+          metadata: Json | null
+          provider: string
+          quality_score: number | null
+          route_id: string | null
+          sip_user_id: string | null
+          start_time: string | null
+          status: string
+          to_uri: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          answer_time?: string | null
+          call_type: string
+          call_uuid: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          error_message?: string | null
+          from_uri: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider: string
+          quality_score?: number | null
+          route_id?: string | null
+          sip_user_id?: string | null
+          start_time?: string | null
+          status?: string
+          to_uri: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          answer_time?: string | null
+          call_type?: string
+          call_uuid?: string
+          conversation_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          duration?: number | null
+          end_time?: string | null
+          error_message?: string | null
+          from_uri?: string
+          hangup_cause?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          quality_score?: number | null
+          route_id?: string | null
+          sip_user_id?: string | null
+          start_time?: string | null
+          status?: string
+          to_uri?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_call_logs_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "sip_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sip_call_logs_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_connectivity_tests: {
+        Row: {
+          account_status: string | null
+          api_reachable: boolean | null
+          created_at: string | null
+          credentials_valid: boolean | null
+          endpoint_registered: boolean | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          last_seen_at: string | null
+          latency_ms: number | null
+          metadata: Json | null
+          provider: string
+          recommendations: Json | null
+          sip_user_id: string | null
+          status: string
+          test_type: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string | null
+          api_reachable?: boolean | null
+          created_at?: string | null
+          credentials_valid?: boolean | null
+          endpoint_registered?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          last_seen_at?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          provider: string
+          recommendations?: Json | null
+          sip_user_id?: string | null
+          status: string
+          test_type: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string | null
+          api_reachable?: boolean | null
+          created_at?: string | null
+          credentials_valid?: boolean | null
+          endpoint_registered?: boolean | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          last_seen_at?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          provider?: string
+          recommendations?: Json | null
+          sip_user_id?: string | null
+          status?: string
+          test_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_connectivity_tests_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_endpoints: {
+        Row: {
+          expires_at: string | null
+          id: string
+          ip_address: string | null
+          last_seen: string | null
+          metadata: Json | null
+          provider: string
+          sip_user_id: string
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          last_seen?: string | null
+          metadata?: Json | null
+          provider: string
+          sip_user_id: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          last_seen?: string | null
+          metadata?: Json | null
+          provider?: string
+          sip_user_id?: string
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_endpoints_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_events: {
+        Row: {
+          created_at: string | null
+          domain_group_id: string | null
+          event_category: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          provider: string
+          route_id: string | null
+          sip_user_id: string | null
+          triggered_by: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          domain_group_id?: string | null
+          event_category: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider: string
+          route_id?: string | null
+          sip_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          domain_group_id?: string | null
+          event_category?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          provider?: string
+          route_id?: string | null
+          sip_user_id?: string | null
+          triggered_by?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_events_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "sip_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sip_events_sip_user_id_fkey"
+            columns: ["sip_user_id"]
+            isOneToOne: false
+            referencedRelation: "sip_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_provider_config: {
+        Row: {
+          config_key: string
+          config_value: string
+          created_at: string | null
+          created_by: string | null
+          credential_id: string | null
+          domain_group_id: string | null
+          friendly_name: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          provider: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: string
+          created_at?: string | null
+          created_by?: string | null
+          credential_id?: string | null
+          domain_group_id?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          provider: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: string
+          created_at?: string | null
+          created_by?: string | null
+          credential_id?: string | null
+          domain_group_id?: string | null
+          friendly_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          provider?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_provider_config_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_routes: {
+        Row: {
+          created_at: string
+          credential_id: string | null
+          domain_group_id: string | null
+          forward_to: string
+          from_pattern: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          priority: number
+          provider: string
+          route_type: string
+          to_pattern: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credential_id?: string | null
+          domain_group_id?: string | null
+          forward_to: string
+          from_pattern: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          priority?: number
+          provider: string
+          route_type: string
+          to_pattern: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string | null
+          domain_group_id?: string | null
+          forward_to?: string
+          from_pattern?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          priority?: number
+          provider?: string
+          route_type?: string
+          to_pattern?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_routes_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sip_users: {
+        Row: {
+          created_at: string
+          credential_id: string | null
+          display_name: string | null
+          domain_group_id: string | null
+          extension: string
+          id: string
+          is_active: boolean
+          provider: string
+          sip_domain: string
+          sip_password: string
+          sip_username: string
+          twilio_credential_sid: string | null
+          twilio_credlist_sid: string | null
+          updated_at: string
+          user_id: string
+          vonage_endpoint_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credential_id?: string | null
+          display_name?: string | null
+          domain_group_id?: string | null
+          extension: string
+          id?: string
+          is_active?: boolean
+          provider: string
+          sip_domain: string
+          sip_password: string
+          sip_username: string
+          twilio_credential_sid?: string | null
+          twilio_credlist_sid?: string | null
+          updated_at?: string
+          user_id: string
+          vonage_endpoint_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string | null
+          display_name?: string | null
+          domain_group_id?: string | null
+          extension?: string
+          id?: string
+          is_active?: boolean
+          provider?: string
+          sip_domain?: string
+          sip_password?: string
+          sip_username?: string
+          twilio_credential_sid?: string | null
+          twilio_credlist_sid?: string | null
+          updated_at?: string
+          user_id?: string
+          vonage_endpoint_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sip_users_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_logs: {
+        Row: {
+          campaign_name: string | null
+          cost: number | null
+          created_at: string
+          credential_id: string | null
+          error_message: string | null
+          external_id: string | null
+          from_number: string
+          id: string
+          message: string
+          provider: string
+          status: string
+          subaccount_id: string | null
+          to_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_name?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          from_number: string
+          id?: string
+          message: string
+          provider: string
+          status?: string
+          subaccount_id?: string | null
+          to_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_name?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          from_number?: string
+          id?: string
+          message?: string
+          provider?: string
+          status?: string
+          subaccount_id?: string | null
+          to_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          items_added: number | null
+          items_updated: number | null
+          metadata: Json | null
+          provider: string | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          items_added?: number | null
+          items_updated?: number | null
+          metadata?: Json | null
+          provider?: string | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          items_added?: number | null
+          items_updated?: number | null
+          metadata?: Json | null
+          provider?: string | null
+          status?: string
+          sync_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      usage_analytics: {
+        Row: {
+          created_at: string
+          id: string
+          ivr_calls: number | null
+          ivr_cost: number | null
+          ivr_minutes: number | null
+          provider: string
+          raw_data: Json | null
+          report_date: string
+          sms_cost: number | null
+          sms_delivered: number | null
+          sms_failed: number | null
+          sms_sent: number | null
+          synced_at: string | null
+          total_cost: number | null
+          user_id: string
+          voice_calls: number | null
+          voice_cost: number | null
+          voice_minutes: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ivr_calls?: number | null
+          ivr_cost?: number | null
+          ivr_minutes?: number | null
+          provider?: string
+          raw_data?: Json | null
+          report_date: string
+          sms_cost?: number | null
+          sms_delivered?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          user_id: string
+          voice_calls?: number | null
+          voice_cost?: number | null
+          voice_minutes?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ivr_calls?: number | null
+          ivr_cost?: number | null
+          ivr_minutes?: number | null
+          provider?: string
+          raw_data?: Json | null
+          report_date?: string
+          sms_cost?: number | null
+          sms_delivered?: number | null
+          sms_failed?: number | null
+          sms_sent?: number | null
+          synced_at?: string | null
+          total_cost?: number | null
+          user_id?: string
+          voice_calls?: number | null
+          voice_cost?: number | null
+          voice_minutes?: number | null
+        }
+        Relationships: []
+      }
+      user_activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      voice_logs: {
+        Row: {
+          call_uuid: string | null
+          cost: number | null
+          created_at: string
+          credential_id: string | null
+          duration: number | null
+          error_message: string | null
+          from_number: string
+          id: string
+          language: string
+          message: string
+          premium: boolean
+          provider: string | null
+          status: string
+          style: number
+          subaccount_id: string | null
+          to_number: string
+          updated_at: string
+          user_id: string
+          voice_label: string | null
+        }
+        Insert: {
+          call_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number: string
+          id?: string
+          language?: string
+          message: string
+          premium?: boolean
+          provider?: string | null
+          status?: string
+          style?: number
+          subaccount_id?: string | null
+          to_number: string
+          updated_at?: string
+          user_id: string
+          voice_label?: string | null
+        }
+        Update: {
+          call_uuid?: string | null
+          cost?: number | null
+          created_at?: string
+          credential_id?: string | null
+          duration?: number | null
+          error_message?: string | null
+          from_number?: string
+          id?: string
+          language?: string
+          message?: string
+          premium?: boolean
+          provider?: string | null
+          status?: string
+          style?: number
+          subaccount_id?: string | null
+          to_number?: string
+          updated_at?: string
+          user_id?: string
+          voice_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_logs_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "provider_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_logs_subaccount_id_fkey"
+            columns: ["subaccount_id"]
+            isOneToOne: false
+            referencedRelation: "provider_subaccounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_health_checks: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          phone_number: string
+          phone_number_id: string
+          provider: string
+          response_body: Json | null
+          response_time_ms: number | null
+          status_code: number | null
+          success: boolean
+          test_mode: string | null
+          test_type: string
+          tested_at: string
+          user_id: string
+          valid_format: boolean | null
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          phone_number: string
+          phone_number_id: string
+          provider: string
+          response_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          success: boolean
+          test_mode?: string | null
+          test_type: string
+          tested_at?: string
+          user_id: string
+          valid_format?: boolean | null
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          phone_number?: string
+          phone_number_id?: string
+          provider?: string
+          response_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          success?: boolean
+          test_mode?: string | null
+          test_type?: string
+          tested_at?: string
+          user_id?: string
+          valid_format?: boolean | null
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_health_checks_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_ivr_params: { Args: never; Returns: undefined }
+      cleanup_stale_calls: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +2020,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

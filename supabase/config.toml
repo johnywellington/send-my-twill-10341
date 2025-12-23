@@ -1,1 +1,81 @@
 project_id = "baowfhikujfppwmmhwcn"
+
+# Edge functions que REQUEREM autenticação JWT
+# send-sms, send-voice-call, send-ivr-call, send-ivr-call-v2 agora protegidos
+
+# Webhooks permanecem públicos (validados por assinatura Vonage/Twilio)
+[functions.generate-twiml]
+verify_jwt = false
+
+[functions.twilio-voice-status]
+verify_jwt = false
+
+[functions.ivr-webhook]
+verify_jwt = false
+
+[functions.ivr-webhook-v2]
+verify_jwt = false
+
+[functions.ivr-webhook-v2-events]
+verify_jwt = false
+
+[functions.twilio-sms-webhook]
+verify_jwt = false
+
+[functions.vonage-sms-webhook]
+verify_jwt = false
+
+[functions.twilio-voice-webhook]
+verify_jwt = false
+
+[functions.vonage-voice-webhook]
+verify_jwt = false
+
+[functions.generate-voice-sample]
+verify_jwt = false
+
+[functions.generate-ivr-preview]
+verify_jwt = false
+
+# Webhooks de entrada (inbound) também públicos
+[functions.twilio-sms-inbound]
+verify_jwt = false
+
+[functions.vonage-sms-inbound]
+verify_jwt = false
+
+[functions.twilio-call-inbound]
+verify_jwt = false
+
+[functions.vonage-call-inbound]
+verify_jwt = false
+
+[functions.test-webhook-health]
+verify_jwt = true
+
+[functions.check-twilio-account-type]
+verify_jwt = true
+
+[functions.sync-twilio-sip-domains]
+verify_jwt = true
+
+[functions.sync-vonage-sip-applications]
+verify_jwt = true
+
+[functions.sync-sip-endpoints-status]
+verify_jwt = false
+
+[functions.create-provider-subaccount]
+verify_jwt = true
+
+[functions.delete-provider-subaccount]
+verify_jwt = true
+
+[functions.sync-provider-subaccounts]
+verify_jwt = true
+
+[functions.process-scheduled-campaigns]
+verify_jwt = false
+
+[functions.resume-campaign]
+verify_jwt = true
